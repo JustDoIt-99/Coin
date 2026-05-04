@@ -1,3 +1,11 @@
+---
+name: Bug
+about: 버그 수정 이슈
+title: "[bug] "
+labels: bug
+assignees: ""
+---
+
 ## 🐛 버그 설명
 
 어떤 문제가 발생하는지 설명
