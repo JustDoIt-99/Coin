@@ -1,3 +1,11 @@
+---
+name: Refactor
+about: 코드 구조 개선 이슈
+title: "[refactor] "
+labels: refactor
+assignees: ""
+---
+
 ## ♻️ 개요
 
 어떤 부분을 개선/리팩토링 하는지 설명

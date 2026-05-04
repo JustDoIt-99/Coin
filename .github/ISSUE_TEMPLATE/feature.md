@@ -1,3 +1,11 @@
+---
+name: Feature
+about: 새로운 기능 구현 이슈
+title: "[feature] "
+labels: feature
+assignees: ""
+---
+
 ## 📌 개요
 
 어떤 기능을 구현하는지 간단히 설명
