@@ -75,12 +75,16 @@ function MarketSidebar({markets} : Props) {
         enabled: marketCodes.length > 0
     });
 
-    const tickerMap = useMemo(() => {
-        return tickers?.reduce((acc,ticker) => {
-            acc[ticker.market] = ticker;
-            return acc;
-        }, {} as Record<string, Ticker>) ?? {};
-    },[tickers]);
+    useEffect(() => {
+        if (!tickers) return;
+        setTickerMap((prev) => {
+            const next = { ...prev };
+            tickers.forEach((ticker) => {
+                next[ticker.market] = ticker;
+            });
+            return next;
+        });
+    }, [tickers]);
 
     const sortedMarkets = [...filteredMarkets].sort((a,b) => {
         if (!sortKey || !sortOrder) return 0;
