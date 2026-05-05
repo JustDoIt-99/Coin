@@ -1,7 +1,7 @@
 import {useQuery} from "@tanstack/react-query";
 import {fetchMarkets, fetchTickers, type Ticker} from "../api/api.ts";
 import Loading from "../components/Loading.tsx";
-import MarketSidebar from "../components/market/MarketSidebar.tsx";
+import MarketSidebar from "../components/market/sidebar/MarketSidebar.tsx";
 import {useState} from "react";
 
 export type MarketTab = "KRW"|"BTC"|"USDT";
