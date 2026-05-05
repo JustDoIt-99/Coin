@@ -4,7 +4,7 @@ import MarketRow from "./MarketRow.tsx";
 import type {MarketTab} from "../../../page/MarketPage.tsx";
 import MarketTabs from "./MarketTabs.tsx";
 import MarketHeaderRow from "./MarketHeaderRow.tsx";
-import {useState} from "react";
+import {useMemo, useState} from "react";
 import MarketSearch from "./MarketSearch.tsx";
 
 const Container = styled.aside`
@@ -60,13 +60,15 @@ function MarketSidebar({markets, activeTab, setActiveTab, tickers} : Props) {
         }
     }
 
-    const filteredMarkets = markets.filter((market) => {
-        return (
-            market.korean_name.toLowerCase().includes(search) ||
-            market.english_name.toLowerCase().includes(search) ||
-            market.market.toLowerCase().includes(search)
-        );
-    })
+    const filteredMarkets = useMemo(() => {
+        return markets.filter((market) => {
+            return (
+                market.korean_name.toLowerCase().includes(search) ||
+                market.english_name.toLowerCase().includes(search) ||
+                market.market.toLowerCase().includes(search)
+            );
+        })
+    }, [markets,  search]);
 
     const sortedMarkets = [...filteredMarkets].sort((a,b) => {
         if (!sortKey || !sortOrder) return 0;
