@@ -77,7 +77,7 @@ function convertToKRW(
     return null;
 }
 
-function MarketRow({market, ticker, btcPrice, usdtPrice, nameType}: Props) {
+function MarketRow({market, ticker, btcPrice, usdtPrice, nameType, flashKey}: Props) {
 
     const rate = ticker?.signed_change_rate ?? 0;
     const isUp = rate > 0;
@@ -98,7 +98,7 @@ function MarketRow({market, ticker, btcPrice, usdtPrice, nameType}: Props) {
                 <small>{market.market.replace("-", "/")}</small>
             </NameBox>
 
-            <PriceBox>
+            <PriceBox key={flashKey ?? 0} flashKey={flashKey}>
                 <Price type={isUp ? "up" : isDown ? "down" : "flat"}>
                     {formatPrice(ticker?.trade_price, market.market)}
                 </Price>
