@@ -113,6 +113,8 @@ function MarketSidebar({markets} : Props) {
         });
     }, []);
 
+    useUpBitTickerSocket(marketCodes, handleTickerMessage);
+
 
         const aTicker = tickerMap[a.market];
         const bTicker = tickerMap[b.market];
