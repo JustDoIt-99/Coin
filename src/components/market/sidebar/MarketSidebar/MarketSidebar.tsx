@@ -14,10 +14,6 @@ interface Props {
     markets: Market[];
 }
 
-export type NameType = "korean" | "english";
-export type SortedKey = "price" | "change" | "volume" | null;
-export type SortOrder = "asc" | "desc" | null;
-
 function MarketSidebar({markets} : Props) {
 
     const [sortKey, setSortKey] = useState<SortedKey>(null);
