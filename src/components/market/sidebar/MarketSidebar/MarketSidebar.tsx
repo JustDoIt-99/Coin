@@ -8,6 +8,7 @@ import MarketSearch from "../MarketSearch";
 import {useQuery} from "@tanstack/react-query";
 import useUpBitTickerSocket from "@hooks/useUpbitTickerSocket.ts";
 import {RowList, Container} from "./MarketSidebar.styles.ts";
+import type {NameType, SortedKey, SortOrder} from "@components/market/sidebar/type.ts";
 
 interface Props {
     markets: Market[];
