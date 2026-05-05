@@ -3,6 +3,7 @@ import type {NameType, SortedKey, SortOrder} from "./MarketSidebar.tsx";
 import {Languages} from "lucide-react";
 import MarketSortedHeaderCell from "@components/market/sidebar/MarketSortedHeaderCell";
 import {Header, Name} from "./MarketHeaderRow.styles.ts";
+import type {NameType, SortedKey, SortOrder} from "@components/market/sidebar/type.ts";
 
 interface Props {
     nameType: NameType;

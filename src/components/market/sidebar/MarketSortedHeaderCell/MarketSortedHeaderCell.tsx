@@ -1,7 +1,6 @@
-import type {SortedKey, SortOrder} from "./MarketSidebar.tsx";
-import styled from "@emotion/styled";
 import {ChevronDown, ChevronUp} from "lucide-react";
 import {Cell, SortIcon} from "./MarketSortedHeaderCell.styles.ts";
+import type {SortedKey, SortOrder} from "@components/market/sidebar/type.ts";
 
 interface Props {
     label: string;
