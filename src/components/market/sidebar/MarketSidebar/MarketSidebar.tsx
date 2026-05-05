@@ -62,12 +62,12 @@ function MarketSidebar({markets} : Props) {
     const marketCodes = useMemo(() => {
         return Array.from(
             new Set([
-                ...(filteredMarkets?.map((market) => market.market) ?? []),
+                ...(tabMarkets.map((market) => market.market) ?? []),
                 "KRW-BTC",
                 "KRW-USDT"
             ])
         );
-    }, [filteredMarkets]);
+    }, [tabMarkets]);
 
     const {data: tickers} = useQuery({
         queryKey: ["tickers", activeTab],
