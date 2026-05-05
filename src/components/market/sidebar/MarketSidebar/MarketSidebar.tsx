@@ -86,8 +86,33 @@ function MarketSidebar({markets} : Props) {
         });
     }, [tickers]);
 
-    const sortedMarkets = [...filteredMarkets].sort((a,b) => {
-        if (!sortKey || !sortOrder) return 0;
+    const handleTickerMessage = useCallback((data: any) => {
+        setTickerMap((prev) => {
+            const prevPrice = prevPriceRef.current[data.code];
+            const nextPrice = data.trade_price;
+
+            const next = {
+                ...prev,
+                [data.code]: {
+                    market: data.code,
+                    trade_price: nextPrice,
+                    signed_change_rate: data.signed_change_rate,
+                    acc_trade_price_24h: data.acc_trade_price_24h,
+                },
+            };
+
+            if (prevPrice !== undefined && prevPrice !== nextPrice) {
+                setFlashMap((prevFlash) => ({
+                    ...prevFlash,
+                    [data.code]: Date.now(),
+                }));
+            }
+
+            prevPriceRef.current[data.code] = nextPrice;
+            return next;
+        });
+    }, []);
+
 
         const aTicker = tickerMap[a.market];
         const bTicker = tickerMap[b.market];
