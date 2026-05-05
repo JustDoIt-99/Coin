@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import type {Market, Ticker} from "../../api/api.ts";
+import type {Market, Ticker} from "../../../api/api.ts";
 import {Star} from "lucide-react";
 
 interface Props {
@@ -16,6 +16,7 @@ const Row = styled.div`
     align-items: center;
     padding: 12px 16px;
     border-bottom: 1px solid #edf0f3;
+    border-right: 1px solid #edf0f3;
     font-size: 13px;
 
     &:hover {
@@ -33,9 +34,12 @@ const NameBox = styled.div`
     display: flex;
     flex-direction: column;
     gap: 3px;
-
+    
     strong {
-        font-size: 15px;
+        font-size: 14px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
     }
 
     small {
