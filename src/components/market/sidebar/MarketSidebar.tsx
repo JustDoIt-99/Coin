@@ -4,7 +4,7 @@ import MarketRow from "./MarketRow.tsx";
 import type {MarketTab} from "../../../page/MarketPage.tsx";
 import MarketTabs from "./MarketTabs.tsx";
 import MarketHeaderRow from "./MarketHeaderRow.tsx";
-import {useDeferredValue, useState} from "react";
+import {useState} from "react";
 import MarketSearch from "./MarketSearch.tsx";
 
 const Container = styled.aside`
@@ -42,7 +42,6 @@ function MarketSidebar({markets, activeTab, setActiveTab, tickers} : Props) {
 
     const [nameType, setNameType] = useState<NameType>("korean");
     const [search, setSearch] = useState<string>("");
-    const deferredSearch = useDeferredValue(search);
 
     function handleSort(key: SortedKey) {
         if (sortKey !== key) {
@@ -62,12 +61,10 @@ function MarketSidebar({markets, activeTab, setActiveTab, tickers} : Props) {
     }
 
     const filteredMarkets = markets.filter((market) => {
-        const keyword = deferredSearch.toLowerCase();
-
         return (
-            market.korean_name.toLowerCase().includes(keyword) ||
-            market.english_name.toLowerCase().includes(keyword) ||
-            market.market.toLowerCase().includes(keyword)
+            market.korean_name.toLowerCase().includes(search) ||
+            market.english_name.toLowerCase().includes(search) ||
+            market.market.toLowerCase().includes(search)
         );
     })
 
