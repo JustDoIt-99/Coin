@@ -1,11 +1,12 @@
 import styled from "@emotion/styled";
-import type {Market, Ticker} from "../../../api/api.ts";
+import {fetchTickers, type Market, type Ticker} from "../../../api/api.ts";
 import MarketRow from "./MarketRow.tsx";
 import type {MarketTab} from "../../../page/MarketPage.tsx";
 import MarketTabs from "./MarketTabs.tsx";
 import MarketHeaderRow from "./MarketHeaderRow.tsx";
 import {useMemo, useState} from "react";
 import MarketSearch from "./MarketSearch.tsx";
+import {useQuery} from "@tanstack/react-query";
 
 const Container = styled.aside`
     width: 420px;
@@ -23,25 +24,24 @@ const RowList = styled.div`
 
 interface Props {
     markets: Market[];
-    activeTab: MarketTab;
-    setActiveTab: (tab: MarketTab) => void;
-    tickers: Record<string, Ticker>;
 }
 
 export type NameType = "korean" | "english";
 export type SortedKey = "price" | "change" | "volume" | null;
 export type SortOrder = "asc" | "desc" | null;
 
-function MarketSidebar({markets, activeTab, setActiveTab, tickers} : Props) {
-
-    const btcPrice = tickers["KRW-BTC"]?.trade_price;
-    const usdtPrice = tickers["KRW-USDT"]?.trade_price;
+function MarketSidebar({markets} : Props) {
 
     const [sortKey, setSortKey] = useState<SortedKey>(null);
     const [sortOrder, setSortOrder] = useState<SortOrder>(null);
 
     const [nameType, setNameType] = useState<NameType>("korean");
     const [search, setSearch] = useState<string>("");
+    const [activeTab, setActiveTab] = useState<MarketTab>("KRW");
+
+    const tabMarkets = useMemo(() => {
+       return markets?.filter((market) => market.market.startsWith(activeTab)) ?? [];
+    },[markets, activeTab]);
 
     function handleSort(key: SortedKey) {
         if (sortKey !== key) {
@@ -61,20 +61,43 @@ function MarketSidebar({markets, activeTab, setActiveTab, tickers} : Props) {
     }
 
     const filteredMarkets = useMemo(() => {
-        return markets.filter((market) => {
+        return tabMarkets.filter((market) => {
             return (
                 market.korean_name.toLowerCase().includes(search) ||
                 market.english_name.toLowerCase().includes(search) ||
                 market.market.toLowerCase().includes(search)
             );
         })
-    }, [markets,  search]);
+    }, [tabMarkets,  search]);
+
+    const marketCodes = useMemo(() => {
+        return Array.from(
+            new Set([
+                ...(filteredMarkets?.map((market) => market.market) ?? []),
+                "KRW-BTC",
+                "KRW-USDT"
+            ])
+        );
+    }, [filteredMarkets]);
+
+    const {data: tickers} = useQuery({
+        queryKey: ["tickers", activeTab],
+        queryFn: () => fetchTickers(marketCodes),
+        enabled: filteredMarkets.length > 0
+    });
+
+    const tickerMap = useMemo(() => {
+        return tickers?.reduce((acc,ticker) => {
+            acc[ticker.market] = ticker;
+            return acc;
+        }, {} as Record<string, Ticker>) ?? {};
+    },[tickers]);
 
     const sortedMarkets = [...filteredMarkets].sort((a,b) => {
         if (!sortKey || !sortOrder) return 0;
 
-        const aTicker = tickers[a.market];
-        const bTicker = tickers[b.market];
+        const aTicker = tickerMap[a.market];
+        const bTicker = tickerMap[b.market];
 
         const getValue = (t?: Ticker) => {
             if (!t) return 0;
@@ -87,6 +110,9 @@ function MarketSidebar({markets, activeTab, setActiveTab, tickers} : Props) {
         const diff = getValue(aTicker) - getValue(bTicker);
         return sortOrder === "asc" ? diff : -diff;
     })
+
+    const btcPrice = tickerMap["KRW-BTC"]?.trade_price;
+    const usdtPrice = tickerMap["KRW-USDT"]?.trade_price;
 
     return (
         <Container>
@@ -104,7 +130,7 @@ function MarketSidebar({markets, activeTab, setActiveTab, tickers} : Props) {
                     <MarketRow
                         key={market.market}
                         market={market}
-                        ticker={tickers[market.market]}
+                        ticker={tickerMap[market.market]}
                         btcPrice={btcPrice}
                         usdtPrice={usdtPrice}
                         nameType={nameType}
