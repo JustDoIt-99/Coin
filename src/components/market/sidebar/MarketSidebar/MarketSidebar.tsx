@@ -22,6 +22,11 @@ function MarketSidebar({markets} : Props) {
     const [nameType, setNameType] = useState<NameType>("korean");
     const [search, setSearch] = useState<string>("");
     const [activeTab, setActiveTab] = useState<MarketTab>("KRW");
+    const [tickerMap, setTickerMap] = useState<Record<string,Ticker>>({});
+    const [flashMap, setFlashMap] = useState<Record<string, number>>({});
+
+    const prevPriceRef = useRef<Record<string, number>>({});
+
 
     const tabMarkets = useMemo(() => {
        return markets?.filter((market) => market.market.startsWith(activeTab)) ?? [];
