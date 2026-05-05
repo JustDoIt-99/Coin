@@ -115,21 +115,25 @@ function MarketSidebar({markets} : Props) {
 
     useUpBitTickerSocket(marketCodes, handleTickerMessage);
 
+    const sortedMarkets = useMemo(() => {
+        return [...filteredMarkets].sort((a,b) => {
+            if (!sortKey || !sortOrder) return 0;
 
-        const aTicker = tickerMap[a.market];
-        const bTicker = tickerMap[b.market];
+            const aTicker = tickerMap[a.market];
+            const bTicker = tickerMap[b.market];
 
-        const getValue = (t?: Ticker) => {
-            if (!t) return 0;
-            if (sortKey === "price") return t.trade_price;
-            if (sortKey === "change") return t.signed_change_rate;
-            if (sortKey === "volume") return t.acc_trade_price_24h;
-            return 0;
-        };
+            const getValue = (t?: Ticker) => {
+                if (!t) return 0;
+                if (sortKey === "price") return t.trade_price;
+                if (sortKey === "change") return t.signed_change_rate;
+                if (sortKey === "volume") return t.acc_trade_price_24h;
+                return 0;
+            };
 
-        const diff = getValue(aTicker) - getValue(bTicker);
-        return sortOrder === "asc" ? diff : -diff;
-    })
+            const diff = getValue(aTicker) - getValue(bTicker);
+            return sortOrder === "asc" ? diff : -diff;
+        })
+    },[filteredMarkets, tickerMap, sortKey, sortOrder]);
 
     const btcPrice = tickerMap["KRW-BTC"]?.trade_price;
     const usdtPrice = tickerMap["KRW-USDT"]?.trade_price;
