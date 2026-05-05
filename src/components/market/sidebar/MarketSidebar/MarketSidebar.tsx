@@ -72,7 +72,7 @@ function MarketSidebar({markets} : Props) {
     const {data: tickers} = useQuery({
         queryKey: ["tickers", activeTab],
         queryFn: () => fetchTickers(marketCodes),
-        enabled: filteredMarkets.length > 0
+        enabled: marketCodes.length > 0
     });
 
     const tickerMap = useMemo(() => {
