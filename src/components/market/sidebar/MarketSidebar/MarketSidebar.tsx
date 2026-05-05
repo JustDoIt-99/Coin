@@ -6,20 +6,7 @@ import MarketHeaderRow from "../MarketHeaderRow";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import MarketSearch from "../MarketSearch";
 import {useQuery} from "@tanstack/react-query";
-
-const Container = styled.aside`
-    width: 420px;
-    height: 100vh;
-    background: #fff;
-    border-left: 1px solid #dfe3ea;
-    display: flex;
-    flex-direction: column;
-`;
-
-const RowList = styled.div`
-  flex: 1;
-  overflow-y: auto;
-`;
+import useUpBitTickerSocket from "@hooks/useUpbitTickerSocket.ts";
 import {RowList, Container} from "./MarketSidebar.styles.ts";
 
 interface Props {
