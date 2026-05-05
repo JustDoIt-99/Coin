@@ -158,6 +158,7 @@ function MarketSidebar({markets} : Props) {
                         btcPrice={btcPrice}
                         usdtPrice={usdtPrice}
                         nameType={nameType}
+                        flashKey={flashMap[market.market]}
                     />
                 ))}
             </RowList>
