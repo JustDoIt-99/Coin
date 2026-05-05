@@ -53,14 +53,12 @@ const Price = styled.div<{ type: "up" | "down" | "flat" }>`
     font-weight: 600;
     color: ${(props) =>
             props.type === "up" ? "#e53935" : props.type === "down" ? "#1e88e5" : "#333"};
-}
 `;
 
 const Change = styled.div<{ type: "up" | "down" | "flat" }>`
     text-align: right;
     color: ${(props) =>
             props.type === "up" ? "#e53935" : props.type === "down" ? "#1e88e5" : "#333"};
-}
 `;
 
 const Volume = styled.div`
