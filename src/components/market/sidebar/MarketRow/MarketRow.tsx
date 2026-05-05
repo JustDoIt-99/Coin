@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 import type {Market, Ticker} from "../../../api/api.ts";
 import {Star} from "lucide-react";
+import {Change, NameBox, Price, PriceBox, Row, Volume} from "./MarketRow.styles.ts";
 
 interface Props {
     market: Market;

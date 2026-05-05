@@ -21,6 +21,7 @@ const RowList = styled.div`
   flex: 1;
   overflow-y: auto;
 `;
+import {RowList, Container} from "./MarketSidebar.styles.ts";
 
 interface Props {
     markets: Market[];
