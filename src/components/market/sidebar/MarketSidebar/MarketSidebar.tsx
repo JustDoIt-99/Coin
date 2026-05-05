@@ -1,11 +1,10 @@
-import styled from "@emotion/styled";
-import {fetchTickers, type Market, type Ticker} from "../../../api/api.ts";
-import MarketRow from "./MarketRow.tsx";
-import type {MarketTab} from "../../../page/MarketPage.tsx";
-import MarketTabs from "./MarketTabs.tsx";
-import MarketHeaderRow from "./MarketHeaderRow.tsx";
-import {useMemo, useState} from "react";
-import MarketSearch from "./MarketSearch.tsx";
+import {fetchTickers, type Market, type Ticker} from "@api/api.ts";
+import MarketRow from "../MarketRow";
+import type {MarketTab} from "@page/MarketPage.tsx";
+import MarketTabs from "../MarketTabs/MarketTabs.tsx";
+import MarketHeaderRow from "../MarketHeaderRow";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import MarketSearch from "../MarketSearch";
 import {useQuery} from "@tanstack/react-query";
 
 const Container = styled.aside`

@@ -1,7 +1,7 @@
 import {useQuery} from "@tanstack/react-query";
-import {fetchMarkets} from "../api/api.ts";
-import Loading from "../components/Loading.tsx";
-import MarketSidebar from "../components/market/sidebar/MarketSidebar.tsx";
+import {fetchMarkets} from "@api/api.ts";
+import Loading from "@components/Loading.tsx";
+import MarketSidebar from "@components/market/sidebar/MarketSidebar";
 
 export type MarketTab = "KRW"|"BTC"|"USDT";
 
