@@ -1,5 +1,3 @@
-import styled from "@emotion/styled";
-import type {NameType, SortedKey, SortOrder} from "./MarketSidebar.tsx";
 import {Languages} from "lucide-react";
 import MarketSortedHeaderCell from "@components/market/sidebar/MarketSortedHeaderCell";
 import {Header, Name} from "./MarketHeaderRow.styles.ts";
