@@ -11,6 +11,7 @@ const Header = styled.div`
     padding: 0 16px;
     background: #f7f8fa;
     border-bottom: 1px solid #e5e8ec;
+    border-right: 1px solid #e5e8ec;
     font-size: 12px;
     color: #666;
 `;
