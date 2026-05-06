@@ -1,6 +1,6 @@
-import type {SortedKey, SortOrder} from "./MarketSidebar.tsx";
-import styled from "@emotion/styled";
 import {ChevronDown, ChevronUp} from "lucide-react";
+import {Cell, SortIcon} from "./MarketSortedHeaderCell.styles.ts";
+import type {SortedKey, SortOrder} from "@components/market/sidebar/type.ts";
 
 interface Props {
     label: string;
@@ -9,35 +9,6 @@ interface Props {
     sortOrder?: SortOrder;
     onSort: (key: SortedKey) => void;
 }
-
-const Cell = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  font-weight: 500;
-
-  &:hover {
-    text-decoration: underline;
-    cursor: pointer;
-  }
-`;
-
-const SortIcon = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  line-height: 0;
-
-  svg {
-    width: 12px;
-    height: 12px;
-  }
-
-  svg:first-of-type {
-    margin-bottom: -5px;
-  }
-`;
 
 function MarketSortedHeaderCell({
     label,
