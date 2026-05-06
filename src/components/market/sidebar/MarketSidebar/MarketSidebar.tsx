@@ -14,6 +14,13 @@ interface Props {
     markets: Market[];
 }
 
+interface TickerMessage {
+    code: string;
+    trade_price: number;
+    signed_change_rate: number;
+    acc_trade_price_24h: number;
+}
+
 function MarketSidebar({markets} : Props) {
 
     const [sortKey, setSortKey] = useState<SortedKey>(null);
@@ -86,7 +93,7 @@ function MarketSidebar({markets} : Props) {
         });
     }, [tickers]);
 
-    const handleTickerMessage = useCallback((data: any) => {
+    const handleTickerMessage = useCallback((data: TickerMessage) => {
 
         const prevPrice = prevPriceRef.current[data.code];
         const nextPrice = data.trade_price;
