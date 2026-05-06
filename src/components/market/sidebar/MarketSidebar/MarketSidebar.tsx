@@ -87,11 +87,12 @@ function MarketSidebar({markets} : Props) {
     }, [tickers]);
 
     const handleTickerMessage = useCallback((data: any) => {
-        setTickerMap((prev) => {
-            const prevPrice = prevPriceRef.current[data.code];
-            const nextPrice = data.trade_price;
 
-            const next = {
+        const prevPrice = prevPriceRef.current[data.code];
+        const nextPrice = data.trade_price;
+
+        setTickerMap((prev) => {
+            return {
                 ...prev,
                 [data.code]: {
                     market: data.code,
@@ -100,17 +101,16 @@ function MarketSidebar({markets} : Props) {
                     acc_trade_price_24h: data.acc_trade_price_24h,
                 },
             };
-
-            if (prevPrice !== undefined && prevPrice !== nextPrice) {
-                setFlashMap((prevFlash) => ({
-                    ...prevFlash,
-                    [data.code]: Date.now(),
-                }));
-            }
-
-            prevPriceRef.current[data.code] = nextPrice;
-            return next;
         });
+
+        if (prevPrice !== undefined && prevPrice !== nextPrice) {
+            setFlashMap((prevFlash) => ({
+                ...prevFlash,
+                [data.code]: Date.now(),
+            }));
+        }
+
+        prevPriceRef.current[data.code] = nextPrice;
     }, []);
 
     useUpBitTickerSocket(marketCodes, handleTickerMessage);
