@@ -29,9 +29,14 @@ function useUpBitTickerSocket(
         };
 
         socket.onmessage = async (event) => {
-            const text =  typeof event.data === "string"  ? event.data  : await event.data.text();
-            const data = JSON.parse(text);
-            onMessage(data);
+
+            try {
+                const text =  typeof event.data === "string"  ? event.data  : await event.data.text();
+                const data = JSON.parse(text);
+                onMessage(data);
+            }catch (error) {
+                console.log("WebSocket message parse error", error);
+            }
         };
 
         socket.onerror = (error) => {
