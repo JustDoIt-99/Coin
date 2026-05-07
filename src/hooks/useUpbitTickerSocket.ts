@@ -26,7 +26,7 @@ function useUpBitTickerSocket(
             try {
                 const text =
                     typeof event.data === "string"?
-                        event.data : await event.data.text()
+                        event.data : await event.data.text();
 
                 const data = JSON.parse(text);
                 onMessageRef.current(data);
