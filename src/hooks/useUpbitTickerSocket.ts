@@ -78,7 +78,7 @@ function useUpBitTickerSocket(
             socket.removeEventListener("open", subscribe);
         };
 
-    },[marketCodes.join('')]);
+    },[marketCodes.join(',')]);
 }
 
 export default useUpBitTickerSocket;
