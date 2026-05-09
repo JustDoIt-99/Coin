@@ -1,5 +1,5 @@
 import {createBrowserRouter} from "react-router-dom";
-import MarketPage from "./page/MarketPage.tsx";
+import MarketPage from "@pages/MarketPage.tsx";
 
 export const router = createBrowserRouter([
     {
