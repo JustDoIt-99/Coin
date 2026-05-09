@@ -90,10 +90,10 @@ export const MainPrice = styled.div`
     gap: 6px;
 `;
 
-export const Price = styled.div`
+export const Price = styled.div<{ color: string }>`
     font-size: 34px;
     font-weight: 700;
-    color: #d64348;
+    color: ${({ color }) => color};
     letter-spacing: -1px;
 
     span {
@@ -122,7 +122,7 @@ export const StatGroup = styled.div`
 
 export const StatRow = styled.div`
     display: grid;
-    grid-template-columns: 100px 1fr;
+    grid-template-columns: 80px 1fr;
     align-items: center;
     height: 38px;
     border-bottom: 1px solid #e3e6eb;
