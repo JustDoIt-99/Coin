@@ -9,6 +9,7 @@ interface Props {
     usdtPrice?: number;
     nameType?: string;
     flashKey?: number;
+    onClick:() => void;
 }
 
 function formatPrice(price?: number, market?: string) {
@@ -77,7 +78,7 @@ function convertToKRW(
     return null;
 }
 
-function MarketRow({market, ticker, btcPrice, usdtPrice, nameType, flashKey}: Props) {
+function MarketRow({market, ticker, btcPrice, usdtPrice, nameType, flashKey, onClick}: Props) {
 
     const rate = ticker?.signed_change_rate ?? 0;
     const isUp = rate > 0;
@@ -91,7 +92,7 @@ function MarketRow({market, ticker, btcPrice, usdtPrice, nameType, flashKey}: Pr
     );
 
     return (
-        <Row>
+        <Row onClick={onClick}>
             <Star/>
             <NameBox>
                 <strong>{nameType === "korean" ? market.korean_name : market.english_name}</strong>
