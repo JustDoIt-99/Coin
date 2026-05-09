@@ -3,7 +3,7 @@ import MarketRow from "../MarketRow";
 import type {MarketTab} from "@page/MarketPage.tsx";
 import MarketTabs from "../MarketTabs/MarketTabs.tsx";
 import MarketHeaderRow from "../MarketHeaderRow";
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import MarketSearch from "../MarketSearch";
 import {useQuery} from "@tanstack/react-query";
 import useUpBitTickerSocket from "@hooks/useUpbitTickerSocket.ts";
@@ -11,7 +11,10 @@ import {RowList, Container} from "./MarketSidebar.styles.ts";
 import type {NameType, SortedKey, SortOrder} from "@components/market/sidebar/type.ts";
 
 interface Props {
-    markets: Market[];
+    markets: Market[] | null;
+    onSelectedMarket: (market:Market) => void;
+    tickerMap: Record<string, Ticker>;
+    setTickerMap: Dispatch<SetStateAction<Record<string, Ticker>>>;
 }
 
 interface TickerMessage {
@@ -21,7 +24,7 @@ interface TickerMessage {
     acc_trade_price_24h: number;
 }
 
-function MarketSidebar({markets} : Props) {
+function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : Props) {
 
     const [sortKey, setSortKey] = useState<SortedKey>(null);
     const [sortOrder, setSortOrder] = useState<SortOrder>(null);
@@ -29,11 +32,9 @@ function MarketSidebar({markets} : Props) {
     const [nameType, setNameType] = useState<NameType>("korean");
     const [search, setSearch] = useState<string>("");
     const [activeTab, setActiveTab] = useState<MarketTab>("KRW");
-    const [tickerMap, setTickerMap] = useState<Record<string,Ticker>>({});
     const [flashMap, setFlashMap] = useState<Record<string, number>>({});
 
     const prevPriceRef = useRef<Record<string, number>>({});
-
 
     const tabMarkets = useMemo(() => {
        return markets?.filter((market) => market.market.startsWith(activeTab)) ?? [];
