@@ -159,6 +159,7 @@ function MarketSidebar({markets} : Props) {
             <RowList>
                 {sortedMarkets?.map((market) => (
                     <MarketRow
+                        onClick={() => onSelectedMarket(market)}
                         key={market.market}
                         market={market}
                         ticker={tickerMap[market.market]}
