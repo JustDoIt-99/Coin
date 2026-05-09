@@ -1,6 +1,6 @@
 import {fetchTickers, type Market, type Ticker} from "@api/api.ts";
 import MarketRow from "../MarketRow";
-import type {MarketTab} from "@page/MarketPage.tsx";
+import type {MarketTab} from "@pages/MarketPage.tsx";
 import MarketTabs from "../MarketTabs/MarketTabs.tsx";
 import MarketHeaderRow from "../MarketHeaderRow";
 import {type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState} from "react";
