@@ -13,7 +13,7 @@ import type {Market, Ticker} from "@api/api.ts";
 
 interface Props {
     market:Market | null;
-    ticker: Ticker
+    ticker?: Ticker
 }
 
 function CoinDetail({market, ticker} : Props) {
