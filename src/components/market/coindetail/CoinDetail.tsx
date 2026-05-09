@@ -58,7 +58,7 @@ function CoinDetail({market, ticker} : Props) {
                     </Price>
                     <Change
                         style={{
-                            color: isPositive ? "#d64348" : isNegative ? "#126ee2" : "#666",
+                            color: isPositive ? "#d64348" : isNegative ? "#126ee2" : "#222",
                         }}
                     >
                         {ticker
