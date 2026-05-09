@@ -110,6 +110,10 @@ function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : P
                     market: data.code,
                     trade_price: nextPrice,
                     signed_change_rate: data.signed_change_rate,
+                    signed_change_price: data.signed_change_price,
+                    high_price: data.high_price,
+                    low_price: data.low_price,
+                    acc_trade_volume_24h: data.acc_trade_volume_24h,
                     acc_trade_price_24h: data.acc_trade_price_24h,
                 },
             };
