@@ -9,15 +9,24 @@ import {
     Tab,
     Tabs
 } from "@components/market/coindetail/CoinDetail.styles.ts";
-import type {Market} from "@api/api.ts";
+import type {Market, Ticker} from "@api/api.ts";
 
 interface Props {
     market:Market | null;
+    ticker: Ticker
 }
 
-function CoinDetail({market} : Props) {
+function CoinDetail({market, ticker} : Props) {
 
-    console.log(market);
+    const marketCode = market?.market ?? "KRW-BTC";
+    const coinName = market?.korean_name ?? "비트코인";
+    const [baseMarket, symbol] = marketCode.split("-");
+
+    const changeRate = ticker?.signed_change_rate ?? 0;
+    const isPositive = changeRate > 0;
+    const isNegative = changeRate < 0;
+
+    const changeColor = changeRate > 0 ? "#d64348" : changeRate < 0 ? "#126ee2" : "#222";
 
     return (
         <Container>
@@ -26,54 +35,65 @@ function CoinDetail({market} : Props) {
                     <CoinIcon>
                         <Bitcoin />
                     </CoinIcon>
-                    <strong>비트코인</strong>
-                    <span>BTC/KRW</span>
+                    <strong>{coinName}</strong>
+                    <span>
+            {symbol}/{baseMarket}
+          </span>
                     <ChevronDown size={18} />
                 </CoinTitle>
-
                 <Tabs>
                     <Tab active>시세</Tab>
                     <Tab>정보</Tab>
                     <Tab>마켓 인사이트</Tab>
                 </Tabs>
-
                 <SettingButton>
                     <Settings size={22} />
                 </SettingButton>
             </Header>
-
             <Content>
                 <MainPrice>
-                    <Price>
-                        118,423,000<span>KRW</span>
+                    <Price color={changeColor}>
+                        {ticker?.trade_price?.toLocaleString() ?? "-"}
+                        <span>{baseMarket}</span>
                     </Price>
-                    <Change>+0.23% ▲ 273,000</Change>
+                    <Change
+                        style={{
+                            color: isPositive ? "#d64348" : isNegative ? "#126ee2" : "#666",
+                        }}
+                    >
+                        {ticker
+                            ? `${(ticker.signed_change_rate * 100).toFixed(2)}% ${
+                                isPositive ? "▲" : isNegative ? "▼" : ""
+                            } ${ticker.signed_change_price.toLocaleString()}`
+                            : "-"}
+                    </Change>
                 </MainPrice>
-
                 <MiniChartBox />
-
                 <StatGroup>
                     <StatRow>
                         <span>고가</span>
-                        <Red>118,750,000</Red>
+                        <Red>{ticker?.high_price?.toLocaleString() ?? "-"}</Red>
                     </StatRow>
                     <StatRow>
                         <span>저가</span>
-                        <Blue>118,106,000</Blue>
+                        <Blue>{ticker?.low_price?.toLocaleString() ?? "-"}</Blue>
                     </StatRow>
                 </StatGroup>
-
                 <StatGroup>
                     <StatRow>
                         <span>거래량(24H)</span>
                         <strong>
-                            908.135<small>BTC</small>
+                            {ticker?.acc_trade_volume_24h?.toLocaleString(undefined, {
+                                maximumFractionDigits: 3,
+                            }) ?? "-"}
+                            <small>{symbol}</small>
                         </strong>
                     </StatRow>
                     <StatRow>
                         <span>거래대금(24H)</span>
                         <strong>
-                            107,377,789,197<small>KRW</small>
+                            {ticker?.acc_trade_price_24h?.toLocaleString() ?? "-"}
+                            <small>{baseMarket}</small>
                         </strong>
                     </StatRow>
                 </StatGroup>
