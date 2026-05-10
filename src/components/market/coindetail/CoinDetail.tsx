@@ -8,7 +8,7 @@ import {
     SettingButton, StatGroup, StatRow,
     Tab,
     Tabs
-} from "@components/market/coindetail/CoinDetail.styles.ts";
+} from "./CoinDetail.styles.ts";
 import type {Market, Ticker} from "@api/api.ts";
 
 interface Props {
