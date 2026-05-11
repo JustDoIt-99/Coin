@@ -46,7 +46,7 @@ export async function fetchTickers(markets:string[]): Promise<Ticker[]> {
 }
 
 export async function fetchMinuteCandles(market:string, unit = 5, count = 100): Promise<MinuteCandle[]> {
-    const response = await fetch(`https://api.upbit.com/v1/candles/minutes/${unit}?market=${market}&count=${count}`);
+    const response = await fetch(`${API.CANDLES}/${unit}?market=${market}&count=${count}`);
 
     if (!response.ok) {
         throw new Error("캔들 데이터 조회 실패");
