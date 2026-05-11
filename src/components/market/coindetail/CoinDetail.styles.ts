@@ -51,22 +51,6 @@ export const CoinIcon = styled.div`
     }
 `;
 
-export const Tabs = styled.div`
-    height: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-`;
-
-export const Tab = styled.button<{ active?: boolean }>`
-    border: none;
-    background: #fff;
-    font-size: 16px;
-    font-weight: 700;
-    color: ${({ active }) => (active ? "#1261d8" : "#222")};
-    border-bottom: ${({ active }) =>
-    active ? "3px solid #1261d8" : "3px solid transparent"};
-`;
-
 export const SettingButton = styled.button`
     height: 100%;
     border: none;

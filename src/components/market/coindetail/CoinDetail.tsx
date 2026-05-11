@@ -6,10 +6,9 @@ import {
     CoinTitle, Container, Content,
     Header, MainPrice, MiniChartBox, Price, Red,
     SettingButton, StatGroup, StatRow,
-    Tab,
-    Tabs
 } from "./CoinDetail.styles.ts";
 import type {Market, Ticker} from "@api/api.ts";
+import MiniPriceChart from "@components/market/coindetail/MiniPriceChart";
 
 interface Props {
     market:Market | null;
@@ -41,11 +40,6 @@ function CoinDetail({market, ticker} : Props) {
           </span>
                     <ChevronDown size={18} />
                 </CoinTitle>
-                <Tabs>
-                    <Tab active>시세</Tab>
-                    <Tab>정보</Tab>
-                    <Tab>마켓 인사이트</Tab>
-                </Tabs>
                 <SettingButton>
                     <Settings size={22} />
                 </SettingButton>
@@ -68,7 +62,9 @@ function CoinDetail({market, ticker} : Props) {
                             : "-"}
                     </Change>
                 </MainPrice>
-                <MiniChartBox />
+                <MiniChartBox>
+                    <MiniPriceChart marketCode={marketCode} prevClosingPrice={ticker?.prev_closing_price}/>
+                </MiniChartBox>
                 <StatGroup>
                     <StatRow>
                         <span>고가</span>
@@ -92,7 +88,9 @@ function CoinDetail({market, ticker} : Props) {
                     <StatRow>
                         <span>거래대금(24H)</span>
                         <strong>
-                            {ticker?.acc_trade_price_24h?.toLocaleString() ?? "-"}
+                            {ticker?.acc_trade_price_24h?.toLocaleString(undefined, {
+                                maximumFractionDigits: 0,
+                            }) ?? "-"}
                             <small>{baseMarket}</small>
                         </strong>
                     </StatRow>

@@ -26,6 +26,7 @@ interface TickerMessage {
     low_price: number;
     acc_trade_volume_24h: number;
     acc_trade_price_24h: number;
+    prev_closing_price: number;
 }
 
 function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : Props) {
@@ -115,6 +116,7 @@ function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : P
                     low_price: data.low_price,
                     acc_trade_volume_24h: data.acc_trade_volume_24h,
                     acc_trade_price_24h: data.acc_trade_price_24h,
+                    prev_closing_price: data.prev_closing_price
                 },
             };
         });
