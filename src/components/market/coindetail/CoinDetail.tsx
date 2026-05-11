@@ -1,11 +1,10 @@
-import {Bitcoin, ChevronDown, Settings} from "lucide-react";
+import {Bitcoin, ChevronDown} from "lucide-react";
 import {
     Blue,
     Change,
     CoinIcon,
     CoinTitle, Container, Content,
-    Header, MainPrice, MiniChartBox, Price, Red,
-    SettingButton, StatGroup, StatRow,
+    Header, MainPrice, MiniChartBox, Price, Red, StatGroup, StatRow,
 } from "./CoinDetail.styles.ts";
 import type {Market, Ticker} from "@api/api.ts";
 import MiniPriceChart from "@components/market/coindetail/MiniPriceChart";
@@ -40,9 +39,6 @@ function CoinDetail({market, ticker} : Props) {
           </span>
                     <ChevronDown size={18} />
                 </CoinTitle>
-                <SettingButton>
-                    <Settings size={22} />
-                </SettingButton>
             </Header>
             <Content>
                 <MainPrice>
