@@ -33,7 +33,7 @@ function MiniPriceChart({ marketCode, prevClosingPrice }: Props) {
         }
 
         return getChartRange(priceHistory);
-    }, [priceHistory, prevClosingPrice]);
+    }, [priceHistory]);
 
     const segments = useMemo(() => {
         if (priceHistory.length === 0 || prevClosingPrice === undefined) {
