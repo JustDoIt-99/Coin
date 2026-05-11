@@ -15,6 +15,13 @@ export interface Ticker {
     low_price: number;
     acc_trade_volume_24h: number;
     acc_trade_price_24h: number;
+    prev_closing_price: number;
+}
+
+export interface MinuteCandle {
+    market: string;
+    candle_date_time_kst: string;
+    trade_price: number;
 }
 
 export async function fetchMarkets(): Promise<Market[]> {
@@ -33,6 +40,16 @@ export async function fetchTickers(markets:string[]): Promise<Ticker[]> {
 
     if (!response.ok) {
         throw new Error("Failed to fetch tickers");
+    }
+
+    return response.json();
+}
+
+export async function fetchMinuteCandles(market:string, unit = 5, count = 100): Promise<MinuteCandle[]> {
+    const response = await fetch(`${API.CANDLES}/${unit}?market=${market}&count=${count}`);
+
+    if (!response.ok) {
+        throw new Error("캔들 데이터 조회 실패");
     }
 
     return response.json();
