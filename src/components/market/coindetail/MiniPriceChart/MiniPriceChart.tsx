@@ -2,7 +2,7 @@ import {Area, ComposedChart, Line, ResponsiveContainer, XAxis, YAxis} from "rech
 import {useQuery} from "@tanstack/react-query";
 import {fetchMinuteCandles} from "@api/api.ts";
 import {memo, useMemo} from "react";
-import {type ChartPoint, type ChartRange, getChartRange, makeSegments} from "@utils/chart/makeSegement.ts";
+import {type ChartPoint, type ChartRange, getChartRange, makeSegments} from "@utils/chart/makeSegment.ts";
 
 interface Props {
     marketCode: string;
