@@ -51,14 +51,6 @@ export const CoinIcon = styled.div`
     }
 `;
 
-export const SettingButton = styled.button`
-    height: 100%;
-    border: none;
-    border-left: 1px solid #dfe3ea;
-    background: #fff;
-    color: #999;
-`;
-
 export const Content = styled.div`
     height: 100px;
     display: grid;
