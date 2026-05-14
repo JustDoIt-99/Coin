@@ -5,6 +5,7 @@ import MarketSidebar from "@components/market/sidebar/MarketSidebar";
 import CoinDetail from "@components/market/coindetail";
 import {ContentArea, PageBackground, PageLayout, SidebarArea} from "@pages/MarketPage.styles.ts";
 import {useState} from "react";
+import CoinCandleChart from "@components/market/chart/CoinCandleChart.tsx";
 
 export type MarketTab = "KRW" | "BTC" | "USDT";
 
@@ -22,6 +23,9 @@ function MarketPage() {
     const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
     const [tickerMap, setTickerMap] = useState<Record<string,Ticker>>({});
 
+    const marketCode = selectedMarket?.market ?? "KRW-BTC";
+    const ticker = tickerMap[marketCode];
+
     if (isLoading) return <Loading />;
     if (isError) return <div>데이터를 불러오지 못했습니다.</div>;
 
@@ -30,6 +34,7 @@ function MarketPage() {
             <PageLayout>
                 <ContentArea>
                     <CoinDetail market={selectedMarket} ticker={ selectedMarket ? tickerMap[selectedMarket.market] : tickerMap["KRW-BTC"]}/>
+                    <CoinCandleChart marketCode={marketCode} unit={15} currentPrice={ticker?.trade_price}/>
                 </ContentArea>
                 <SidebarArea>
                     <MarketSidebar
