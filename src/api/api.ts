@@ -42,7 +42,7 @@ export async function fetchMarkets(): Promise<Market[]> {
     return response.json();
 }
 
-export async function fetchTickers(markets:string[]): Promise<MinuteCandle[]> {
+export async function fetchTickers(markets:string[]): Promise<Ticker[]> {
     const query = markets.join(",");
     const response = await fetch(`${API.TICKERS}?markets=${query}`);
 
