@@ -163,7 +163,7 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
             chartRef.current = null;
             candleSeriesRef.current = null;
         }
-    }, [marketCode]);
+    }, [marketCode, unit]);
 
     useEffect(() => {
         if (!candles || !candleSeriesRef.current || !chartRef.current) return;
