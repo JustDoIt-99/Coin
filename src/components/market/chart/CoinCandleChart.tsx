@@ -35,10 +35,7 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
 
     const toChartData = (candles: MinuteCandle[]): CandlestickData<Time>[] => {
         return [...candles].reverse().map((candle) => ({
-            time: Math.floor(
-                new Date(`${candle.candle_date_time_utc}Z`).getTime() / 1000 +
-                KST_OFFSET_SECONDS
-            ) as Time,
+            time: Math.floor(candle.timestamp / 1000 + KST_OFFSET_SECONDS) as Time,
             open: candle.opening_price,
             high: candle.high_price,
             low: candle.low_price,
