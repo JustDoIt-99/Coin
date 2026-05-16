@@ -36,6 +36,16 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
         refetchInterval: 1000 * 60 * unit
     });
 
+    useEffect(() => {
+        isFirstLoadingChartRef.current = true;
+        candleDataRef.current = [];
+        oldestCandleRef.current = "";
+        lastCandleRef.current = null;
+        requestedOlderRef.current = false;
+        isLoadingOlderRef.current = false;
+        candleSeriesRef.current?.setData([]);
+    }, [marketCode, unit]);
+
     const toChartData = (candles: MinuteCandle[]): CandlestickData<Time>[] => {
         return [...candles].reverse().map((candle) => ({
             time: Math.floor(candle.timestamp / 1000 + KST_OFFSET_SECONDS) as Time,
@@ -153,7 +163,7 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
             chartRef.current = null;
             candleSeriesRef.current = null;
         }
-    }, []);
+    }, [marketCode]);
 
     useEffect(() => {
         if (!candles || !candleSeriesRef.current || !chartRef.current) return;
