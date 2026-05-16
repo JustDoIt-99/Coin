@@ -91,7 +91,7 @@ export async function fetchMinuteCandlesPage(
 
         if (candles.length == 0) break;
 
-        result = [...result,  ...candles];
+        result.push(...candles);
 
         const oldestCandle = candles[candles.length - 1];
         nextTo = oldestCandle.candle_date_time_utc;
