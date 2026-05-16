@@ -4,7 +4,7 @@ import {
     CandlestickSeries,
     createChart,
     type IChartApi,
-    type ISeriesApi, type Time
+    type ISeriesApi, type LogicalRange, type Time
 } from "lightweight-charts";
 import {useQuery} from "@tanstack/react-query";
 import {fetchMinuteCandlesPage, type MinuteCandle} from "@api/api.ts";
@@ -79,7 +79,7 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
         chartRef.current = chart;
         candleSeriesRef.current = candleSeries;
 
-        const handleVisibleRangeChange = async (range: any) => {
+        const handleVisibleRangeChange = async (range: LogicalRange | null) => {
             if (!range) return;
             if (range.from >= 20) {
                 requestedOlderRef.current = false;
