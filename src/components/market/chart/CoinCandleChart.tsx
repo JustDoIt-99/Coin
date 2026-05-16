@@ -16,6 +16,8 @@ interface Props {
     currentPrice?: number
 }
 
+const LOAD_MORE_THRESHOLD = 20;
+
 function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
     const chartContainerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<IChartApi | null>(null);
@@ -81,7 +83,7 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
 
         const handleVisibleRangeChange = async (range: LogicalRange | null) => {
             if (!range) return;
-            if (range.from >= 20) {
+            if (range.from >= LOAD_MORE_THRESHOLD) {
                 requestedOlderRef.current = false;
                 return;
             }
