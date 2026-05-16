@@ -27,6 +27,7 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
     const oldestCandleRef = useRef<string>("");
     const requestedOlderRef = useRef(false);
     const isLoadingOlderRef = useRef<boolean>(false);
+    const isFirstLoadingChartRef = useRef<boolean>(true);
 
     const {data: candles} = useQuery({
         queryKey: ["candle-chart", marketCode, unit],
@@ -106,6 +107,8 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
                     oldestCandleRef.current
                 );
 
+                const visibleRange = chart.timeScale().getVisibleLogicalRange();
+
                 if (olderCandles.length === 0) return;
 
                 const olderChartData = toChartData(olderCandles);
@@ -115,6 +118,14 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
                 ];
 
                 candleSeries.setData(candleDataRef.current);
+
+                if (visibleRange) {
+                    chart.timeScale().setVisibleLogicalRange({
+                        from: visibleRange.from + olderChartData.length,
+                        to: visibleRange.to + olderChartData.length
+                    });
+                }
+
                 oldestCandleRef.current = olderCandles[olderCandles.length - 1].candle_date_time_utc;
             } catch (error) {
                 console.error("과거 캔들 조회 실패", error);
@@ -147,13 +158,15 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
     useEffect(() => {
         if (!candles || !candleSeriesRef.current || !chartRef.current) return;
 
-        oldestCandleRef.current = candles[candles.length - 1].candle_date_time_utc;
+        if (!isFirstLoadingChartRef.current) return;
 
+        oldestCandleRef.current = candles[candles.length - 1].candle_date_time_utc;
         const chartData = toChartData(candles);
+
         candleDataRef.current = chartData;
         candleSeriesRef.current.setData(chartData);
         chartRef.current.timeScale().fitContent();
-
+        isFirstLoadingChartRef.current = false;
         lastCandleRef.current = chartData[chartData.length - 1];
     }, [candles]);
 
