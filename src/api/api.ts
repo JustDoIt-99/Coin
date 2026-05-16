@@ -20,8 +20,16 @@ export interface Ticker {
 
 export interface MinuteCandle {
     market: string;
+    candle_date_time_utc: string;
     candle_date_time_kst: string;
+    opening_price: number;
+    high_price: number;
+    low_price: number;
     trade_price: number;
+    timestamp: number;
+    candle_acc_trade_price: number;
+    candle_acc_trade_volume: number;
+    unit: number;
 }
 
 export async function fetchMarkets(): Promise<Market[]> {
@@ -45,12 +53,49 @@ export async function fetchTickers(markets:string[]): Promise<Ticker[]> {
     return response.json();
 }
 
-export async function fetchMinuteCandles(market:string, unit = 5, count = 100): Promise<MinuteCandle[]> {
-    const response = await fetch(`${API.CANDLES}/${unit}?market=${market}&count=${count}`);
+export async function fetchMinuteCandles(
+    market:string,
+    unit = 5,
+    count = 100,
+    to?: string
+    ): Promise<MinuteCandle[]> {
+    const params = new URLSearchParams({
+        market,
+        count: String(count),
+    });
+
+    if (to) {
+        params.append("to", to);
+    }
+
+    const response = await fetch(`${API.CANDLES}/${unit}?${params}`);
 
     if (!response.ok) {
         throw new Error("캔들 데이터 조회 실패");
     }
 
     return response.json();
+}
+
+export async function fetchMinuteCandlesPage(
+    market: string,
+    unit: number,
+    pageCount = 3,
+    to?: string
+): Promise<MinuteCandle[]> {
+    let result: MinuteCandle[] = [];
+    let nextTo = to;
+
+    for (let i = 0; i < pageCount; i++) {
+        const candles = await fetchMinuteCandles(market,  unit,  200, nextTo);
+
+        if (candles.length == 0) break;
+
+        result.push(...candles);
+
+        const oldestCandle = candles[candles.length - 1];
+        nextTo = oldestCandle.candle_date_time_utc;
+    }
+
+    return result;
 }
