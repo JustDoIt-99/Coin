@@ -33,3 +33,10 @@ export const SidebarArea = styled.aside`
     background: #fff;
     overflow: hidden;
 `;
+
+export const TradingPanel = styled.div`
+    display: flex;
+    flex-direction: column;
+    margin-top: 16px;
+    padding: 3px;
+`;
