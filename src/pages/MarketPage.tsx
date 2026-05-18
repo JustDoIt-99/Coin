@@ -3,19 +3,16 @@ import {fetchMarkets, type Market, type Ticker} from "@api/api.ts";
 import Loading from "@components/Loading.tsx";
 import MarketSidebar from "@components/market/sidebar/MarketSidebar";
 import CoinDetail from "@components/market/coindetail";
-import {ContentArea, PageBackground, PageLayout, SidebarArea} from "@pages/MarketPage.styles.ts";
+import {ContentArea, PageBackground, PageLayout, SidebarArea, TradingPanel} from "@pages/MarketPage.styles.ts";
 import {useState} from "react";
 import CoinCandleChart from "@components/market/chart/CoinCandleChart.tsx";
+import OrderBook from "@components/market/orderbook/OrderBook/OrderBook.tsx";
 
 export type MarketTab = "KRW" | "BTC" | "USDT";
 
 function MarketPage() {
 
-    const {
-        isLoading,
-        data: markets,
-        isError,
-    } = useQuery({
+    const { isLoading, data: markets, isError,} = useQuery({
         queryKey: ["markets"],
         queryFn: fetchMarkets,
     });
@@ -35,6 +32,9 @@ function MarketPage() {
                 <ContentArea>
                     <CoinDetail market={selectedMarket} ticker={ selectedMarket ? tickerMap[selectedMarket.market] : tickerMap["KRW-BTC"]}/>
                     <CoinCandleChart marketCode={marketCode} unit={15} currentPrice={ticker?.trade_price}/>
+                    <TradingPanel>
+                       <OrderBook marketCode={marketCode} prevClosingPrice={ticker?.prev_closing_price} ticker={ticker}/>
+                    </TradingPanel>
                 </ContentArea>
                 <SidebarArea>
                     <MarketSidebar
