@@ -18,14 +18,18 @@ export const PageLayout = styled.div`
 `;
 
 export const ContentArea = styled.section`
-  min-width: 0;
-  height: 100%;
-  background: #fff;
-  overflow: hidden;
+    min-width: 0;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
 `;
 
 export const SidebarArea = styled.aside`
-  height: 100%;
-  background: #fff;
-  overflow: hidden;
+    height: 100%;
+    background: #fff;
+    overflow: hidden;
 `;
