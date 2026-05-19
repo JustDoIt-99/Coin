@@ -13,7 +13,7 @@ import type {Ticker} from "@api/api.ts";
 
 interface Props {
     marketCode: string;
-    prevClosingPrice: number;
+    prevClosingPrice?: number;
     ticker?: Ticker
 }
 
