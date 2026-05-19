@@ -27,7 +27,7 @@ export const OrderBookHeader = styled.div`
 
 export const ColumnHeader = styled.div`
     display: grid;
-    grid-template-columns: 130px 140px 70px 230px;
+    grid-template-columns: 140px 130px 70px 230px;
     height: 32px;
     background: #f8f9fb;
 
