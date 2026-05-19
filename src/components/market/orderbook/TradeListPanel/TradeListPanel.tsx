@@ -29,6 +29,7 @@ function TradeListPanel({marketCode, ticker}: Props) {
             <StrengthRow>
                 <span>체결강도</span>
                 <strong>
+                    {strength >= 100 ? "+" : ""}
                     {strength.toFixed(2)}%
                 </strong>
             </StrengthRow>
