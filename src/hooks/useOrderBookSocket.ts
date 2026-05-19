@@ -1,8 +1,9 @@
 import {useEffect, useRef} from "react";
+import type {UpBitOrderBook} from "@components/market/orderbook/OrderBook/OrderBook.tsx";
 
 const URL = "wss://api.upbit.com/websocket/v1";
 
-function useOrderBookSocket(marketCode: string,  onMessage:(data:any) => void) {
+function useOrderBookSocket(marketCode: string,  onMessage:(data:UpBitOrderBook) => void) {
     const socketRef = useRef<WebSocket | null>(null);
     const onMessageRef = useRef(onMessage);
 
