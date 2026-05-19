@@ -19,13 +19,13 @@ function OrderBookPanel({type, rows}: Props) {
     return (
         <Panel>
             <OrderBookList>
-                {rows.map((row, index) => {
+                {rows.map((row) => {
                     const ratio = maxSize === 0
                         ? 0
                         : (row.size / maxSize) * 100;
                     return (
                         <OrderBookRow
-                            key={`${type}-${row.price}-${index}`}
+                            key={`${type}-${row.price}`}
                             type={type}
                             price={row.price}
                             size={row.size}
