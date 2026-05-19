@@ -20,6 +20,8 @@ export interface Ticker {
     highest_52_week_date: string;
     lowest_52_week_price: number;
     lowest_52_week_date: string;
+    acc_bid_volume: number;
+    acc_ask_volume: number;
 }
 
 export interface MinuteCandle {

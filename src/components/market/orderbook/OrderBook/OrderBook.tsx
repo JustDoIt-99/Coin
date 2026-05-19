@@ -70,7 +70,7 @@ function OrderBook({marketCode, prevClosingPrice, ticker}: Props) {
             </Section>
             <Section>
                 <OrderBookPanel type={"bid"} rows={bidRows}/>
-                <TradeListPanel marketCode={marketCode}/>
+                <TradeListPanel marketCode={marketCode} ticker={ticker}/>
             </Section>
         </OrderBookContainer>
     )

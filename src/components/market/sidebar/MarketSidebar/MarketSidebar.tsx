@@ -31,6 +31,8 @@ interface TickerMessage {
     highest_52_week_date: string;
     lowest_52_week_price: number;
     lowest_52_week_date: string;
+    acc_bid_volume: number;
+    acc_ask_volume: number;
 }
 
 function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : Props) {
@@ -124,7 +126,9 @@ function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : P
                     highest_52_week_price: data.highest_52_week_price,
                     highest_52_week_date: data.highest_52_week_date,
                     lowest_52_week_price: data.lowest_52_week_price,
-                    lowest_52_week_date: data.lowest_52_week_date
+                    lowest_52_week_date: data.lowest_52_week_date,
+                    acc_bid_volume: data.acc_bid_volume,
+                    acc_ask_volume: data.acc_ask_volume
                 },
             };
         });
