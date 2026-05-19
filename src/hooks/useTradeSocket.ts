@@ -32,7 +32,7 @@ function useTradeSocket(
                 const data = JSON.parse(text);
                 onMessageRef.current(data);
             } catch (error) {
-                console.log("Trade WebSocket parse error", error);
+                console.error("Trade WebSocket parse error", error);
             }
         };
 
