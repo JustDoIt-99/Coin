@@ -30,7 +30,7 @@ function MarketInfoPanel({ticker}: Props) {
                         {ticker.acc_trade_volume_24h.toLocaleString(undefined, {
                             maximumFractionDigits: 0,
                         })}{" "}
-                        <Unit>BTC</Unit>
+                        <Unit>{ticker.market.split('-')[1]}</Unit>
                     </Value>
                 </InfoRow>
                 <InfoRow>
