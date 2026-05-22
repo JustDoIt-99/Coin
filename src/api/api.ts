@@ -16,6 +16,12 @@ export interface Ticker {
     acc_trade_volume_24h: number;
     acc_trade_price_24h: number;
     prev_closing_price: number;
+    highest_52_week_price: number;
+    highest_52_week_date: string;
+    lowest_52_week_price: number;
+    lowest_52_week_date: string;
+    acc_bid_volume: number;
+    acc_ask_volume: number;
 }
 
 export interface MinuteCandle {

@@ -27,6 +27,12 @@ interface TickerMessage {
     acc_trade_volume_24h: number;
     acc_trade_price_24h: number;
     prev_closing_price: number;
+    highest_52_week_price: number;
+    highest_52_week_date: string;
+    lowest_52_week_price: number;
+    lowest_52_week_date: string;
+    acc_bid_volume: number;
+    acc_ask_volume: number;
 }
 
 function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : Props) {
@@ -116,7 +122,13 @@ function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : P
                     low_price: data.low_price,
                     acc_trade_volume_24h: data.acc_trade_volume_24h,
                     acc_trade_price_24h: data.acc_trade_price_24h,
-                    prev_closing_price: data.prev_closing_price
+                    prev_closing_price: data.prev_closing_price,
+                    highest_52_week_price: data.highest_52_week_price,
+                    highest_52_week_date: data.highest_52_week_date,
+                    lowest_52_week_price: data.lowest_52_week_price,
+                    lowest_52_week_date: data.lowest_52_week_date,
+                    acc_bid_volume: data.acc_bid_volume,
+                    acc_ask_volume: data.acc_ask_volume
                 },
             };
         });
