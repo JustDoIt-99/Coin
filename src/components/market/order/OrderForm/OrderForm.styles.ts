@@ -8,14 +8,14 @@ const tradeColor = {
 };
 
 export const Form = styled.div`
-    width: 355px;
-    padding: 15px 10px;
+    width: 100%;
+    padding: 20px 20px;
     box-sizing: border-box;
 `;
 
 export const Row = styled.div`
     display: grid;
-    grid-template-columns: 60px minmax(0, 1fr);
+    grid-template-columns: 100px minmax(0, 1fr);
     align-items: center;
     gap: 14px;
     margin-bottom: 12px;
@@ -72,12 +72,16 @@ export const InputBox = styled.div`
 `;
 
 export const PercentGrid = styled.div`
-    width: 100%;
     display: grid;
-    grid-template-columns: repeat(5, 48px);
-    gap: 5px;
-    margin-left: 75px;
-    margin-bottom: 12px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+`;
+
+export const PercentRow = styled.div`
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
 `;
 
 export const PercentButton = styled.button`

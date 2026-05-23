@@ -4,6 +4,7 @@ import Loading from "@components/Loading.tsx";
 import MarketSidebar from "@components/market/sidebar/MarketSidebar";
 import CoinDetail from "@components/market/coindetail";
 import {
+    ChartArea,
     ContentArea,
     OrderPanel,
     PageBackground,
@@ -39,7 +40,9 @@ function MarketPage() {
             <PageLayout>
                 <ContentArea>
                     <CoinDetail market={selectedMarket} ticker={ selectedMarket ? tickerMap[selectedMarket.market] : tickerMap["KRW-BTC"]}/>
-                    <CoinCandleChart marketCode={marketCode} unit={15} currentPrice={ticker?.trade_price}/>
+                    <ChartArea>
+                        <CoinCandleChart marketCode={marketCode} unit={15} currentPrice={ticker?.trade_price}/>
+                    </ChartArea>
                     <TradingOrderPanel>
                         <TradingPanel>
                             <OrderBook marketCode={marketCode} prevClosingPrice={ticker?.prev_closing_price} ticker={ticker}/>

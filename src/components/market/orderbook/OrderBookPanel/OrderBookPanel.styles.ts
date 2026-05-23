@@ -3,7 +3,7 @@ import styled from "@emotion/styled";
 export const Panel = styled.div`
     position: relative;
     display: grid;
-    width: 350px;
+    width: 290px;
     background: #fff;
     overflow-y: auto;
     overflow-x: hidden;

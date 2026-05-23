@@ -1,8 +1,7 @@
 import styled from "@emotion/styled";
 
 export const Container = styled.div<{ history?: boolean }>`
-    width: 355px;
-    height: 650px;
+    width: 98%;
     background: #fff;
 `;
 

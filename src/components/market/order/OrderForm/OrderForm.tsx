@@ -5,7 +5,7 @@ import {
     Form, InputBox,
     Label, Notice,
     OrderTypeButton,
-    OrderTypeTabs, PercentButton, PercentGrid, ResetButton, RightText,
+    OrderTypeTabs, PercentButton, PercentGrid, PercentRow, ResetButton, RightText,
     Row, SubmitButton,
     type TradeType
 } from "@components/market/order/OrderForm/OrderForm.styles.ts";
@@ -59,11 +59,16 @@ function OrderForm({tradeType}: OrderFormProps) {
                 </Label>
                 <InputBox>0</InputBox>
             </Row>
-            <PercentGrid>
-                {PERCENT.map((value) => (
-                    <PercentButton key={value}>{value}</PercentButton>
-                ))}
-            </PercentGrid>
+
+            <PercentRow>
+                <div/>
+                <PercentGrid>
+                    {PERCENT.map((value) => (
+                        <PercentButton key={value}>{value}</PercentButton>
+                    ))}
+                </PercentGrid>
+            </PercentRow>
+
             <Row>
                 <Label>
                     주문총액 <span>(KRW)</span>

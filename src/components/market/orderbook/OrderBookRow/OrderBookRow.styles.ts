@@ -2,7 +2,7 @@ import styled from "@emotion/styled";
 
 export const Row = styled.div<{ type: "ask" | "bid" }>`
     display: grid;
-    grid-template-columns: 140px 130px 70px;
+    grid-template-columns: 80px 130px 70px;
     height: 46px;
 
     background: ${({ type }) =>

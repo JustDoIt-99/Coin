@@ -2,11 +2,11 @@ import styled from "@emotion/styled";
 
 export const TabContainer = styled.div`
     display: grid;
-    grid-template-columns: repeat(3, 120px);
+    width: 100%;
+    grid-template-columns: repeat(3, 1fr);
     border-bottom: 1px solid #dcdfe4;
     background: #fff;
 `;
-
 
 export const TabButton = styled.button<TabButtonProps>`
     height: 50px;
