@@ -2,7 +2,7 @@ import styled from "@emotion/styled";
 
 export const OrderBookContainer = styled.div`
     height: 700px;
-    width: 590px;
+    width: 570px;
     background-color: #fff;
     overflow-y: auto;
     overflow-x: hidden;
