@@ -35,7 +35,7 @@ export const TableScroll = styled.div`
 
 export const Table = styled.div`
     width: 100%;
-    Height: 100%;
+    height: 100%;
 `;
 
 export const Header = styled.div`
