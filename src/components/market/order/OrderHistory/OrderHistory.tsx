@@ -38,7 +38,7 @@ const trades: TradeItem[] = [
         quantity: 0.00061292,
     },
     {
-        id: 1,
+        id: 3,
         date: "2026.01.27",
         time: "15:46",
         market: "BTC/KRW",
@@ -48,7 +48,7 @@ const trades: TradeItem[] = [
         quantity: 0.00007744,
     },
     {
-        id: 2,
+        id: 4,
         date: "2025.10.22",
         time: "19:13",
         market: "BTC/KRW",
@@ -58,7 +58,7 @@ const trades: TradeItem[] = [
         quantity: 0.00061292,
     },
     {
-        id: 2,
+        id: 5,
         date: "2025.10.22",
         time: "19:13",
         market: "BTC/KRW",
@@ -68,7 +68,7 @@ const trades: TradeItem[] = [
         quantity: 0.00061292,
     },
     {
-        id: 2,
+        id: 6,
         date: "2025.10.22",
         time: "19:13",
         market: "BTC/KRW",
@@ -78,7 +78,7 @@ const trades: TradeItem[] = [
         quantity: 0.00061292,
     },
     {
-        id: 2,
+        id: 7,
         date: "2025.10.22",
         time: "19:13",
         market: "BTC/KRW",
