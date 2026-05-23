@@ -3,10 +3,19 @@ import {fetchMarkets, type Market, type Ticker} from "@api/api.ts";
 import Loading from "@components/Loading.tsx";
 import MarketSidebar from "@components/market/sidebar/MarketSidebar";
 import CoinDetail from "@components/market/coindetail";
-import {ContentArea, PageBackground, PageLayout, SidebarArea, TradingPanel} from "@pages/MarketPage.styles.ts";
+import {
+    ChartArea,
+    ContentArea,
+    OrderPanel,
+    PageBackground,
+    PageLayout,
+    SidebarArea, TradingOrderPanel,
+    TradingPanel
+} from "@pages/MarketPage.styles.ts";
 import {useState} from "react";
 import CoinCandleChart from "@components/market/chart/CoinCandleChart.tsx";
 import OrderBook from "@components/market/orderbook/OrderBook/OrderBook.tsx";
+import Order from "@components/market/order/Order";
 
 export type MarketTab = "KRW" | "BTC" | "USDT";
 
@@ -31,10 +40,17 @@ function MarketPage() {
             <PageLayout>
                 <ContentArea>
                     <CoinDetail market={selectedMarket} ticker={ selectedMarket ? tickerMap[selectedMarket.market] : tickerMap["KRW-BTC"]}/>
-                    <CoinCandleChart marketCode={marketCode} unit={15} currentPrice={ticker?.trade_price}/>
-                    <TradingPanel>
-                       <OrderBook marketCode={marketCode} prevClosingPrice={ticker?.prev_closing_price} ticker={ticker}/>
-                    </TradingPanel>
+                    <ChartArea>
+                        <CoinCandleChart marketCode={marketCode} unit={15} currentPrice={ticker?.trade_price}/>
+                    </ChartArea>
+                    <TradingOrderPanel>
+                        <TradingPanel>
+                            <OrderBook marketCode={marketCode} prevClosingPrice={ticker?.prev_closing_price} ticker={ticker}/>
+                        </TradingPanel>
+                        <OrderPanel>
+                            <Order/>
+                        </OrderPanel>
+                    </TradingOrderPanel>
                 </ContentArea>
                 <SidebarArea>
                     <MarketSidebar

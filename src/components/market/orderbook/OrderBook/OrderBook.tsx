@@ -1,14 +1,14 @@
 import {useState} from "react";
 import useOrderBookSocket from "@hooks/useOrderBookSocket.ts";
-import OrderBookPanel from "@components/market/orderbook/OrderBookPanel/OrderBookPanel.tsx";
-import MarketInfoPanel from "@components/market/orderbook/MarketInfoPanel/MarketInfoPanel.tsx";
+import OrderBookPanel from "@components/market/orderbook/OrderBookPanel";
+import MarketInfoPanel from "@components/market/orderbook/MarketInfoPanel";
 import {
     ColumnHeader,
     MarketInfoWrapper,
     OrderBookContainer, OrderBookHeader,
     Section
 } from "@components/market/orderbook/OrderBook/OrderBook.styles.ts";
-import TradeListPanel from "@components/market/orderbook/TradeListPanel/TradeListPanel.tsx";
+import TradeListPanel from "@components/market/orderbook/TradeListPanel";
 import type {Ticker} from "@api/api.ts";
 
 interface Props {

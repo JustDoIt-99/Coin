@@ -2,7 +2,7 @@ import styled from "@emotion/styled";
 
 export const OrderBookContainer = styled.div`
     height: 700px;
-    width: 590px;
+    width: 500px;
     background-color: #fff;
     overflow-y: auto;
     overflow-x: hidden;
@@ -10,7 +10,7 @@ export const OrderBookContainer = styled.div`
 
 export const Section = styled.div`
     display: grid;
-    grid-template-columns: 340px 250px;
+    grid-template-columns: 290px 150px;
 `;
 
 export const MarketInfoWrapper = styled.div`
@@ -27,7 +27,7 @@ export const OrderBookHeader = styled.div`
 
 export const ColumnHeader = styled.div`
     display: grid;
-    grid-template-columns: 140px 130px 70px 230px;
+    grid-template-columns: 85px 120px 65px 235px;
     height: 32px;
     background: #f8f9fb;
 

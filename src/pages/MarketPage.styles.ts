@@ -6,12 +6,15 @@ export const PageBackground = styled.main`
     min-height: 100vh;
     box-sizing: border-box;
     background: #eef1f6;
-    padding: 16px 70px 0;
     overflow: hidden;
 `;
 
 export const PageLayout = styled.div`
+    width: min(100%, 1400px);
     height: calc(100vh - 16px);
+
+    margin: 0 auto;
+    
     display: grid;
     grid-template-columns: minmax(0, 1fr) 420px;
     gap: 12px;
@@ -34,9 +37,29 @@ export const SidebarArea = styled.aside`
     overflow: hidden;
 `;
 
+export const TradingOrderPanel = styled.div`
+    width: 100%;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: 500px 465px;
+    margin-top: 12px;
+`;
+
 export const TradingPanel = styled.div`
     display: flex;
     flex-direction: column;
-    margin-top: 16px;
-    padding: 3px;
+`;
+
+export const OrderPanel = styled.div`
+    width: 100%;
+    min-width: 360px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+`;
+
+export const ChartArea = styled.div`
+    width: 100%;
+    min-width: 930px;
+    background: #fff;
 `;
