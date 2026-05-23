@@ -34,9 +34,18 @@ export const SidebarArea = styled.aside`
     overflow: hidden;
 `;
 
+export const TradingOrderPanel = styled.div`
+    display: flex;
+    margin-top: 10px;
+    padding: 3px;
+`;
+
 export const TradingPanel = styled.div`
     display: flex;
     flex-direction: column;
-    margin-top: 16px;
-    padding: 3px;
+`;
+
+export const OrderPanel = styled.div`
+    display: flex;
+    flex-direction: column;
 `;
