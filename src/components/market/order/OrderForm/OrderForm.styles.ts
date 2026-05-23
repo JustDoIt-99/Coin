@@ -23,7 +23,7 @@ export const Row = styled.div`
 
 export const Label = styled.div`
     font-size: 15px;
-    font-weight: 00;
+    font-weight: 500;
     color: #4b5563;
 
     span {
@@ -50,7 +50,7 @@ export const OrderTypeButton = styled.button<{ active?: boolean }>`
     color: ${({ active }) =>
     active ? "#0062df" : "#4b5563"};
     font-size: 13px;
-    font-weight: 7s00;
+    font-weight: 700;
     cursor: pointer;
     &:last-of-type {
         border-right: none;
