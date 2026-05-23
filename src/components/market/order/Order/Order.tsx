@@ -1,7 +1,7 @@
 import {useState} from "react";
-import OrderTab from "@components/market/order/OrderTab/OrderTab.tsx";
-import OrderForm from "@components/market/order/OrderForm/OrderForm.tsx";
-import OrderHistory from "@components/market/order/OrderHistory/OrderHistory.tsx";
+import OrderTab from "@components/market/order/OrderTab";
+import OrderForm from "@components/market/order/OrderForm";
+import OrderHistory from "@components/market/order/OrderHistory";
 import {Container} from "@components/market/order/Order/Order.styles.ts";
 
 function Order() {

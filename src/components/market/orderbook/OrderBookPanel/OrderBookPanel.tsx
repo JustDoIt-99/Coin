@@ -1,5 +1,5 @@
 import {OrderBookList, Panel} from "@components/market/orderbook/OrderBookPanel/OrderBookPanel.styles.ts";
-import OrderBookRow from "@components/market/orderbook/OrderBookRow/OrderBookRow.tsx";
+import OrderBookRow from "@components/market/orderbook/OrderBookRow";
 
 interface Props {
     type: "ask" | "bid";
