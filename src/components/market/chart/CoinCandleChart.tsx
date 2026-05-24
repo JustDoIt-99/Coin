@@ -80,12 +80,12 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
                 borderVisible: true
             },
             handleScroll: {
-                mouseWheel: false,
-                pressedMouseMove: false,
+                mouseWheel: !!active,
+                pressedMouseMove: !!active,
             },
             handleScale: {
-                mouseWheel: false,
-                pinch: false,
+                mouseWheel: !!active,
+                pinch: !!active,
             }
         });
 

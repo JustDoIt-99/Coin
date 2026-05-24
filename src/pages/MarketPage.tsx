@@ -18,7 +18,7 @@ import OrderBook from "@components/market/orderbook/OrderBook/OrderBook.tsx";
 import Order from "@components/market/order/Order";
 
 export type MarketTab = "KRW" | "BTC" | "USDT";
-type ActivePanel = "chart" | "orderbook" | "order" | "sidebar" | null;
+type ActivePanel = "chart" | "orderbook" | "order" | null;
 
 function MarketPage() {
 
@@ -41,8 +41,7 @@ function MarketPage() {
         <PageBackground onMouseDown={() => setActivePanel(null)}>
             <PageLayout>
                 <ContentArea>
-                    <CoinDetail market={selectedMarket}
-                                ticker={selectedMarket ? tickerMap[selectedMarket.market] : tickerMap["KRW-BTC"]}/>
+                    <CoinDetail market={selectedMarket} ticker={ticker}/>
                     <ChartArea onMouseDown={(e) => {
                         e.stopPropagation();
                         setActivePanel("chart");

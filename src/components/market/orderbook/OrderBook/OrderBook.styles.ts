@@ -4,7 +4,7 @@ export const OrderBookContainer = styled.div<{ active?: boolean }>`
     height: 700px;
     width: 500px;
     background-color: #fff;
-    overflow-y: auto;
+    overflow-y: ${({ active }) => (active ? "auto" : "hidden")};
     overflow-x: hidden;
 `;
 
