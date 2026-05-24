@@ -48,7 +48,7 @@ function MarketPage() {
                             <OrderBook marketCode={marketCode} prevClosingPrice={ticker?.prev_closing_price} ticker={ticker}/>
                         </TradingPanel>
                         <OrderPanel>
-                            <Order/>
+                            <Order ticker={ticker}/>
                         </OrderPanel>
                     </TradingOrderPanel>
                 </ContentArea>
