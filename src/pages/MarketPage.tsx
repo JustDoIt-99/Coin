@@ -18,36 +18,53 @@ import OrderBook from "@components/market/orderbook/OrderBook/OrderBook.tsx";
 import Order from "@components/market/order/Order";
 
 export type MarketTab = "KRW" | "BTC" | "USDT";
+type ActivePanel = "chart" | "orderbook" | "order" | null;
 
 function MarketPage() {
 
-    const { isLoading, data: markets, isError,} = useQuery({
+    const {isLoading, data: markets, isError,} = useQuery({
         queryKey: ["markets"],
         queryFn: fetchMarkets,
     });
 
     const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
-    const [tickerMap, setTickerMap] = useState<Record<string,Ticker>>({});
+    const [tickerMap, setTickerMap] = useState<Record<string, Ticker>>({});
+    const [activePanel, setActivePanel] = useState<ActivePanel>(null);
 
     const marketCode = selectedMarket?.market ?? "KRW-BTC";
     const ticker = tickerMap[marketCode];
 
-    if (isLoading) return <Loading />;
+    if (isLoading) return <Loading/>;
     if (isError) return <div>데이터를 불러오지 못했습니다.</div>;
 
     return (
-        <PageBackground>
+        <PageBackground onMouseDown={() => setActivePanel(null)}>
             <PageLayout>
                 <ContentArea>
-                    <CoinDetail market={selectedMarket} ticker={ selectedMarket ? tickerMap[selectedMarket.market] : tickerMap["KRW-BTC"]}/>
-                    <ChartArea>
-                        <CoinCandleChart marketCode={marketCode} unit={15} currentPrice={ticker?.trade_price}/>
+                    <CoinDetail market={selectedMarket} ticker={ticker}/>
+                    <ChartArea onMouseDown={(e) => {
+                        e.stopPropagation();
+                        setActivePanel("chart");
+                    }}>
+                        <CoinCandleChart marketCode={marketCode} unit={15} currentPrice={ticker?.trade_price}
+                                         active={activePanel === "chart"}/>
                     </ChartArea>
                     <TradingOrderPanel>
-                        <TradingPanel>
-                            <OrderBook marketCode={marketCode} prevClosingPrice={ticker?.prev_closing_price} ticker={ticker}/>
+                        <TradingPanel
+                            onMouseDown={(e) => {
+                                e.stopPropagation();
+                                setActivePanel("orderbook");
+                            }}
+                        >
+                            <OrderBook marketCode={marketCode} prevClosingPrice={ticker?.prev_closing_price}
+                                       ticker={ticker} active={activePanel === "orderbook"}/>
                         </TradingPanel>
-                        <OrderPanel>
+                        <OrderPanel
+                            onMouseDown={(e) => {
+                                e.stopPropagation();
+                                setActivePanel("order");
+                            }}
+                        >
                             <Order ticker={ticker}/>
                         </OrderPanel>
                     </TradingOrderPanel>
