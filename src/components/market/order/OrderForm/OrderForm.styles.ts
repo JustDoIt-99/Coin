@@ -57,20 +57,6 @@ export const OrderTypeButton = styled.button<{ active?: boolean }>`
     }
 `;
 
-export const InputBox = styled.div`
-    width: 100%;
-    height: 42px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 0 12px;
-    box-sizing: border-box;
-    font-size: 15px;
-    font-weight: 500;
-`;
-
 export const Divider = styled.div`
     height: 1px;
     background: #e5e7eb;
@@ -110,6 +96,11 @@ export const SubmitButton = styled.button<{ tradeType: TradeType }>`
     color: white;
     font-size: 16px;
     font-weight: 500;
+
+    &:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
 `;
 
 export const RightText = styled.div`
@@ -118,4 +109,34 @@ export const RightText = styled.div`
     font-size: 15px;
     font-weight: 700;
     color: #111827;
+`;
+
+export const InputBox = styled.input`
+  width: 100%;
+  height: 42px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 500;
+  outline: none;
+
+  &:focus {
+    border-color: #0062df;
+  }
+`;
+
+export const PercentInput = styled.input`
+  width: 48px;
+  height: 28px;
+  border: 1px solid #0062df;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  outline: none;
+  box-sizing: border-box;
 `;
