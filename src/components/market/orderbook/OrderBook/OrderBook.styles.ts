@@ -1,6 +1,6 @@
 import styled from "@emotion/styled";
 
-export const OrderBookContainer = styled.div`
+export const OrderBookContainer = styled.div<{ active?: boolean }>`
     height: 700px;
     width: 500px;
     background-color: #fff;

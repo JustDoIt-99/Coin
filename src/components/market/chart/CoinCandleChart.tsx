@@ -13,12 +13,13 @@ import {KST_OFFSET_SECONDS} from "@constants/chart.ts";
 interface Props {
     marketCode: string;
     unit?: number;
-    currentPrice?: number
+    currentPrice?: number,
+    active?: boolean
 }
 
 const LOAD_MORE_THRESHOLD = 20;
 
-function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
+function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
     const chartContainerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -77,6 +78,14 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
             },
             rightPriceScale : {
                 borderVisible: true
+            },
+            handleScroll: {
+                mouseWheel: false,
+                pressedMouseMove: false,
+            },
+            handleScale: {
+                mouseWheel: false,
+                pinch: false,
             }
         });
 
@@ -196,6 +205,20 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice}: Props) {
         candleSeriesRef.current.update(updatedCandle);
         lastCandleRef.current = updatedCandle;
     }, [currentPrice]);
+
+    useEffect(() => {
+        if (!chartRef.current) return;
+        chartRef.current.applyOptions({
+            handleScroll: {
+                mouseWheel: !!active,
+                pressedMouseMove: !!active,
+            },
+            handleScale: {
+                mouseWheel: !!active,
+                pinch: !!active,
+            },
+        });
+    }, [active]);
 
     return <div ref={chartContainerRef} style={{width: "100%", height: 420}}/>
 }

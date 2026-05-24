@@ -14,7 +14,8 @@ import type {Ticker} from "@api/api.ts";
 interface Props {
     marketCode: string;
     prevClosingPrice?: number;
-    ticker?: Ticker
+    ticker?: Ticker;
+    active: boolean;
 }
 
 export interface OrderBookUnit {
@@ -32,7 +33,7 @@ export interface UpBitOrderBook {
     orderbook_units: OrderBookUnit[];
 }
 
-function OrderBook({marketCode, prevClosingPrice, ticker}: Props) {
+function OrderBook({marketCode, prevClosingPrice, ticker, active}: Props) {
     const [orderBook, setOrderBook] = useState<UpBitOrderBook | null>(null);
 
     useOrderBookSocket(marketCode, setOrderBook);
@@ -53,7 +54,7 @@ function OrderBook({marketCode, prevClosingPrice, ticker}: Props) {
     }));
 
     return (
-        <OrderBookContainer>
+        <OrderBookContainer active={active}>
             <OrderBookHeader>
                 <ColumnHeader>
                     <span>수량</span>
