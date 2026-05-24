@@ -1,9 +1,7 @@
-import {useState} from "react";
 import {
     ButtonRow,
     Divider,
     Form,
-    InputBox,
     Label,
     Notice,
     OrderTypeButton,
@@ -15,12 +13,14 @@ import {
     type TradeType
 } from "@components/market/order/OrderForm/OrderForm.styles.ts";
 import PercentButtons from "@components/common/PercentButtons/PercentButtons.tsx";
+import type {Ticker} from "@api/api.ts";
+import OrderInputRow from "@components/common/OrderInputRow/OrderInputRow.tsx";
+import useOrderForm from "@hooks/useOrderForm.ts";
 
 interface OrderFormProps {
     tradeType: TradeType;
+    ticker?: Ticker;
 }
-
-type OrderType = "limit" | "market" | "reserve";
 
 const PERCENT = ["10%", "25%", "50%", "100%", "입력"] as const;
 
@@ -30,91 +30,79 @@ const ORDER_TYPES = [
     {key: "reserve", label: "예약-지정가"},
 ] as const;
 
+const DEFAULT_NOTICE = "최소주문: 5,000 KRW · 수수료(부가세 포함): 0.05%";
 
-function OrderForm({tradeType}: OrderFormProps) {
+function OrderForm({tradeType, ticker}: OrderFormProps) {
+    const {state, flags, display, actions} = useOrderForm({ tradeType, ticker });
 
-    const [orderType, setOrderType] = useState<OrderType>("limit");
-    const [selectedPercent, setSelectedPercent] = useState<string | undefined>();
+    const percentButtons = (
+        <PercentButtons
+            values={PERCENT}
+            selected={state.selectedPercent}
+            onClick={actions.handlePercentClick}
+        />
+    );
 
-    const isBuy = tradeType === "buy";
-
-    const isLimit = orderType === "limit";
-    const isMarket = orderType === "market";
-    const isReserve = orderType === "reserve";
-
-    const submitLabel = isReserve
-        ? isBuy ? "예약 매수" : "예약 매도"
-        : isBuy ? "매수" : "매도";
-
-    const renderPercentButtons = () =>
-        (<PercentButtons values={PERCENT}
-                         selected={selectedPercent}
-                         onClick={setSelectedPercent}/>);
-
-    const renderInputRow = (label: string, unit: string, value: string) =>
-        (<Row>
-            <Label>
-                {label} <span>({unit})</span>
-            </Label>
-            <InputBox>{value}</InputBox>
-        </Row>);
+    const priceLabel = flags.isBuy ? "매수가격" : "매도가격";
 
     return (
         <Form>
-
             <Row>
                 <Label>주문유형</Label>
-
                 <OrderTypeTabs>
                     {ORDER_TYPES.map((type) => (
                         <OrderTypeButton
                             key={type.key}
-                            active={orderType === type.key}
-                            onClick={() => setOrderType(type.key)}
+                            active={state.orderType === type.key}
+                            onClick={() => actions.handleOrderTypeChange(type.key)}
                         >
                             {type.label}
                         </OrderTypeButton>
                     ))}
                 </OrderTypeTabs>
             </Row>
-
             <Row>
                 <Label>주문가능</Label>
-
                 <RightText>
-                    {isBuy ? "0 KRW" : "0 BTC"}
+                    {display.availableAsset}
                 </RightText>
             </Row>
-
-            {isLimit && (
+            {flags.isLimit && (
                 <>
-                    {renderInputRow(isBuy ? "매수가격" : "매도가격", "KRW", "113,441,000")}
-                    {renderInputRow("주문수량", "BTC", "0")}
-                    {renderPercentButtons()}
-                    {renderInputRow("주문총액", "KRW", "0")}
+                    <OrderInputRow label={priceLabel} unit={"KRW"} value={state.orderPrice} onChange={actions.handleOrderPriceChange}/>
+                    <OrderInputRow label={"주문수량"} unit={"BTC"} value={state.quantity} onChange={actions.handleQuantityChange}/>
+                    {percentButtons}
+                    <OrderInputRow label={"주문총액"} unit={"KRW"} value={state.totalAmount} onChange={actions.handleTotalAmountChange}/>
                 </>
             )}
-            {isMarket && (
+            {flags.isMarket && flags.isBuy && (
                 <>
-                    {renderInputRow("주문총액", "KRW", "0")}
-                    {renderPercentButtons()}
+                    <OrderInputRow label="주문총액" unit="KRW" value={state.totalAmount} onChange={actions.handleTotalAmountChange}/>
+                    <PercentButtons values={PERCENT} selected={state.selectedPercent} onClick={actions.handlePercentClick}/>
                 </>
             )}
-            {isReserve && (
+            {flags.isMarket && !flags.isBuy && (
                 <>
-                    {renderInputRow("감시가격", "KRW", "112,169,000")}
-                    {renderInputRow(isBuy ? "매수가격" : "매도가격", "KRW", "112,169,000")}
-                    {renderInputRow("주문수량", "BTC", "0")}
-                    {renderPercentButtons()}
-                    {renderInputRow("주문총액", "KRW", "0")}
+                    <OrderInputRow label="주문수량" unit="BTC" value={state.quantity} onChange={actions.handleQuantityChange}/>
+                    {percentButtons}
+                    <OrderInputRow label="예상금액" unit="KRW" value={state.totalAmount}/>
+                </>
+            )}
+            {flags.isReserve && (
+                <>
+                    <OrderInputRow label={"감시가격"} unit={"KRW"} value={state.triggerPrice} onChange={actions.handleTriggerPriceChange}/>
+                    <OrderInputRow label={priceLabel} unit={"KRW"} value={state.orderPrice} onChange={actions.handleOrderPriceChange}/>
+                    <OrderInputRow label={"주문수량"} unit={"BTC"} value={state.quantity} onChange={actions.handleQuantityChange}/>
+                    {percentButtons}
+                    <OrderInputRow label={"주문총액"} unit={"KRW"} value={state.totalAmount} onChange={actions.handleTotalAmountChange}/>
                 </>
             )}
             <Divider/>
-            <Notice>최소주문: 5,000 KRW · 수수료(부가세 포함): 0.05%</Notice>
+            <Notice>{display.validationMessage || DEFAULT_NOTICE}</Notice>
             <ButtonRow>
-                <ResetButton>초기화</ResetButton>
-                <SubmitButton tradeType={tradeType}>
-                    {submitLabel}
+                <ResetButton onClick={actions.handleReset}>초기화</ResetButton>
+                <SubmitButton tradeType={tradeType} disabled={!!display.validationMessage}>
+                    {display.submitLabel}
                 </SubmitButton>
             </ButtonRow>
 
