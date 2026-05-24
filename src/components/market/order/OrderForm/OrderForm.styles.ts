@@ -71,13 +71,6 @@ export const InputBox = styled.div`
     font-weight: 500;
 `;
 
-export const PercentRow = styled.div`
-  display: grid;
-  grid-template-columns: 100px minmax(0, 1fr);
-  gap: 12px;
-  margin-bottom: 12px;
-`;
-
 export const Divider = styled.div`
     height: 1px;
     background: #e5e7eb;

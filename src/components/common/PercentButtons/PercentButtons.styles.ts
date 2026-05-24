@@ -6,6 +6,13 @@ export const PercentGrid = styled.div`
     gap: 6px;
 `;
 
+export const PercentRow = styled.div`
+    display: grid;
+    grid-template-columns: 100px minmax(0, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+`;
+
 export const PercentButton = styled.button<{ active?: boolean }>`
     width: 55px;
     height: 28px;
@@ -17,7 +24,7 @@ export const PercentButton = styled.button<{ active?: boolean }>`
     color: ${({ active }) =>
             active ? "#0062df" : "#111"};
     border-radius: 6px;
-    background: #fff;
+    
     font-size: 13px;
     font-weight: 500;
 `;

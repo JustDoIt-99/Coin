@@ -8,7 +8,6 @@ import {
     Notice,
     OrderTypeButton,
     OrderTypeTabs,
-    PercentRow,
     ResetButton,
     RightText,
     Row,
@@ -31,6 +30,7 @@ const ORDER_TYPES = [
     {key: "reserve", label: "예약-지정가"},
 ] as const;
 
+
 function OrderForm({tradeType}: OrderFormProps) {
 
     const [orderType, setOrderType] = useState<OrderType>("limit");
@@ -41,6 +41,23 @@ function OrderForm({tradeType}: OrderFormProps) {
     const isLimit = orderType === "limit";
     const isMarket = orderType === "market";
     const isReserve = orderType === "reserve";
+
+    const submitLabel = isReserve
+        ? isBuy ? "예약 매수" : "예약 매도"
+        : isBuy ? "매수" : "매도";
+
+    const renderPercentButtons = () =>
+        (<PercentButtons values={PERCENT}
+                         selected={selectedPercent}
+                         onClick={setSelectedPercent}/>);
+
+    const renderInputRow = (label: string, unit: string, value: string) =>
+        (<Row>
+            <Label>
+                {label} <span>({unit})</span>
+            </Label>
+            <InputBox>{value}</InputBox>
+        </Row>);
 
     return (
         <Form>
@@ -71,74 +88,25 @@ function OrderForm({tradeType}: OrderFormProps) {
 
             {isLimit && (
                 <>
-                    <Row>
-                        <Label>{isBuy ? "매수가격" : "매도가격"} <span>(KRW)</span></Label>
-                        <InputBox>113,441,000</InputBox>
-                    </Row>
-
-                    <Row>
-                        <Label>
-                            주문수량 <span>(BTC)</span>
-                        </Label>
-
-                        <InputBox>0</InputBox>
-                    </Row>
-                    <PercentRow>
-                        <div/>
-                        <PercentButtons values={PERCENT}
-                                        selected={selectedPercent}
-                                        onClick={setSelectedPercent}/>
-                    </PercentRow>
-                    <Row>
-                        <Label>주문총액 <span>(KRW)</span></Label>
-                        <InputBox>0</InputBox>
-                    </Row>
+                    {renderInputRow(isBuy ? "매수가격" : "매도가격", "KRW", "113,441,000")}
+                    {renderInputRow("주문수량", "BTC", "0")}
+                    {renderPercentButtons()}
+                    {renderInputRow("주문총액", "KRW", "0")}
                 </>
             )}
-
             {isMarket && (
                 <>
-                    <Row>
-                        <Label>주문총액 <span>(KRW)</span></Label>
-                        <InputBox>0</InputBox>
-                    </Row>
-                    <PercentRow>
-                        <div/>
-                        <PercentButtons values={PERCENT}
-                                        selected={selectedPercent}
-                                        onClick={setSelectedPercent}/>
-                    </PercentRow>
-
+                    {renderInputRow("주문총액", "KRW", "0")}
+                    {renderPercentButtons()}
                 </>
             )}
-
             {isReserve && (
                 <>
-                    <Row>
-                        <Label>감시가격 <span>(KRW)</span></Label>
-                        <InputBox>112,169,000</InputBox>
-                    </Row>
-                    <Row>
-                        <Label>{isBuy ? "매수가격" : "매도가격"} <span>(KRW)</span></Label>
-                        <InputBox>112,169,000</InputBox>
-                    </Row>
-
-                    <Row>
-                        <Label>주문수량 <span>(BTC)</span></Label>
-                        <InputBox>0</InputBox>
-                    </Row>
-
-                    <PercentRow>
-                        <div/>
-                        <PercentButtons values={PERCENT}
-                                        selected={selectedPercent}
-                                        onClick={setSelectedPercent}/>
-                    </PercentRow>
-
-                    <Row>
-                        <Label>주문총액 <span>(KRW)</span></Label>
-                        <InputBox>0</InputBox>
-                    </Row>
+                    {renderInputRow("감시가격", "KRW", "112,169,000")}
+                    {renderInputRow(isBuy ? "매수가격" : "매도가격", "KRW", "112,169,000")}
+                    {renderInputRow("주문수량", "BTC", "0")}
+                    {renderPercentButtons()}
+                    {renderInputRow("주문총액", "KRW", "0")}
                 </>
             )}
             <Divider/>
@@ -146,9 +114,7 @@ function OrderForm({tradeType}: OrderFormProps) {
             <ButtonRow>
                 <ResetButton>초기화</ResetButton>
                 <SubmitButton tradeType={tradeType}>
-                    {isReserve
-                        ? (isBuy ? "예약 매수" : "예약 매도")
-                        : (isBuy ? "매수" : "매도")}
+                    {submitLabel}
                 </SubmitButton>
             </ButtonRow>
 

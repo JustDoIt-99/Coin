@@ -1,4 +1,4 @@
-import {PercentButton, PercentGrid} from "@components/common/PercentButtons/PercentButtons.styles.ts";
+import {PercentButton, PercentGrid, PercentRow} from "@components/common/PercentButtons/PercentButtons.styles.ts";
 
 interface Props {
     values: readonly string[];
@@ -9,17 +9,21 @@ interface Props {
 
 function PercentButtons({values, selected, onClick,}: Props) {
     return (
-        <PercentGrid>
-            {values.map((value) => (
-                <PercentButton
-                    key={value}
-                    active={selected === value}
-                    onClick={() => onClick?.(value)}
-                >
-                    {value}
-                </PercentButton>
-            ))}
-        </PercentGrid>
+        <PercentRow>
+            <div/>
+            <PercentGrid>
+                {values.map((value) => (
+                    <PercentButton
+                        key={value}
+                        active={selected === value}
+                        onClick={() => onClick?.(value)}
+                    >
+                        {value}
+                    </PercentButton>
+                ))}
+            </PercentGrid>
+        </PercentRow>
+
     );
 }
 
