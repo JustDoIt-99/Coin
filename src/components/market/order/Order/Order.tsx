@@ -3,15 +3,20 @@ import OrderTab from "@components/market/order/OrderTab";
 import OrderForm from "@components/market/order/OrderForm";
 import OrderHistory from "@components/market/order/OrderHistory";
 import {Container} from "@components/market/order/Order/Order.styles.ts";
+import type {Ticker} from "@api/api.ts";
 
-function Order() {
+interface Props {
+    ticker?: Ticker;
+}
+
+function Order({ticker}: Props) {
 
     const [activeTab, setActiveTab] = useState<"buy" | "sell" | "history">("buy");
 
     return (
         <Container>
             <OrderTab activeTab={activeTab} setActiveTab={setActiveTab}/>
-            {activeTab !== "history" && (<OrderForm tradeType={activeTab} />)}
+            {activeTab !== "history" && (<OrderForm tradeType={activeTab} ticker={ticker}/>)}
             {activeTab === "history" && (<OrderHistory/>)}
         </Container>
     );
