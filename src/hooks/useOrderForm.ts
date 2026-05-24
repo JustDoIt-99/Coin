@@ -27,9 +27,10 @@ function useOrderForm({tradeType, ticker} : Props) {
     const isMarket = orderType === "market";
     const isReserve = orderType === "reserve";
 
+    const coinSymbol = ticker?.market?.split("-")[1] ?? "";
     const availableAsset = isBuy
         ? `${MOCK_AVAILABLE_KRW.toLocaleString()} KRW`
-        : `${MOCK_AVAILABLE_BTC} BTC`;
+        : `${MOCK_AVAILABLE_BTC} ${coinSymbol}`;
 
     const submitLabel = isReserve
         ? isBuy ? "예약 매수" : "예약 매도"
