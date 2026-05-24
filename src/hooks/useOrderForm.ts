@@ -41,7 +41,10 @@ function useOrderForm({tradeType, ticker} : Props) {
         setTotalAmount(Math.floor(total).toLocaleString());
 
         const price = Number(removeComma(orderPrice));
-        if (!price) return;
+        if (!price) {
+            setTotalAmount("");
+            return;
+        }
 
         setQuantity(
             formatDecimalWithComma((total / price).toFixed(8))
@@ -72,7 +75,10 @@ function useOrderForm({tradeType, ticker} : Props) {
         setOrderPrice(formattedPrice);
         const price = Number(removeComma(formattedPrice));
         const qty = Number(removeComma(quantity));
-        if (!price || !qty) return;
+        if (!price || !qty) {
+            setTotalAmount("");
+            return;
+        }
         setTotalAmount(Math.floor(price * qty).toLocaleString());
     };
 
@@ -100,7 +106,10 @@ function useOrderForm({tradeType, ticker} : Props) {
         const price = Number(removeComma(orderPrice));
         const total = Number(removeComma(formattedTotal));
 
-        if (!price || !total) return;
+        if (!price || !total) {
+            setQuantity("");
+            return;
+        }
 
         setQuantity(
             formatDecimalWithComma((total / price).toFixed(8))
@@ -124,6 +133,13 @@ function useOrderForm({tradeType, ticker} : Props) {
     };
 
     const handlePercentClick = (value: string) => {
+        if (!value) {
+            setSelectedPercent(undefined);
+            setQuantity("");
+            setTotalAmount("");
+            return;
+        }
+
         setSelectedPercent(value);
 
         const percent = Number(value.replace("%", ""));
@@ -144,10 +160,10 @@ function useOrderForm({tradeType, ticker} : Props) {
     const quantityNumber = Number(removeComma(quantity));
 
     const getOrderValidationMessage = () => {
-        if (!quantityNumber && !isMarket && !isBuy) {
+        if (!quantityNumber && !(isMarket && isBuy)) {
             return "주문수량을 입력해주세요.";
         }
-        if (!orderTotalNumber) {
+        if (!orderTotalNumber && !(isMarket && !isBuy)) {
             return "주문총액을 입력해주세요.";
         }
         if (orderTotalNumber < MIN_ORDER_KRW) {

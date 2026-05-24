@@ -26,7 +26,11 @@ function PercentButtons({values, selected, onClick}: Props) {
     const handleCustomChange = (value: string) => {
         const onlyNumber = value.replace(/\D/g, "");
         setCustomValue(onlyNumber);
-        if (!onlyNumber) return;
+        if (!onlyNumber) {
+            onClick?.("");
+            setIsInputMode(false);
+            return;
+        }
         onClick?.(`${onlyNumber}%`);
     };
 
