@@ -1,4 +1,4 @@
-import {Bitcoin, ChevronDown} from "lucide-react";
+import {ChevronDown} from "lucide-react";
 import {
     Blue,
     Change,
@@ -26,12 +26,17 @@ function CoinDetail({market, ticker} : Props) {
 
     const changeColor = changeRate > 0 ? "#d64348" : changeRate < 0 ? "#126ee2" : "#222";
 
+    const coinSymbol = marketCode.split("-")[1];
+
     return (
         <Container>
             <Header>
                 <CoinTitle>
                     <CoinIcon>
-                        <Bitcoin />
+                        <img
+                            src={`https://static.upbit.com/logos/${coinSymbol}.png`}
+                            alt={coinSymbol}
+                        />
                     </CoinIcon>
                     <strong>{coinName}</strong>
                     <span>
