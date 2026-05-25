@@ -102,8 +102,8 @@ function PortfolioPage() {
             <AssetTable>
                 <thead>
                 <tr>
-                    {tableHeaders.map((header, index) => (
-                        <th key={index}>{header}</th>
+                    {tableHeaders.map((header) => (
+                        <th key={header || "action"}>{header}</th>
                     ))}
                 </tr>
                 </thead>
