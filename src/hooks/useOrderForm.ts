@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import type {TradeType} from "@components/market/order/OrderForm/OrderForm.styles.ts";
+import type {TradeType} from "@pages/market/components/order/OrderForm/OrderForm.styles.ts";
 import {formatDecimalWithComma, formatIntegerWithComma, removeComma} from "@utils/orderform/numberFormat.ts";
 import type {Ticker} from "@api/api.ts";
 

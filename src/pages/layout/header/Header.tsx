@@ -1,0 +1,31 @@
+import {
+    HeaderContainer,
+    LeftArea,
+    LoginButton,
+    Logo,
+    Nav,
+    NavItem,
+    RightArea,
+    SignupButton
+} from "./Header.styles.ts";
+
+function Header() {
+    return (
+        <HeaderContainer>
+            <LeftArea>
+                <Logo>CoinCo</Logo>
+                <Nav>
+                    <NavItem to="/">거래소</NavItem>
+                    <NavItem to="/portfolio">투자내역</NavItem>
+                </Nav>
+            </LeftArea>
+
+            <RightArea>
+                <LoginButton>로그인</LoginButton>
+                <SignupButton>회원가입</SignupButton>
+            </RightArea>
+        </HeaderContainer>
+    );
+}
+
+export default Header;

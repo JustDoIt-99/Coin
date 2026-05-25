@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
-import Layout from "@components/layout/Layout";
-import MarketPage from "@pages/MarketPage";
+import Layout from "@pages/layout/Layout";
+import MarketPage from "@pages/market";
+import PortfolioPage from "@pages/portfolio/PortfolioPage.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -11,6 +12,10 @@ export const router = createBrowserRouter([
                 index: true,
                 element: <MarketPage />,
             },
+            {
+                path: "portfolio",
+                element: <PortfolioPage />,
+            },
         ],
-    },
+    }
 ]);
