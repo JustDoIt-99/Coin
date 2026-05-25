@@ -1,5 +1,5 @@
 import {useEffect, useRef} from "react";
-import type {UpBitOrderBook} from "@components/market/orderbook/OrderBook/OrderBook.tsx";
+import type {UpBitOrderBook} from "@pages/market/components/orderbook/OrderBook/OrderBook.tsx";
 
 const URL = "wss://api.upbit.com/websocket/v1";
 
