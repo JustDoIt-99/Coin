@@ -1,6 +1,7 @@
 import styled from "@emotion/styled";
 
 export const Container = styled.section`
+    min-width: 800px;
     height: 160px;
     background: #fff;
     border-bottom: 1px solid #dfe3ea;
@@ -44,10 +45,10 @@ export const CoinIcon = styled.div`
     align-items: center;
     justify-content: center;
 
-    svg {
-        width: 20px;
-        height: 20px;
-        color: #fff;
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
     }
 `;
 

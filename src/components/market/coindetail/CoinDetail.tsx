@@ -1,4 +1,4 @@
-import {Bitcoin, ChevronDown} from "lucide-react";
+import {ChevronDown} from "lucide-react";
 import {
     Blue,
     Change,
@@ -8,6 +8,7 @@ import {
 } from "./CoinDetail.styles.ts";
 import type {Market, Ticker} from "@api/api.ts";
 import MiniPriceChart from "@components/market/coindetail/MiniPriceChart";
+import * as React from "react";
 
 interface Props {
     market:Market | null;
@@ -26,12 +27,22 @@ function CoinDetail({market, ticker} : Props) {
 
     const changeColor = changeRate > 0 ? "#d64348" : changeRate < 0 ? "#126ee2" : "#222";
 
+    const coinSymbol = marketCode.split("-")[1];
+
+    const hideImage = (e: React.SyntheticEvent<HTMLImageElement>) => {
+        e.currentTarget.style.display = "none";
+    };
+
     return (
         <Container>
             <Header>
                 <CoinTitle>
                     <CoinIcon>
-                        <Bitcoin />
+                        <img
+                            src={`https://static.upbit.com/logos/${coinSymbol}.png`}
+                            alt={coinSymbol}
+                            onError={hideImage}
+                        />
                     </CoinIcon>
                     <strong>{coinName}</strong>
                     <span>
