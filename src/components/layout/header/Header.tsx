@@ -15,17 +15,9 @@ function Header() {
             <LeftArea>
                 <Logo>CoinCo</Logo>
                 <Nav>
-                    <NavItem
-                        to="/"
-                        className={({isActive}) => isActive ? "active" : ""}>거래소</NavItem>
-
-                    <NavItem
-                        to="/portfolio"
-                        className={({isActive}) => isActive ? "active" : ""}>투자내역</NavItem>
-
-                    <NavItem
-                        to="/asset"
-                        className={({isActive}) => isActive ? "active" : ""}>자산</NavItem>
+                    <NavItem to="/">거래소</NavItem>
+                    <NavItem to="/portfolio">투자내역</NavItem>
+                    <NavItem to="/asset">자산</NavItem>
                 </Nav>
             </LeftArea>
 

@@ -20,8 +20,6 @@ export const HeaderContainer = styled.header`
     box-sizing: border-box;
 
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-
-    backdrop-filter: blur(10px);
 `;
 
 export const LeftArea = styled.div`
