@@ -1,9 +1,16 @@
-import {createBrowserRouter} from "react-router-dom";
-import MarketPage from "@pages/MarketPage.tsx";
+import { createBrowserRouter } from "react-router-dom";
+import Layout from "@components/layout/Layout";
+import MarketPage from "@pages/MarketPage";
 
 export const router = createBrowserRouter([
     {
-        path:"/",
-        element: <MarketPage/>
-    }
+        path: "/",
+        element: <Layout />,
+        children: [
+            {
+                index: true,
+                element: <MarketPage />,
+            },
+        ],
+    },
 ]);
