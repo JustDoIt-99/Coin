@@ -7,6 +7,7 @@ export const PageBackground = styled.main`
     box-sizing: border-box;
     background: #eef1f6;
     overflow: hidden;
+    margin-top: 15px;
 `;
 
 export const PageLayout = styled.div`
