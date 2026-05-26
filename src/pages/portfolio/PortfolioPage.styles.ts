@@ -13,11 +13,12 @@ export const TabBar = styled.div`
     background: #fff;
     border: 1px solid #dfe3ea;
     border-top: none;
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    display: flex;
 `;
 
 export const TabItem = styled.button<{ $active?: boolean }>`
+    flex: 1;
+
     border: none;
     background: #fff;
     font-size: 16px;

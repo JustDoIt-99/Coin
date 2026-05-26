@@ -33,11 +33,7 @@ function PortfolioPage() {
                 ))}
             </TabBar>
 
-            {activeTab === "assets" && (
-                <>
-                    <AssetSummary/>
-                </>
-            )}
+            {activeTab === "assets" && <AssetSummary />}
 
             {activeTab === "history" && <TradeHistory/>}
             {activeTab === "pending" && <div>미체결 UI 영역</div>}

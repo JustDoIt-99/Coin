@@ -85,8 +85,11 @@ function TradeHistory() {
                     <FilterTitle>코인선택</FilterTitle>
 
                     <CoinSearchBox>
-                        <input placeholder="전체" />
-                        <button>⌕</button>
+                        <input
+                            placeholder="전체"
+                            aria-label="코인 검색"
+                        />
+                        <button aria-label="검색">⌕</button>
                     </CoinSearchBox>
                 </FilterGroup>
             </FilterSection>
@@ -100,8 +103,8 @@ function TradeHistory() {
                 </tr>
                 </thead>
                 <tbody>
-                {histories.map((history) => (
-                    <tr key={history.executedAt}>
+                {histories.map((history,index) => (
+                    <tr key={`${history.executedAt}-${index}`}>
                         <td>{history.executedAt}</td>
                         <td>{history.coin}</td>
                         <td>{history.market}</td>
