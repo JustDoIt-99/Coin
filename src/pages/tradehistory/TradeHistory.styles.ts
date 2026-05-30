@@ -41,17 +41,21 @@ export const PeriodButtonGroup = styled.div`
 `;
 
 export const FilterButton = styled.button<{ $active?: boolean }>`
+    width: 86px;
     height: 44px;
-    min-width: 86px;
-    padding: 0 20px;
+    padding: 0;
 
+    box-sizing: border-box;
+    position: relative;
+    z-index: ${({ $active }) => ($active ? 2 : 1)};
     border: 1px solid ${({ $active }) => ($active ? "#0062df" : "#d2d7df")};
     background: #fff;
-    color: ${({ $active }) => ($active ? "#0062df" : "#4b5563")};
 
+    color: ${({ $active }) => ($active ? "#0062df" : "#4b5563")};
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
+    outline: none;
 
     & + & {
         margin-left: -1px;
