@@ -6,6 +6,7 @@ import {
 import { useState } from "react";
 import TradeHistory from "@pages/tradehistory";
 import AssetSummary from "@pages/portfolio/components/assetsummary";
+import PendingOrder from "@pages/pendingOrder";
 
 type PortfolioTab = "assets" | "history" | "pending" | "deposit";
 
@@ -36,7 +37,7 @@ function PortfolioPage() {
             {activeTab === "assets" && <AssetSummary />}
 
             {activeTab === "history" && <TradeHistory/>}
-            {activeTab === "pending" && <div>미체결 UI 영역</div>}
+            {activeTab === "pending" && <PendingOrder/>}
             {activeTab === "deposit" && <div>입출금대기 UI 영역</div>}
         </Page>
     );
