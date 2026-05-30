@@ -4,10 +4,9 @@ import {
     CancelAllButton,
     PendingTable,
     EmptyArea,
-    EmptyIcon, CancelButton, FilterButtonGroup,
+    EmptyIcon, CancelButton, FilterButtonGroup, FilterButton,
 } from "./PendingOrder.styles";
 import {useMemo, useState} from "react";
-import {FilterButton} from "@pages/tradehistory/TradeHistory.styles.ts";
 
 const headers = [
     { key: "time", label: "시간" },

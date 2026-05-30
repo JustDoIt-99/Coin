@@ -133,3 +133,21 @@ export const CancelButton = styled.button`
 export const FilterButtonGroup = styled.div`
     display: flex;
 `;
+
+export const FilterButton = styled.button<{ $active?: boolean }>`
+    height: 44px;
+    min-width: 86px;
+    padding: 0 20px;
+
+    border: 1px solid ${({ $active }) => ($active ? "#0062df" : "#d2d7df")};
+    background: #fff;
+    color: ${({ $active }) => ($active ? "#0062df" : "#4b5563")};
+
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+
+    & + & {
+        margin-left: -1px;
+    }
+`;
