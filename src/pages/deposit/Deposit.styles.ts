@@ -37,21 +37,21 @@ export const DepositTable = styled.table`
     }
 `;
 
-export const StatusBadge = styled.span<{ $status: string }>`
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+const STATUS_THEME = {
+    PENDING: { color: "#0062df", background: "#e7f1ff" },
+    PROCESSING: { color: "#f08c00", background: "#fff4e6" },
+} as const;
 
-    min-width: 96px;
-    height: 28px;
-    border-radius: 14px;
 
-    font-size: 12px;
-    font-weight: 700;
-
-    color: ${({ $status }) =>
-            $status === "처리중" ? "#f08c00" : "#0062df"};
-
-    background: ${({ $status }) =>
-            $status === "처리중" ? "#fff4e6" : "#e7f1ff"};
-`;
+export const StatusBadge = styled.span<{ $status: keyof typeof STATUS_THEME }>(({ $status }) => ({
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: "96px",
+    height: "28px",
+    borderRadius: "14px",
+    fontSize: "12px",
+    fontWeight: 700,
+    color: STATUS_THEME[$status].color,
+    background: STATUS_THEME[$status].background,
+}));

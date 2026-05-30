@@ -13,7 +13,20 @@ const headers = [
     "상태",
 ];
 
-const deposits = [
+type DepositStatus = "PENDING" | "PROCESSING";
+
+interface DepositItem {
+    id: number;
+    requestTime: string;
+    coin: string;
+    type: string;
+    amount: string;
+    transactionId: string;
+    status: DepositStatus;
+    statusLabel: string;
+}
+
+const deposits: DepositItem[] = [
     {
         id: 1,
         requestTime: "2026.05.30 14:12:03",
@@ -21,7 +34,8 @@ const deposits = [
         type: "입금",
         amount: "10,000,000",
         transactionId: "REQ-10001",
-        status: "관리자승인대기",
+        status: "PENDING",
+        statusLabel: "관리자승인대기",
     },
     {
         id: 2,
@@ -30,7 +44,8 @@ const deposits = [
         type: "출금",
         amount: "2,500,000",
         transactionId: "REQ-10002",
-        status: "처리중",
+        status: "PROCESSING",
+        statusLabel: "처리중",
     },
 ];
 
