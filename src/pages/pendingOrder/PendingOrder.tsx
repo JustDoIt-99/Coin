@@ -80,7 +80,7 @@ function PendingOrder() {
                     ))}
                 </FilterButtonGroup>
 
-                <CancelAllButton disabled={pendingOrders.length === 0}>
+                <CancelAllButton disabled={filteredOrders.length === 0}>
                     일괄취소
                 </CancelAllButton>
             </FilterBar>
