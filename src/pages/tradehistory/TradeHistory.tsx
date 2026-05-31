@@ -5,68 +5,118 @@ import {
     FilterTitle,
     PeriodButtonGroup,
     FilterButton,
-    CoinSearchBox, HistoryTable
+    CoinSearchBox,
+    HistoryTable
 } from "./TradeHistory.styles";
-
-const periodButtons = ["1주일", "1개월", "3개월", "6개월", "직접입력"];
-const typeButtons = ["전체", "매수", "매도", "입금", "출금"];
-
-const historyHeaders = [
-    "체결시간",
-    "코인",
-    "마켓",
-    "종류",
-    "거래수량",
-    "거래단가",
-    "거래금액",
-    "수수료",
-    "정산금액",
-    "주문시간",
-];
-
-const histories = [
-    {
-        executedAt: "2026.05.26 13:22:11",
-        coin: "비트코인",
-        market: "BTC/KRW",
-        type: "매수",
-        quantity: 0.0012,
-        price: 154000000,
-        totalPrice: 184800,
-        fee: 92,
-        settlement: 184892,
-        orderAt: "2026.05.26 13:21:58",
-    },
-    {
-        executedAt: "2026.05.25 09:14:01",
-        coin: "이더리움",
-        market: "ETH/KRW",
-        type: "매도",
-        quantity: 0.15,
-        price: 4200000,
-        totalPrice: 630000,
-        fee: 315,
-        settlement: 629685,
-        orderAt: "2026.05.25 09:13:44",
-    },
-];
+import { useMemo, useState } from "react";
+import type {HistoryType, PeriodType} from "@pages/tradehistory/types.ts";
+import {histories, historyHeaders, periodButtons, typeButtons} from "@pages/tradehistory/constants.ts";
+import {
+    formatDate,
+    getEndOfDay,
+    getStartDateByPeriod,
+    parseHistoryDate,
+    toDateInputValue
+} from "@pages/tradehistory/utils.ts";
 
 function TradeHistory() {
+    const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>("1개월");
+    const [selectedType, setSelectedType] = useState<HistoryType>("전체");
+    const [searchKeyword, setSearchKeyword] = useState("");
+
+    const today = new Date();
+
+    const defaultStartDate = getStartDateByPeriod("1개월", today);
+
+    const [customStartDate, setCustomStartDate] = useState(
+        defaultStartDate ? toDateInputValue(defaultStartDate) : ""
+    );
+    const [customEndDate, setCustomEndDate] = useState(toDateInputValue(today));
+
+    const endDate =
+        selectedPeriod === "직접입력"
+            ? getEndOfDay(customEndDate)
+            : today;
+
+    const startDate =
+        selectedPeriod === "직접입력"
+            ? customStartDate
+                ? new Date(`${customStartDate}T00:00:00`)
+                : null
+            : getStartDateByPeriod(selectedPeriod, endDate ?? today);
+
+    const periodText =
+        selectedPeriod === "직접입력"
+            ? `${customStartDate ? customStartDate.replaceAll("-", ".") : "시작일"} ~ ${
+                customEndDate ? customEndDate.replaceAll("-", ".") : "종료일"
+            }`
+            : startDate && endDate
+                ? `${formatDate(startDate)} ~ ${formatDate(endDate)}`
+                : "직접입력";
+
+    const startDateTime = startDate?.getTime();
+    const endDateTime = endDate?.getTime();
+
+    const filteredHistories = useMemo(() => {
+        const keyword = searchKeyword.trim().toLowerCase();
+
+        return histories.filter((history) => {
+            const historyTime = parseHistoryDate(history.executedAt).getTime();
+
+            const periodMatch =
+                !startDateTime ||
+                !endDateTime ||
+                (historyTime >= startDateTime && historyTime <= endDateTime);
+
+            const typeMatch =
+                selectedType === "전체" || history.type === selectedType;
+
+            const coinMatch =
+                keyword === "" ||
+                history.coin.toLowerCase().includes(keyword) ||
+                history.market.toLowerCase().includes(keyword);
+
+            return periodMatch && typeMatch && coinMatch;
+        });
+    }, [selectedType, searchKeyword, startDateTime, endDateTime]);
+
     return (
         <HistoryContainer>
             <FilterSection>
                 <FilterGroup>
                     <FilterTitle>
-                        기간 <span>2026.04.25 ~ 2026.05.25</span>
+                        기간 <span>{periodText}</span>
                     </FilterTitle>
 
                     <PeriodButtonGroup>
                         {periodButtons.map((button) => (
-                            <FilterButton key={button} $active={button === "1개월"}>
+                            <FilterButton
+                                key={button}
+                                $active={selectedPeriod === button}
+                                onClick={() => setSelectedPeriod(button)}
+                            >
                                 {button}
                             </FilterButton>
                         ))}
                     </PeriodButtonGroup>
+
+                    {selectedPeriod === "직접입력" && (
+                        <div>
+                            <input
+                                type="date"
+                                value={customStartDate}
+                                max={customEndDate}
+                                onChange={(e) => setCustomStartDate(e.target.value)}
+                            />
+                            <span> ~ </span>
+                            <input
+                                type="date"
+                                value={customEndDate}
+                                min={customStartDate}
+                                onChange={(e) => setCustomEndDate(e.target.value)}
+                            />
+                        </div>
+                    )}
                 </FilterGroup>
 
                 <FilterGroup>
@@ -74,7 +124,11 @@ function TradeHistory() {
 
                     <PeriodButtonGroup>
                         {typeButtons.map((button) => (
-                            <FilterButton key={button} $active={button === "전체"}>
+                            <FilterButton
+                                key={button}
+                                $active={selectedType === button}
+                                onClick={() => setSelectedType(button)}
+                            >
                                 {button}
                             </FilterButton>
                         ))}
@@ -86,8 +140,10 @@ function TradeHistory() {
 
                     <CoinSearchBox>
                         <input
+                            value={searchKeyword}
                             placeholder="전체"
                             aria-label="코인 검색"
+                            onChange={(e) => setSearchKeyword(e.target.value)}
                         />
                         <button aria-label="검색">⌕</button>
                     </CoinSearchBox>
@@ -102,9 +158,10 @@ function TradeHistory() {
                     ))}
                 </tr>
                 </thead>
+
                 <tbody>
-                {histories.map((history,index) => (
-                    <tr key={`${history.executedAt}-${index}`}>
+                {filteredHistories.map((history) => (
+                    <tr key={history.id}>
                         <td>{history.executedAt}</td>
                         <td>{history.coin}</td>
                         <td>{history.market}</td>
