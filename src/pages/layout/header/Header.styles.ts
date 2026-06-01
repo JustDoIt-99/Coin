@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import {NavLink} from "react-router-dom";
+import {Link, NavLink} from "react-router-dom";
 
 export const HeaderContainer = styled.header`
     position: sticky;
@@ -66,16 +66,18 @@ export const RightArea = styled.div`
     gap: 10px;
 `;
 
-export const LoginButton = styled.button`
+export const LoginButton = styled(Link)`
     height: 32px;
     padding: 0 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     border: 1px solid rgba(255, 255, 255, 0.5);
     border-radius: 4px;
-
     background: white;
     color: #1f2937;
-
+    text-decoration: none;
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
