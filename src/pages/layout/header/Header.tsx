@@ -21,7 +21,7 @@ function Header() {
             </LeftArea>
 
             <RightArea>
-                <LoginButton>로그인</LoginButton>
+                <LoginButton to="/login">로그인</LoginButton>
                 <SignupButton>회원가입</SignupButton>
             </RightArea>
         </HeaderContainer>
