@@ -10,19 +10,21 @@ import {
     LoginButton,
     Divider,
     SocialButton,
-    LinkRow,
+    LinkRow, SignupLink,
 } from "./LoginPage.styles";
 import {useState} from "react";
+import * as React from "react";
 
 function LoginPage() {
-
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    const handleLogin = () => {
+    const handleLogin = (e: React.SubmitEvent<HTMLFormElement>) => {
+        e.preventDefault();
+
         console.log(email);
         console.log(password);
-    }
+    };
 
     return (
         <Page>
@@ -30,12 +32,13 @@ function LoginPage() {
                 <Title>로그인</Title>
                 <SubText>CoinCo 계정으로 모의투자를 시작해보세요.</SubText>
 
-                <Form>
+                <Form onSubmit={handleLogin}>
                     <Field>
                         <Label>이메일</Label>
                         <Input
                             type="email"
                             placeholder="이메일을 입력하세요"
+                            value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                     </Field>
@@ -45,11 +48,12 @@ function LoginPage() {
                         <Input
                             type="password"
                             placeholder="비밀번호를 입력하세요"
+                            value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </Field>
 
-                    <LoginButton type="button" onClick={handleLogin}>
+                    <LoginButton type="submit">
                         로그인
                     </LoginButton>
                 </Form>
@@ -68,7 +72,7 @@ function LoginPage() {
 
                 <LinkRow>
                     <span>아직 회원이 아니신가요?</span>
-                    <button type="button">회원가입</button>
+                    <SignupLink to="/signup">회원가입</SignupLink>
                 </LinkRow>
             </LoginCard>
         </Page>

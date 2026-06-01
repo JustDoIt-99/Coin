@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import {Link} from "react-router-dom";
 
 export const Page = styled.main`
     min-width: 1280px;
@@ -154,5 +155,15 @@ export const LinkRow = styled.div`
         font-size: 14px;
         font-weight: 800;
         cursor: pointer;
+    }
+`;
+
+export const SignupLink = styled(Link)`
+    color: #6d28d9;
+    font-weight: 700;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
     }
 `;
