@@ -57,6 +57,18 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
         }));
     };
 
+    const normalizeChartData = (
+        data: CandlestickData<Time>[]
+    ): CandlestickData<Time>[] => {
+        const map = new Map<number, CandlestickData<Time>>();
+        data.forEach((item) => {
+            map.set(Number(item.time), item);
+        });
+
+        return Array.from(map.values())
+            .sort((a, b) => Number(a.time) - Number(b.time));
+    };
+
     useEffect(() => {
         if (!chartContainerRef.current) return;
 
@@ -102,6 +114,7 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
         candleSeriesRef.current = candleSeries;
 
         const handleVisibleRangeChange = async (range: LogicalRange | null) => {
+            console.log("visible range", range);
             if (!range) return;
             if (range.from >= LOAD_MORE_THRESHOLD) {
                 requestedOlderRef.current = false;
@@ -130,18 +143,24 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
 
                 if (olderCandles.length === 0) return;
 
+                const beforeLength = candleDataRef.current.length;
+
                 const olderChartData = toChartData(olderCandles);
-                candleDataRef.current = [
+
+                const mergedData = normalizeChartData([
                     ...olderChartData,
                     ...candleDataRef.current,
-                ];
+                ]);
 
-                candleSeries.setData(candleDataRef.current);
+                candleDataRef.current = mergedData;
+                candleSeries.setData(mergedData);
 
-                if (visibleRange) {
+                const addedCount = mergedData.length - beforeLength;
+
+                if (visibleRange && addedCount > 0) {
                     chart.timeScale().setVisibleLogicalRange({
-                        from: visibleRange.from + olderChartData.length,
-                        to: visibleRange.to + olderChartData.length
+                        from: visibleRange.from + addedCount,
+                        to: visibleRange.to + addedCount
                     });
                 }
 
@@ -150,6 +169,7 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
                 console.error("과거 캔들 조회 실패", error);
             } finally {
                 isLoadingOlderRef.current = false;
+                requestedOlderRef.current = false;
             }
         }
 
@@ -180,7 +200,7 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
         if (!isFirstLoadingChartRef.current) return;
 
         oldestCandleRef.current = candles[candles.length - 1].candle_date_time_utc;
-        const chartData = toChartData(candles);
+        const chartData = normalizeChartData(toChartData(candles));
 
         candleDataRef.current = chartData;
         candleSeriesRef.current.setData(chartData);

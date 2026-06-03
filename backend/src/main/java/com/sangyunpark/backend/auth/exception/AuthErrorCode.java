@@ -1,12 +1,13 @@
 package com.sangyunpark.backend.auth.exception;
 
+import com.sangyunpark.backend.common.exception.ErrorCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 @Getter
 @RequiredArgsConstructor
-public enum ErrorCode {
+public enum AuthErrorCode implements ErrorCode {
 
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 가입된 이메일입니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않은 사용자입니다."),
