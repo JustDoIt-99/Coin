@@ -61,6 +61,8 @@ public class UpbitTickerWebSocketClient {
         client.execute(new BinaryWebSocketHandler() {
             @Override
             public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+                reconnecting.set(false);
+
                 List<String> marketCodes = upbitMarketClient.fetchMarkets()
                         .stream()
                         .map(MarketResponse::market)
@@ -80,17 +82,21 @@ public class UpbitTickerWebSocketClient {
             }
 
             @Override
-            protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
+            protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
                 ByteBuffer buffer = message.getPayload();
                 String payload = StandardCharsets.UTF_8.decode(buffer).toString();
 
-                TickerResponse ticker = objectMapper.readValue(payload, TickerResponse.class);
-                tickerCache.put(ticker.marketCode(), ticker);
+                try {
+                    TickerResponse ticker = objectMapper.readValue(payload, TickerResponse.class);
+                    tickerCache.put(ticker.marketCode(), ticker);
 
-                messagingTemplate.convertAndSend(
-                        "/topic/ticker",
-                        ticker
-                );
+                    messagingTemplate.convertAndSend(
+                            "/topic/ticker",
+                            ticker
+                    );
+                } catch (Exception e) {
+                    log.error("Ticker 파싱 실패. payload={}", payload, e);
+                }
             }
 
             @Override
@@ -110,7 +116,13 @@ public class UpbitTickerWebSocketClient {
                 scheduleReconnect();
             }
 
-        }, UPBIT_WS_URL);
+        }, UPBIT_WS_URL)
+                .whenComplete((session, ex) -> {
+                    if(ex != null) {
+                        log.error("UpBit 연결 실패", ex);
+                        scheduleReconnect();
+                    }
+                });
     }
 
     private void scheduleReconnect() {
