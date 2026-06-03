@@ -91,7 +91,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVALID_EMAIL);
+                .isEqualTo(ErrorCode.INVALID_LOGIN_CREDENTIALS);
     }
 
     @Test
@@ -110,7 +110,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVALID_PASSWORD);
+                .isEqualTo(ErrorCode.INVALID_LOGIN_CREDENTIALS);
     }
 
     @Test

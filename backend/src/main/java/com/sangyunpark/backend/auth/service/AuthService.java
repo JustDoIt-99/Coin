@@ -52,10 +52,10 @@ public class AuthService {
     @Transactional
     public LoginResponse login(final LoginRequest request) {
         User user = userJpaRepository.findByEmail(request.email())
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_EMAIL));
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new BusinessException(ErrorCode.INVALID_PASSWORD);
+            throw new BusinessException(ErrorCode.INVALID_LOGIN_CREDENTIALS);
         }
 
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
