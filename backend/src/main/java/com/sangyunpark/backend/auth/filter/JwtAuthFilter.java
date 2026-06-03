@@ -40,19 +40,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String authorization = request.getHeader(AUTHORIZATION);
 
-        if(authorization != null && authorization.startsWith(BEARER)) {
-            String token = authorization.substring(TOKEN_INDEX);
-
-            if(!jwtTokenProvider.validate(token)) {
-                response.setStatus(
-                        HttpServletResponse.SC_UNAUTHORIZED
-                );
-                return;
-            }
-
-            Long userId = jwtTokenProvider.getUserId(token);
-            request.setAttribute(USER_ID, userId);
+        if (authorization == null || !authorization.startsWith(BEARER)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
         }
+
+        String token = authorization.substring(TOKEN_INDEX);
+
+        if (!jwtTokenProvider.validate(token)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
+        Long userId = jwtTokenProvider.getUserId(token);
+        request.setAttribute(USER_ID, userId);
 
         filterChain.doFilter(request, response);
     }
