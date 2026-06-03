@@ -9,6 +9,7 @@ import com.sangyunpark.backend.auth.dto.response.ReissueResponse;
 import com.sangyunpark.backend.auth.dto.response.UserResponse;
 import com.sangyunpark.backend.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,8 +27,8 @@ public class AuthController {
         return authService.signup(request);
     }
 
-    @GetMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request) {
+    @PostMapping("/login")
+    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
     }
 
