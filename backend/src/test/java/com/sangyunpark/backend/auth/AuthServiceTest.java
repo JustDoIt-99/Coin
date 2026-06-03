@@ -183,7 +183,7 @@ class AuthServiceTest {
 
     @Test
     void 로그아웃하면_리프레시_토큰이_삭제된다() {
-        authService.signup(new SignupRequest(
+        UserResponse user = authService.signup(new SignupRequest(
                 "test@test.com",
                 "12345678",
                 "sangyun"
@@ -194,10 +194,13 @@ class AuthServiceTest {
                 "12345678"
         ));
 
-        authService.logout(loginResponse.refreshToken());
+        authService.logout(user.id());
 
-        assertThat(refreshTokenJpaRepository.findByToken(loginResponse.refreshToken()))
-                .isEmpty();
+        assertThat(
+                refreshTokenJpaRepository.findByToken(
+                        loginResponse.refreshToken()
+                )
+        ).isEmpty();
     }
 
     @Test
