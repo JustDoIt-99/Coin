@@ -40,8 +40,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public void logout(@RequestBody LogoutRequest request) {
-        authService.logout(request.refreshToken());
+    public void logout(HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute(USER_ID);
+        authService.logout(userId);
     }
 
     @GetMapping("/me")
