@@ -19,8 +19,9 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Long userId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
 
     @Column(nullable = false, unique = true, length = 500)
     private String token;
@@ -29,8 +30,8 @@ public class RefreshToken {
     private LocalDateTime expiredAt;
 
     @Builder
-    private RefreshToken(Long userId, String token, LocalDateTime expiredAt) {
-        this.userId = userId;
+    private RefreshToken(User user, String token, LocalDateTime expiredAt) {
+        this.user = user;
         this.token = token;
         this.expiredAt = expiredAt;
     }
