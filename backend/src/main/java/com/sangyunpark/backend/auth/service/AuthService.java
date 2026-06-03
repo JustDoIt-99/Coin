@@ -61,11 +61,11 @@ public class AuthService {
         String accessToken = jwtTokenProvider.createAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        refreshTokenJpaRepository.deleteByUserId(user.getId());
+        refreshTokenJpaRepository.deleteByUser(user);
 
         refreshTokenJpaRepository.save(
                 RefreshToken.builder()
-                        .userId(user.getId())
+                        .user(user)
                         .token(refreshToken)
                         .expiredAt(LocalDateTime.now().plusDays(14))
                         .build()
@@ -98,8 +98,9 @@ public class AuthService {
     }
 
     @Transactional
-    public void logout(String refreshToken) {
-        refreshTokenJpaRepository.deleteByToken(refreshToken);
+    public void logout(Long userId) {
+        User user = userJpaRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        refreshTokenJpaRepository.deleteByUser(user);
     }
 
     @Transactional(readOnly = true)
