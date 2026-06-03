@@ -12,7 +12,6 @@ import org.springframework.context.annotation.Configuration;
 public class FilterConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final JwtAuthFilter jwtAuthFilter;
 
     @Bean
     public JwtAuthFilter jwtAuthFilter() {
@@ -24,7 +23,7 @@ public class FilterConfig {
         FilterRegistrationBean<JwtAuthFilter> bean =
                 new FilterRegistrationBean<>();
 
-        bean.setFilter(jwtAuthFilter);
+        bean.setFilter(jwtAuthFilter());
         bean.addUrlPatterns("/api/*");
         bean.setOrder(1);
 
