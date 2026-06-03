@@ -80,6 +80,11 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public ReissueResponse reissue(String refreshToken) {
+
+        if(!jwtTokenProvider.validate(refreshToken)) {
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
         RefreshToken savedToken = refreshTokenJpaRepository.findByToken(refreshToken)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
 
