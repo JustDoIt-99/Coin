@@ -20,6 +20,11 @@ public class UpbitTickerClient {
             .build();
 
     public List<TickerResponse> fetchTickers(List<String> marketCodes) {
+
+        if(marketCodes == null || marketCodes.isEmpty()) {
+            return List.of();
+        }
+
         try {
             TickerResponse[] response = restClient.get()
                     .uri(uriBuilder -> uriBuilder
