@@ -1,6 +1,5 @@
 package com.sangyunpark.backend.common.exception;
 
-import com.sangyunpark.backend.auth.exception.ErrorCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;

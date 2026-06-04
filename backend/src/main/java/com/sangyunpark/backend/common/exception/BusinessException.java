@@ -1,6 +1,5 @@
 package com.sangyunpark.backend.common.exception;
 
-import com.sangyunpark.backend.auth.exception.ErrorCode;
 import lombok.Getter;
 
 @Getter

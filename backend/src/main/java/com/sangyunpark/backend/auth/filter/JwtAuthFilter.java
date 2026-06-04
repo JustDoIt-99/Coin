@@ -22,7 +22,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final Set<String> EXCLUDED_URLS = Set.of(
             "/api/auth/login",
             "/api/auth/signup",
-            "/api/auth/reissue"
+            "/api/auth/reissue",
+            "/api/markets",
+            "/api/tickers",
+            "/api/candles/minutes"
     );
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -31,7 +34,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-        if(EXCLUDED_URLS.contains(uri)) {
+        boolean excluded = EXCLUDED_URLS.stream()
+                .anyMatch(uri::startsWith);
+
+        if(excluded) {
             filterChain.doFilter(request, response);
             return;
         }

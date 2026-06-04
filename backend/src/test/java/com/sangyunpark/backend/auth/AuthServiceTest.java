@@ -5,7 +5,7 @@ import com.sangyunpark.backend.auth.dto.request.SignupRequest;
 import com.sangyunpark.backend.auth.dto.response.LoginResponse;
 import com.sangyunpark.backend.auth.dto.response.ReissueResponse;
 import com.sangyunpark.backend.auth.dto.response.UserResponse;
-import com.sangyunpark.backend.auth.exception.ErrorCode;
+import com.sangyunpark.backend.auth.exception.AuthErrorCode;
 import com.sangyunpark.backend.auth.repositiory.RefreshTokenJpaRepository;
 import com.sangyunpark.backend.auth.repositiory.UserJpaRepository;
 import com.sangyunpark.backend.auth.service.AuthService;
@@ -59,7 +59,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.signup(request))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.DUPLICATE_EMAIL);
+                .isEqualTo(AuthErrorCode.DUPLICATE_EMAIL);
     }
 
     @Test
@@ -91,7 +91,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVALID_LOGIN_CREDENTIALS);
+                .isEqualTo(AuthErrorCode.INVALID_LOGIN_CREDENTIALS);
     }
 
     @Test
@@ -110,7 +110,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVALID_LOGIN_CREDENTIALS);
+                .isEqualTo(AuthErrorCode.INVALID_LOGIN_CREDENTIALS);
     }
 
     @Test
@@ -178,7 +178,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.reissue("invalid-refresh-token"))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
-                .isEqualTo(ErrorCode.INVALID_REFRESH_TOKEN);
+                .isEqualTo(AuthErrorCode.INVALID_REFRESH_TOKEN);
     }
 
     @Test

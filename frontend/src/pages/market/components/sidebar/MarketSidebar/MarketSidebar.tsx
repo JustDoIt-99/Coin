@@ -1,7 +1,6 @@
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchTickers, type Market, type Ticker } from "@api/api";
-import useUpBitTickerSocket from "@hooks/useUpbitTickerSocket";
 import type { MarketTab } from "@pages/market/MarketPage";
 import type { NameType, SortedKey, SortOrder } from "@pages/market/components/sidebar/type";
 import MarketRow from "../MarketRow";
@@ -9,6 +8,7 @@ import MarketTabs from "../MarketTabs/MarketTabs";
 import MarketHeaderRow from "../MarketHeaderRow";
 import MarketSearch from "../MarketSearch";
 import { Container, RowList } from "./MarketSidebar.styles";
+import useServerTickerSocket from "@hooks/useServerTickerSocket.ts";
 
 interface Props {
     markets: Market[] | null;
@@ -17,7 +17,7 @@ interface Props {
     setTickerMap: Dispatch<SetStateAction<Record<string, Ticker>>>;
 }
 
-interface TickerMessage {
+export interface TickerMessage {
     code: string;
     trade_price: number;
     signed_change_rate: number;
@@ -143,7 +143,7 @@ function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : P
         prevPriceRef.current[data.code] = nextPrice;
     }, []);
 
-    useUpBitTickerSocket(marketCodes, handleTickerMessage);
+    useServerTickerSocket(handleTickerMessage);
 
     const sortedMarkets = useMemo(() => {
         return [...filteredMarkets].sort((a,b) => {
@@ -164,6 +164,7 @@ function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : P
             return sortOrder === "asc" ? diff : -diff;
         })
     },[filteredMarkets, tickerMap, sortKey, sortOrder]);
+
 
     const btcPrice = tickerMap["KRW-BTC"]?.trade_price;
     const usdtPrice = tickerMap["KRW-USDT"]?.trade_price;

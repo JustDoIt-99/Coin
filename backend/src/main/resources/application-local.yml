@@ -1,8 +1,8 @@
-spring:
-  application:
-    name: backend
-
 jwt:
   secret: yeZ5/HgQ71qd7PduhYBZDaHRJ2B9KyfVswkdvgbit8w=
   access-token-expiration: 1800000
   refresh-token-expiration: 1209600000
+
+cors:
+  allowed-origins:
+    - http://localhost:5173
