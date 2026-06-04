@@ -17,7 +17,7 @@ public class TickerService {
 
     public List<TickerResponse> getLatestTickers(List<String> marketCodes) {
         List<TickerResponse> tickers = upbitTickerClient.fetchTickers(marketCodes);
-        upbitTickerWebSocketClient.putAll(tickers);
+        upbitTickerWebSocketClient.updateTickerCache(tickers);
         return tickers;
     }
 
