@@ -25,7 +25,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             "/api/auth/reissue",
             "/api/markets",
             "/api/tickers",
-            "/api/candles/minutes"
+            "/api/candles/minutes",
+            "/api/orderbooks/subscribe",
+            "/api/trades/subscribe"
     );
 
     private final JwtTokenProvider jwtTokenProvider;

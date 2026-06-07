@@ -6,7 +6,7 @@ import {
 } from "@stomp/stompjs";
 import type {TickerMessage} from "@pages/market/components/sidebar/MarketSidebar/MarketSidebar.tsx";
 
-function useServerTickerSocket(
+function useTickerSocket(
     onMessage: (data: TickerMessage) => void
 ) {
     const clientRef = useRef<Client | null>(null);
@@ -63,4 +63,4 @@ function useServerTickerSocket(
     }, []);
 }
 
-export default useServerTickerSocket;
+export default useTickerSocket;

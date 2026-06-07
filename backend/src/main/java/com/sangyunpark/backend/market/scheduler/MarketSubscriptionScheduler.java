@@ -1,6 +1,6 @@
 package com.sangyunpark.backend.market.scheduler;
 
-import com.sangyunpark.backend.market.restClient.UpbitTickerWebSocketClient;
+import com.sangyunpark.backend.market.socketClient.UpbitTickerWebSocketClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
