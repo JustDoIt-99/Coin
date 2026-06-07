@@ -106,7 +106,7 @@ public class UpbitTradeWebSocketClient {
                 cancelReconnect();
 
                 sendSubscribeMessage();
-                log.info("Upbit trade 웹소켓 연결 성공");
+                log.info("Upbit trade 웹소켓 연결 성공, 구독중인 마켓 개수: {}", subscribedMarketCodes.size());
             }
 
             @Override
@@ -116,14 +116,15 @@ public class UpbitTradeWebSocketClient {
 
                 try {
                     TradeResponse trade = objectMapper.readValue(payload, TradeResponse.class);
+                    String marketCode = trade.code();
 
-                    if (trade.code() == null || trade.code().isBlank()) {
+                    if (marketCode == null || marketCode.isBlank()) {
                         log.debug("code가 비어있는 trade 메시지는 무시합니다. payload={}", payload);
                         return;
                     }
 
                     messagingTemplate.convertAndSend(
-                            TRADE_TOPIC_PREFIX + trade.code(),
+                            TRADE_TOPIC_PREFIX + marketCode,
                             trade
                     );
                 } catch (Exception e) {
@@ -228,6 +229,12 @@ public class UpbitTradeWebSocketClient {
         }
     }
 
+    private void closeSession() {
+        WebSocketSession currentSession = this.session;
+        this.session = null;
+        closeSession(currentSession);
+    }
+
     private void closeSession(WebSocketSession targetSession) {
         if (targetSession == null) {
             return;
@@ -240,12 +247,6 @@ public class UpbitTradeWebSocketClient {
         } catch (Exception e) {
             log.error("trade 웹소켓 세션 종료 실패", e);
         }
-    }
-
-    private void closeSession() {
-        WebSocketSession currentSession = this.session;
-        this.session = null;
-        closeSession(currentSession);
     }
 
     @PreDestroy
