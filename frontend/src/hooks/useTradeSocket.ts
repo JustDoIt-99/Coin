@@ -7,6 +7,8 @@ import {
 } from "@stomp/stompjs";
 import { subscribeTrade } from "@api/api.ts";
 
+const WS_URL = import.meta.env.VITE_WS_URL;
+
 export interface UpBitTrade {
     code: string;
     trade_price: number;
@@ -23,6 +25,7 @@ function useServerTradeSocket(
     const subscriptionRef = useRef<StompSubscription | null>(null);
     const onMessageRef = useRef(onMessage);
     const marketCodeRef = useRef(marketCode);
+    const requestIdRef = useRef(0);
 
     useEffect(() => {
         onMessageRef.current = onMessage;
@@ -36,8 +39,18 @@ function useServerTradeSocket(
         const client = clientRef.current;
         if (!client || !client.connected || !code) return;
 
+        const requestId = ++requestIdRef.current;
+
         try {
             await subscribeTrade(code);
+
+            if (requestIdRef.current !== requestId) {
+                return;
+            }
+
+            if(marketCodeRef.current !== code) {
+                return;
+            }
 
             subscriptionRef.current?.unsubscribe();
             subscriptionRef.current = client.subscribe(
@@ -58,7 +71,7 @@ function useServerTradeSocket(
 
     useEffect(() => {
         const client = new Client({
-            brokerURL: "ws://localhost:8080/ws",
+            brokerURL: WS_URL,
             reconnectDelay: 3000,
 
             onConnect: () => {
@@ -90,6 +103,7 @@ function useServerTradeSocket(
         client.activate();
 
         return () => {
+            requestIdRef.current += 1;
             subscriptionRef.current?.unsubscribe();
             subscriptionRef.current = null;
             client.deactivate();
@@ -101,6 +115,7 @@ function useServerTradeSocket(
         void subscribeToMarket(marketCode);
 
         return () => {
+            requestIdRef.current += 1;
             subscriptionRef.current?.unsubscribe();
             subscriptionRef.current = null;
         };

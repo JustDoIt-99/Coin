@@ -22,7 +22,9 @@ export interface OrderbookMessage {
     orderbook_units: OrderBookUnitMessage[];
 }
 
-function useOrderBookSocket(
+const WS_URL = import.meta.env.VITE_WS_URL;
+
+function useServerOrderBookSocket(
     marketCode: string,
     onMessage: (data: OrderbookMessage) => void
 ) {
@@ -30,6 +32,7 @@ function useOrderBookSocket(
     const subscriptionRef = useRef<StompSubscription | null>(null);
     const onMessageRef = useRef(onMessage);
     const marketCodeRef = useRef(marketCode);
+    const requestIdRef = useRef(0);
 
     useEffect(() => {
         onMessageRef.current = onMessage;
@@ -43,8 +46,18 @@ function useOrderBookSocket(
         const client = clientRef.current;
         if (!client || !client.connected || !code) return;
 
+        const requestId = ++requestIdRef.current;
+
         try {
             await subscribeOrderBook(code);
+
+            if (requestIdRef.current !== requestId) {
+                return;
+            }
+
+            if (marketCodeRef.current !== code) {
+                return;
+            }
 
             subscriptionRef.current?.unsubscribe();
             subscriptionRef.current = client.subscribe(
@@ -59,13 +72,16 @@ function useOrderBookSocket(
                 }
             );
         } catch (error) {
+            if (requestIdRef.current !== requestId) {
+                return;
+            }
             console.error("orderbook subscribe request error", error);
         }
     };
 
     useEffect(() => {
         const client = new Client({
-            brokerURL: "ws://localhost:8080/ws",
+            brokerURL: WS_URL,
             reconnectDelay: 3000,
 
             onConnect: () => {
@@ -97,6 +113,7 @@ function useOrderBookSocket(
         client.activate();
 
         return () => {
+            requestIdRef.current += 1;
             subscriptionRef.current?.unsubscribe();
             subscriptionRef.current = null;
             client.deactivate();
@@ -108,10 +125,11 @@ function useOrderBookSocket(
         void subscribeToMarket(marketCode);
 
         return () => {
+            requestIdRef.current += 1;
             subscriptionRef.current?.unsubscribe();
             subscriptionRef.current = null;
         };
     }, [marketCode]);
 }
 
-export default useOrderBookSocket;
+export default useServerOrderBookSocket;

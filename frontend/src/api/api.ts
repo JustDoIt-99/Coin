@@ -110,7 +110,7 @@ export async function subscribeOrderBook(marketCode: string): Promise<void> {
     if (!marketCode) return;
 
     const response = await fetch(
-        `http://localhost:8080/api/orderbooks/subscribe?marketCode=${encodeURIComponent(marketCode)}`,
+        `${API.ORDERBOOK_SUBSCRIPTION}?marketCode=${encodeURIComponent(marketCode)}`,
         {
             method: "POST"
         }
@@ -125,7 +125,7 @@ export async function subscribeTrade(marketCode: string): Promise<void> {
 
     const response = await fetch(
 
-        `http://localhost:8080/api/trades/subscribe?marketCode=${encodeURIComponent(marketCode)}`,
+        `${API.TRADE_SUBSCRIPTION}?marketCode=${encodeURIComponent(marketCode)}`,
         {
             method: "POST",
         }
