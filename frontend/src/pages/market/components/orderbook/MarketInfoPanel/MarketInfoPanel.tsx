@@ -8,12 +8,11 @@ import {
     RedValue,
     BlueValue,
 } from "./MarketInfoPanel.styles.ts";
-import type {Ticker} from "frontend/src/api/api.ts";
+import type {Ticker} from "@api/api.ts";
 
 interface Props {
     ticker?: Ticker;
 }
-
 
 function MarketInfoPanel({ticker}: Props) {
     if (!ticker) return null;

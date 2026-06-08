@@ -8,7 +8,7 @@ import MarketTabs from "../MarketTabs/MarketTabs";
 import MarketHeaderRow from "../MarketHeaderRow";
 import MarketSearch from "../MarketSearch";
 import { Container, RowList } from "./MarketSidebar.styles";
-import useServerTickerSocket from "@hooks/useServerTickerSocket.ts";
+import useTickerSocket from "@hooks/useTickerSocket.ts";
 
 interface Props {
     markets: Market[] | null;
@@ -143,7 +143,7 @@ function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : P
         prevPriceRef.current[data.code] = nextPrice;
     }, []);
 
-    useServerTickerSocket(handleTickerMessage);
+    useTickerSocket(handleTickerMessage);
 
     const sortedMarkets = useMemo(() => {
         return [...filteredMarkets].sort((a,b) => {

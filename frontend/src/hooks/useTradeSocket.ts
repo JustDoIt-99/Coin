@@ -1,6 +1,13 @@
-import {useEffect, useRef} from "react";
+import { useEffect, useRef } from "react";
+import {
+    Client,
+    type IMessage,
+    type IFrame,
+    type StompSubscription,
+} from "@stomp/stompjs";
+import { subscribeTrade } from "@api/api.ts";
 
-const URL = "wss://api.upbit.com/websocket/v1";
+const WS_URL = import.meta.env.VITE_WS_URL;
 
 export interface UpBitTrade {
     code: string;
@@ -10,68 +17,109 @@ export interface UpBitTrade {
     trade_timestamp: number;
 }
 
-function useTradeSocket(
+function useServerTradeSocket(
     marketCode: string,
-    onMessage: (DataTransfer: UpBitTrade) => void
+    onMessage: (data: UpBitTrade) => void
 ) {
-
-    const socketRef = useRef<WebSocket | null>(null);
+    const clientRef = useRef<Client | null>(null);
+    const subscriptionRef = useRef<StompSubscription | null>(null);
     const onMessageRef = useRef(onMessage);
+    const marketCodeRef = useRef(marketCode);
+    const requestIdRef = useRef(0);
 
     useEffect(() => {
         onMessageRef.current = onMessage;
     }, [onMessage]);
 
     useEffect(() => {
-        const socket = new WebSocket(URL);
-        socketRef.current = socket;
+        marketCodeRef.current = marketCode;
+    }, [marketCode]);
 
-        socket.onmessage = async (event) => {
-            try {
-                const text = typeof event.data === "string" ? event.data : await event.data.text();
-                const data = JSON.parse(text);
-                onMessageRef.current(data);
-            } catch (error) {
-                console.error("Trade WebSocket parse error", error);
+    const subscribeToMarket = async (code: string) => {
+        const client = clientRef.current;
+        if (!client || !client.connected || !code) return;
+
+        const requestId = ++requestIdRef.current;
+
+        try {
+            await subscribeTrade(code);
+
+            if (requestIdRef.current !== requestId) {
+                return;
             }
-        };
+
+            if(marketCodeRef.current !== code) {
+                return;
+            }
+
+            subscriptionRef.current?.unsubscribe();
+            subscriptionRef.current = client.subscribe(
+                `/topic/trade/${code}`,
+                (message: IMessage) => {
+                    try {
+                        const data = JSON.parse(message.body) as UpBitTrade;
+                        onMessageRef.current(data);
+                    } catch (error) {
+                        console.error("Spring trade message parse error", error);
+                    }
+                }
+            );
+        } catch (error) {
+            console.error("trade subscribe request error", error);
+        }
+    };
+
+    useEffect(() => {
+        const client = new Client({
+            brokerURL: WS_URL,
+            reconnectDelay: 3000,
+
+            onConnect: () => {
+                void subscribeToMarket(marketCodeRef.current);
+            },
+
+            onStompError: (frame: IFrame) => {
+                console.error(
+                    "STOMP error",
+                    frame.headers["message"],
+                    frame.body
+                );
+            },
+
+            onWebSocketError: (event: Event) => {
+                console.error("Spring trade websocket error", event);
+            },
+
+            onWebSocketClose: (event: CloseEvent) => {
+                console.log(
+                    "Spring trade websocket closed",
+                    event.code,
+                    event.reason
+                );
+            },
+        });
+
+        clientRef.current = client;
+        client.activate();
 
         return () => {
-            socket.close();
-            socketRef.current = null;
-        }
+            requestIdRef.current += 1;
+            subscriptionRef.current?.unsubscribe();
+            subscriptionRef.current = null;
+            client.deactivate();
+            clientRef.current = null;
+        };
     }, []);
 
     useEffect(() => {
-        if (!marketCode) return;
-
-        const socket = socketRef.current;
-        if (!socket) return;
-
-        const subscribe = () => {
-            socket.send(
-                JSON.stringify([
-                    {ticket: "trade"},
-                    {
-                        type: "trade",
-                        codes: [marketCode]
-                    },
-                ])
-            );
-        };
-
-        if (socket.readyState === WebSocket.OPEN) {
-            subscribe();
-            return;
-        }
-
-        socket.addEventListener("open", subscribe, {once: true});
+        void subscribeToMarket(marketCode);
 
         return () => {
-            socket.removeEventListener("open", subscribe);
-        }
-
-    },[marketCode]);
+            requestIdRef.current += 1;
+            subscriptionRef.current?.unsubscribe();
+            subscriptionRef.current = null;
+        };
+    }, [marketCode]);
 }
 
-export default useTradeSocket;
+export default useServerTradeSocket;

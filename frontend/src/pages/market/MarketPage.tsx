@@ -85,4 +85,4 @@ function MarketPage() {
 
 }
 
-export default MarketPage;
+export default  MarketPage;

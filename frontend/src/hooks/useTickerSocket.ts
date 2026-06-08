@@ -6,7 +6,9 @@ import {
 } from "@stomp/stompjs";
 import type {TickerMessage} from "@pages/market/components/sidebar/MarketSidebar/MarketSidebar.tsx";
 
-function useServerTickerSocket(
+const WS_URL = import.meta.env.VITE_WS_URL;
+
+function useTickerSocket(
     onMessage: (data: TickerMessage) => void
 ) {
     const clientRef = useRef<Client | null>(null);
@@ -18,7 +20,7 @@ function useServerTickerSocket(
 
     useEffect(() => {
         const client = new Client({
-            brokerURL: "ws://localhost:8080/ws",
+            brokerURL: WS_URL,
             reconnectDelay: 3000,
 
             onConnect: () => {
@@ -63,4 +65,4 @@ function useServerTickerSocket(
     }, []);
 }
 
-export default useServerTickerSocket;
+export default useTickerSocket;

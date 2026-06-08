@@ -1,5 +1,4 @@
 import {useState} from "react";
-import useOrderBookSocket from "@hooks/useOrderBookSocket.ts";
 import OrderBookPanel from "@pages/market/components/orderbook/OrderBookPanel";
 import MarketInfoPanel from "@pages/market/components/orderbook/MarketInfoPanel";
 import {
@@ -10,6 +9,7 @@ import {
 } from "@pages/market/components/orderbook/OrderBook/OrderBook.styles.ts";
 import TradeListPanel from "@pages/market/components/orderbook/TradeListPanel";
 import type {Ticker} from "@api/api.ts";
+import useOrderBookSocket, {type OrderbookMessage} from "@hooks/useOrderBookSocket.ts";
 
 interface Props {
     marketCode: string;
@@ -34,7 +34,7 @@ export interface UpBitOrderBook {
 }
 
 function OrderBook({marketCode, prevClosingPrice, ticker, active}: Props) {
-    const [orderBook, setOrderBook] = useState<UpBitOrderBook | null>(null);
+    const [orderBook, setOrderBook] = useState<OrderbookMessage | null>(null);
 
     useOrderBookSocket(marketCode, setOrderBook);
 

@@ -105,3 +105,34 @@ export async function fetchMinuteCandlesPage(
 
     return result;
 }
+
+export async function subscribeOrderBook(marketCode: string): Promise<void> {
+    if (!marketCode) return;
+
+    const response = await fetch(
+        `${API.ORDERBOOK_SUBSCRIPTION}?marketCode=${encodeURIComponent(marketCode)}`,
+        {
+            method: "POST"
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error("호가창 구독 요청에 실패했습니다.");
+    }
+}
+
+export async function subscribeTrade(marketCode: string): Promise<void> {
+
+    const response = await fetch(
+
+        `${API.TRADE_SUBSCRIPTION}?marketCode=${encodeURIComponent(marketCode)}`,
+        {
+            method: "POST",
+        }
+
+    );
+
+    if (!response.ok) {
+        throw new Error("체결 데이터 구독 요청에 실패했습니다.");
+    }
+}

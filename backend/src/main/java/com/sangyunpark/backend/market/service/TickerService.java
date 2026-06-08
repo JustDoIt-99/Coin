@@ -2,7 +2,7 @@ package com.sangyunpark.backend.market.service;
 
 import com.sangyunpark.backend.market.dto.response.TickerResponse;
 import com.sangyunpark.backend.market.restClient.UpbitTickerClient;
-import com.sangyunpark.backend.market.restClient.UpbitTickerWebSocketClient;
+import com.sangyunpark.backend.market.socketClient.UpbitTickerWebSocketClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

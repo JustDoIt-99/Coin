@@ -1,78 +1,135 @@
-import {useEffect, useRef} from "react";
-import type {UpBitOrderBook} from "frontend/src/pages/market/components/orderbook/OrderBook/OrderBook.tsx";
+import { useEffect, useRef } from "react";
+import {
+    Client,
+    type IMessage,
+    type IFrame,
+    type StompSubscription,
+} from "@stomp/stompjs";
+import { subscribeOrderBook } from "@api/api.ts";
 
-const URL = "wss://api.upbit.com/websocket/v1";
+export interface OrderBookUnitMessage {
+    ask_price: number;
+    bid_price: number;
+    ask_size: number;
+    bid_size: number;
+}
 
-function useOrderBookSocket(marketCode: string,  onMessage:(data:UpBitOrderBook) => void) {
-    const socketRef = useRef<WebSocket | null>(null);
+export interface OrderbookMessage {
+    code: string;
+    timestamp: number;
+    total_ask_size: number;
+    total_bid_size: number;
+    orderbook_units: OrderBookUnitMessage[];
+}
+
+const WS_URL = import.meta.env.VITE_WS_URL;
+
+function useServerOrderBookSocket(
+    marketCode: string,
+    onMessage: (data: OrderbookMessage) => void
+) {
+    const clientRef = useRef<Client | null>(null);
+    const subscriptionRef = useRef<StompSubscription | null>(null);
     const onMessageRef = useRef(onMessage);
+    const marketCodeRef = useRef(marketCode);
+    const requestIdRef = useRef(0);
 
     useEffect(() => {
         onMessageRef.current = onMessage;
     }, [onMessage]);
 
     useEffect(() => {
-        const socket = new WebSocket(URL);
-        socketRef.current = socket;
+        marketCodeRef.current = marketCode;
+    }, [marketCode]);
 
-        socket.onmessage = async (event)  => {
-            try {
-                const text = typeof event.data === "string"
-                    ? event.data
-                    : await event.data.text();
+    const subscribeToMarket = async (code: string) => {
+        const client = clientRef.current;
+        if (!client || !client.connected || !code) return;
 
-                const data = JSON.parse(text);
-                onMessageRef.current(data);
-            } catch (error) {
-                console.error("WebSocket Message parse error", error);
+        const requestId = ++requestIdRef.current;
+
+        try {
+            await subscribeOrderBook(code);
+
+            if (requestIdRef.current !== requestId) {
+                return;
             }
+
+            if (marketCodeRef.current !== code) {
+                return;
+            }
+
+            subscriptionRef.current?.unsubscribe();
+            subscriptionRef.current = client.subscribe(
+                `/topic/orderbook/${code}`,
+                (message: IMessage) => {
+                    try {
+                        const data = JSON.parse(message.body) as OrderbookMessage;
+                        onMessageRef.current(data);
+                    } catch (error) {
+                        console.error("Spring orderbook message parse error", error);
+                    }
+                }
+            );
+        } catch (error) {
+            if (requestIdRef.current !== requestId) {
+                return;
+            }
+            console.error("orderbook subscribe request error", error);
         }
-
-        socket.onerror = (error) => {
-            console.error("WebSocket error", error);
-        };
-
-        socket.onclose = (event) => {
-            console.log("WebSocket closed", event.code, event.reason);
-        };
-
-        return () => {
-            socket.close();
-            socketRef.current = null;
-        }
-
-    },[]);
+    };
 
     useEffect(() => {
-        if (!marketCode) return;
+        const client = new Client({
+            brokerURL: WS_URL,
+            reconnectDelay: 3000,
 
-        const socket = socketRef.current;
-        if (!socket) return;
+            onConnect: () => {
+                void subscribeToMarket(marketCodeRef.current);
+            },
 
-        const subscribe = () => {
-            socket.send(
-                JSON.stringify([
-                    {ticket: "orderbook"},
-                    {
-                        type: "orderbook",
-                        codes: [marketCode]
-                    }
-                ])
-            );
-        };
+            onStompError: (frame: IFrame) => {
+                console.error(
+                    "STOMP error",
+                    frame.headers["message"],
+                    frame.body
+                );
+            },
 
-        if (socket.readyState === WebSocket.OPEN) {
-            subscribe();
-            return;
-        }
+            onWebSocketError: (event: Event) => {
+                console.error("Spring orderbook websocket error", event);
+            },
 
-        socket.addEventListener("open", subscribe, {once: true});
+            onWebSocketClose: (event: CloseEvent) => {
+                console.log(
+                    "Spring orderbook websocket closed",
+                    event.code,
+                    event.reason
+                );
+            },
+        });
+
+        clientRef.current = client;
+        client.activate();
 
         return () => {
-            socket.removeEventListener("open", subscribe);
-        }
+            requestIdRef.current += 1;
+            subscriptionRef.current?.unsubscribe();
+            subscriptionRef.current = null;
+            client.deactivate();
+            clientRef.current = null;
+        };
+    }, []);
 
+    useEffect(() => {
+        void subscribeToMarket(marketCode);
+
+        return () => {
+            requestIdRef.current += 1;
+            subscriptionRef.current?.unsubscribe();
+            subscriptionRef.current = null;
+        };
     }, [marketCode]);
 }
 
-export default useOrderBookSocket;
+export default useServerOrderBookSocket;
