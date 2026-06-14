@@ -16,6 +16,9 @@ import PercentButtons from "@pages/market/components/common/PercentButtons/Perce
 import type {Ticker} from "@api/api.ts";
 import OrderInputRow from "@pages/market/components/common/OrderInputRow/OrderInputRow.tsx";
 import useOrderForm from "@hooks/useOrderForm.ts";
+import {useNavigate} from "react-router-dom";
+import * as React from "react";
+import {useAuth} from "../../../../../auth/useAuth.ts";
 
 interface OrderFormProps {
     tradeType: TradeType;
@@ -34,6 +37,8 @@ const DEFAULT_NOTICE = "최소주문: 5,000 KRW · 수수료(부가세 포함): 
 
 function OrderForm({tradeType, ticker}: OrderFormProps) {
     const {state, flags, display, actions} = useOrderForm({ tradeType, ticker });
+    const {isAuthenticated} = useAuth();
+    const navigate = useNavigate();
 
     const percentButtons = (
         <PercentButtons
@@ -43,15 +48,28 @@ function OrderForm({tradeType, ticker}: OrderFormProps) {
         />
     );
 
+    const handleSubmit: React.ComponentProps<"form">["onSubmit"] = (e) => {
+        e.preventDefault();
+
+        if (!isAuthenticated) {
+            alert("로그인이 필요한 서비스 입니다.");
+            navigate("/login")
+            return;
+        }
+
+        console.log("주문 API 호출");
+    }
+
     const priceLabel = flags.isBuy ? "매수가격" : "매도가격";
 
     return (
-        <Form>
+        <Form onSubmit={handleSubmit}>
             <Row>
                 <Label>주문유형</Label>
                 <OrderTypeTabs>
                     {ORDER_TYPES.map((type) => (
                         <OrderTypeButton
+                            type="button"
                             key={type.key}
                             active={state.orderType === type.key}
                             onClick={() => actions.handleOrderTypeChange(type.key)}
@@ -100,8 +118,12 @@ function OrderForm({tradeType, ticker}: OrderFormProps) {
             <Divider/>
             <Notice>{display.validationMessage || DEFAULT_NOTICE}</Notice>
             <ButtonRow>
-                <ResetButton onClick={actions.handleReset}>초기화</ResetButton>
-                <SubmitButton tradeType={tradeType} disabled={!!display.validationMessage}>
+                <ResetButton type="button" onClick={actions.handleReset}>초기화</ResetButton>
+                <SubmitButton
+                    type="submit"
+                    tradeType={tradeType}
+                    disabled={!!display.validationMessage}
+                >
                     {display.submitLabel}
                 </SubmitButton>
             </ButtonRow>
