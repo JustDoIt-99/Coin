@@ -1,6 +1,5 @@
 import {useEffect, useRef} from "react";
 import {
-    type BusinessDay,
     type CandlestickData,
     CandlestickSeries,
     createChart,
@@ -19,6 +18,7 @@ interface Props {
 }
 
 const LOAD_MORE_THRESHOLD = 20;
+const KST_OFFSET_SECONDS = 9 * 60 * 60;
 
 function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
     const chartContainerRef = useRef<HTMLDivElement | null>(null);
@@ -50,7 +50,7 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
 
     const toChartData = (candles: MinuteCandle[]): CandlestickData<Time>[] => {
         return [...candles].reverse().map((candle) => ({
-            time: toChartTime(candle.candle_date_time_kst, interval),
+            time: toChartTime(candle.timestamp),
             open: candle.opening_price,
             high: candle.high_price,
             low: candle.low_price,
@@ -252,35 +252,8 @@ function getRefetchInterval(interval: CandleInterval) {
     return 1000 * 60 * 5;
 }
 
-function toChartTime(kstDateTime: string, interval: CandleInterval) {
-    const parsedDate = parseKstDateTime(kstDateTime);
-
-    if (interval.type !== "minute") {
-        return {
-            year: parsedDate.year,
-            month: parsedDate.month,
-            day: parsedDate.day,
-        } as BusinessDay;
-    }
-
-    return Math.floor(
-        Date.UTC(
-            parsedDate.year,
-            parsedDate.month - 1,
-            parsedDate.day,
-            parsedDate.hour,
-            parsedDate.minute,
-            parsedDate.second
-        ) / 1000
-    ) as Time;
-}
-
-function parseKstDateTime(kstDateTime: string) {
-    const [datePart, timePart] = kstDateTime.split("T");
-    const [year, month, day] = datePart.split("-").map(Number);
-    const [hour = 0, minute = 0, second = 0] = (timePart ?? "00:00:00").split(":").map(Number);
-
-    return {year, month, day, hour, minute, second};
+function toChartTime(timestamp: number) {
+    return (Math.floor(timestamp / 1000) + KST_OFFSET_SECONDS) as Time;
 }
 
 function formatTickMark(time: Time, tickMarkType: TickMarkType) {
@@ -300,36 +273,14 @@ function formatTickMark(time: Time, tickMarkType: TickMarkType) {
 }
 
 function getTimeKey(time: Time) {
-    if (isBusinessDay(time)) {
-        return `${time.year}-${pad(time.month)}-${pad(time.day)}`;
-    }
-
     return String(time);
 }
 
 function getTimeValue(time: Time) {
-    if (isBusinessDay(time)) {
-        return Date.UTC(time.year, time.month - 1, time.day);
-    }
-
     return Number(time) * 1000;
 }
 
-function isBusinessDay(time: Time): time is BusinessDay {
-    return typeof time === "object";
-}
-
 function getDateParts(time: Time) {
-    if (isBusinessDay(time)) {
-        return {
-            year: time.year,
-            month: time.month,
-            day: time.day,
-            hour: 0,
-            minute: 0,
-        };
-    }
-
     const date = new Date(Number(time) * 1000);
 
     return {

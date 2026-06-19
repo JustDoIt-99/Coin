@@ -109,67 +109,74 @@ public class UpbitTradeWebSocketClient {
     }
 
     private void connectWebSocket() {
-        webSocketClient.execute(new BinaryWebSocketHandler() {
+        try {
+            webSocketClient.execute(new BinaryWebSocketHandler() {
 
-            @Override
-            public void afterConnectionEstablished(WebSocketSession session) {
-                UpbitTradeWebSocketClient.this.session = session;
-                connecting.set(false);
-                reconnectScheduled.set(false);
-                cancelReconnect();
+                @Override
+                public void afterConnectionEstablished(WebSocketSession session) {
+                    UpbitTradeWebSocketClient.this.session = session;
+                    connecting.set(false);
+                    reconnectScheduled.set(false);
+                    cancelReconnect();
 
-                sendSubscribeMessage();
-                log.info("Upbit trade 웹소켓 연결 성공, 구독중인 마켓 개수: {}", subscribedMarketCodes.size());
-            }
-
-            @Override
-            protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
-                ByteBuffer buffer = message.getPayload();
-                String payload = StandardCharsets.UTF_8.decode(buffer).toString();
-
-                try {
-                    TradeResponse trade = objectMapper.readValue(payload, TradeResponse.class);
-                    String marketCode = trade.code();
-
-                    if (marketCode == null || marketCode.isBlank()) {
-                        log.debug("code가 비어있는 trade 메시지는 무시합니다. payload={}", payload);
-                        return;
-                    }
-
-                    messagingTemplate.convertAndSend(
-                            TRADE_TOPIC_PREFIX + marketCode,
-                            trade
-                    );
-                } catch (Exception e) {
-                    log.error("trade 메시지 파싱 실패. payload={}", payload, e);
+                    sendSubscribeMessage();
+                    log.info("Upbit trade 웹소켓 연결 성공, 구독중인 마켓 개수: {}", subscribedMarketCodes.size());
                 }
-            }
 
-            @Override
-            public void handleTransportError(WebSocketSession session, Throwable exception) {
-                log.error("Upbit trade 웹소켓 transport error", exception);
-                clearSession(session);
-                closeSession(session);
-                scheduleReconnect();
-            }
+                @Override
+                protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
+                    ByteBuffer buffer = message.getPayload();
+                    String payload = StandardCharsets.UTF_8.decode(buffer).toString();
 
-            @Override
-            public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-                log.warn("Upbit trade 웹소켓 연결 종료. status={}", status);
-                clearSession(session);
+                    try {
+                        TradeResponse trade = objectMapper.readValue(payload, TradeResponse.class);
+                        String marketCode = trade.code();
 
-                if (!shuttingDown.get()) {
+                        if (marketCode == null || marketCode.isBlank()) {
+                            log.debug("code가 비어있는 trade 메시지는 무시합니다. payload={}", payload);
+                            return;
+                        }
+
+                        messagingTemplate.convertAndSend(
+                                TRADE_TOPIC_PREFIX + marketCode,
+                                trade
+                        );
+                    } catch (Exception e) {
+                        log.error("trade 메시지 파싱 실패. payload={}", payload, e);
+                    }
+                }
+
+                @Override
+                public void handleTransportError(WebSocketSession session, Throwable exception) {
+                    log.error("Upbit trade 웹소켓 transport error", exception);
+                    clearSession(session);
+                    closeSession(session);
                     scheduleReconnect();
                 }
-            }
-        }, UPBIT_WS_URL).whenComplete((session, ex) -> {
-            if (ex != null) {
-                connecting.set(false);
-                log.error("Upbit trade 웹소켓 연결 실패", ex);
-                reconnectScheduled.set(false);
-                scheduleReconnect();
-            }
-        });
+
+                @Override
+                public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+                    log.warn("Upbit trade 웹소켓 연결 종료. status={}", status);
+                    clearSession(session);
+
+                    if (!shuttingDown.get()) {
+                        scheduleReconnect();
+                    }
+                }
+            }, UPBIT_WS_URL).whenComplete((session, ex) -> {
+                if (ex != null) {
+                    connecting.set(false);
+                    log.error("Upbit trade 웹소켓 연결 실패", ex);
+                    reconnectScheduled.set(false);
+                    scheduleReconnect();
+                }
+            });
+        } catch (RuntimeException e) {
+            connecting.set(false);
+            log.error("Upbit trade 웹소켓 연결 요청 실패", e);
+            reconnectScheduled.set(false);
+            scheduleReconnect();
+        }
     }
 
     private void sendSubscribeMessage() {
