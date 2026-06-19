@@ -1,12 +1,10 @@
 package com.sangyunpark.backend.auth.service;
 
-import com.sangyunpark.backend.auth.dto.response.ReissueResponse;
+import com.sangyunpark.backend.auth.dto.response.*;
 import com.sangyunpark.backend.auth.entity.RefreshToken;
 import com.sangyunpark.backend.auth.entity.User;
 import com.sangyunpark.backend.auth.dto.request.LoginRequest;
 import com.sangyunpark.backend.auth.dto.request.SignupRequest;
-import com.sangyunpark.backend.auth.dto.response.LoginResponse;
-import com.sangyunpark.backend.auth.dto.response.UserResponse;
 import com.sangyunpark.backend.auth.exception.AuthErrorCode;
 import com.sangyunpark.backend.auth.jwt.JwtTokenProvider;
 import com.sangyunpark.backend.auth.repositiory.RefreshTokenJpaRepository;
@@ -29,7 +27,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public UserResponse signup(final SignupRequest request) {
+    public AuthTokenResponse signup(final SignupRequest request) {
         if(userJpaRepository.existsByEmail(request.email())) {
             throw new BusinessException(AuthErrorCode.DUPLICATE_EMAIL);
         }
@@ -42,15 +40,18 @@ public class AuthService {
 
         User savedUser = userJpaRepository.save(user);
 
-        return new UserResponse(
-                savedUser.getId(),
-                savedUser.getEmail(),
-                savedUser.getNickname()
+        String accessToken = jwtTokenProvider.createAccessToken(savedUser.getId());
+        String refreshToken = jwtTokenProvider.createRefreshToken(savedUser.getId());
+
+        return new AuthTokenResponse(
+            accessToken,
+            refreshToken,
+            UserResponse.from(user)
         );
     }
 
     @Transactional
-    public LoginResponse login(final LoginRequest request) {
+    public AuthTokenResponse login(final LoginRequest request) {
         User user = userJpaRepository.findByEmail(request.email())
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.INVALID_LOGIN_CREDENTIALS));
 
@@ -71,15 +72,15 @@ public class AuthService {
                         .build()
         );
 
-        return new LoginResponse(
+        return new AuthTokenResponse(
                 accessToken,
                 refreshToken,
                 UserResponse.from(user)
         );
     }
 
-    @Transactional(readOnly = true)
-    public ReissueResponse reissue(String refreshToken) {
+    @Transactional
+    public AuthTokenResponse reissue(String refreshToken) {
 
         if(!jwtTokenProvider.validate(refreshToken)) {
             throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
@@ -92,9 +93,24 @@ public class AuthService {
             throw new BusinessException(AuthErrorCode.EXPIRED_REFRESH_TOKEN);
         }
 
-        Long userId = jwtTokenProvider.getUserId(refreshToken);
+        User user = savedToken.getUser();
+        String accessToken = jwtTokenProvider.createAccessToken(user.getId());
+        String rotatedRefreshToken = jwtTokenProvider.createRefreshToken(user.getId());
 
-        return new ReissueResponse(jwtTokenProvider.createAccessToken(userId));
+        refreshTokenJpaRepository.deleteByUser(user);
+        refreshTokenJpaRepository.save(
+                RefreshToken.builder()
+                        .user(user)
+                        .token(rotatedRefreshToken)
+                        .expiredAt(LocalDateTime.now().plusDays(14))
+                        .build()
+        );
+
+        return new AuthTokenResponse(
+                accessToken,
+                rotatedRefreshToken,
+                UserResponse.from(user)
+        );
     }
 
     @Transactional

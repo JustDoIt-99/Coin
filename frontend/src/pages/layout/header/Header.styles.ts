@@ -102,3 +102,28 @@ export const SignupButton = styled(Link)`
     font-weight: 700;
     cursor: pointer;
 `;
+
+export const LogoutButton = styled.button`
+    height: 32px;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    background: white;
+    color: #1f2937;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover {
+        background: #e5e7eb;
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
+`;

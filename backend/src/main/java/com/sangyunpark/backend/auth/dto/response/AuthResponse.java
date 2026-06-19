@@ -1,6 +1,6 @@
 package com.sangyunpark.backend.auth.dto.response;
 
-public record ReissueResponse(
+public record AuthResponse(
         String accessToken,
         UserResponse user
 ) {

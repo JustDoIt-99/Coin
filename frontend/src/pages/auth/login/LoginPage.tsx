@@ -14,16 +14,46 @@ import {
 } from "../AuthPage.styles";
 import {useState} from "react";
 import * as React from "react";
+import {useAuth} from "@auth/useAuth.ts";
+import {useLocation, useNavigate} from "react-router-dom";
+import {API} from "@constants/api.ts";
+import type {LoginResponse} from "../../../types/User.ts";
 
 function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const { login } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const from = location.state?.from?.pathname ?? "/";
 
-    const handleLogin = (e: React.SubmitEvent<HTMLFormElement>) => {
+    const handleLogin = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        console.log(email);
-        console.log(password);
+        try {
+            const response = await fetch(API.AUTH_LOGIN, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "include",
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("로그인 실패");
+            }
+
+            const data: LoginResponse = await response.json();
+
+            login(data.accessToken, data.user);
+            navigate(from, {replace: true});
+        } catch {
+            alert("이메일 또는 비밀번호를 확인해주세요.");
+        }
     };
 
     return (

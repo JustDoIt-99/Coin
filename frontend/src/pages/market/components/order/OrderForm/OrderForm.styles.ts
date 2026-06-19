@@ -7,7 +7,7 @@ const tradeColor = {
     sell: "#1976d2",
 };
 
-export const Form = styled.div`
+export const Form = styled.form`
     width: 100%;
     padding: 20px 20px;
     box-sizing: border-box;

@@ -4,6 +4,7 @@ import Layout from "./pages/layout/Layout";
 import LoginPage from "./pages/auth/login/LoginPage";
 import SignupPage from "./pages/auth/signup/SignupPage";
 import PortfolioPage from "./pages/portfolio/PortfolioPage";
+import ProtectedRoute from "./auth/ProtectedRoute.tsx";
 
 export const router = createBrowserRouter([
     {
@@ -23,9 +24,14 @@ export const router = createBrowserRouter([
                 element: <SignupPage/>
             },
             {
-                path: "portfolio",
-                element: <PortfolioPage />,
-            },
+                element: <ProtectedRoute/>,
+                children: [
+                    {
+                        path: "portfolio",
+                        element: <PortfolioPage/>
+                    }
+                ]
+            }
         ],
     }
 ]);

@@ -1,4 +1,4 @@
-import type {HistoryType, PeriodType} from "frontend/src/pages/tradehistory/types.ts";
+import type {HistoryType, PeriodType} from "@pages/tradehistory/types.ts";
 
 export const histories = [
     {

@@ -59,6 +59,7 @@ function PercentButtons({values, selected, onClick}: Props) {
 
                     return (
                         <PercentButton
+                            type="button"
                             key={value}
                             active={selected === value}
                             onClick={() => handleClick(value)}

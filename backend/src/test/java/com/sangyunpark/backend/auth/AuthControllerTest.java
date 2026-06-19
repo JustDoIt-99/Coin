@@ -2,11 +2,10 @@ package com.sangyunpark.backend.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sangyunpark.backend.auth.dto.request.LoginRequest;
-import com.sangyunpark.backend.auth.dto.request.LogoutRequest;
-import com.sangyunpark.backend.auth.dto.request.ReissueRequest;
 import com.sangyunpark.backend.auth.dto.request.SignupRequest;
-import com.sangyunpark.backend.auth.dto.response.LoginResponse;
+import com.sangyunpark.backend.auth.dto.response.AuthTokenResponse;
 import com.sangyunpark.backend.auth.service.AuthService;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -15,7 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -44,9 +44,11 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.email").value("test@test.com"))
-                .andExpect(jsonPath("$.nickname").value("sangyun"));
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.user.id").exists())
+                .andExpect(jsonPath("$.user.email").value("test@test.com"))
+                .andExpect(jsonPath("$.user.nickname").value("sangyun"))
+                .andExpect(cookie().exists("refreshToken"));
     }
 
     @Test
@@ -67,9 +69,11 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").exists())
-                .andExpect(jsonPath("$.refreshToken").exists())
-                .andExpect(jsonPath("$.userResponse.email").value("test@test.com"))
-                .andExpect(jsonPath("$.userResponse.nickname").value("sangyun"));
+                .andExpect(cookie().exists("refreshToken"))
+                .andExpect(cookie().httpOnly("refreshToken", true))
+                .andExpect(jsonPath("$.refreshToken").doesNotExist())
+                .andExpect(jsonPath("$.user.email").value("test@test.com"))
+                .andExpect(jsonPath("$.user.nickname").value("sangyun"));
     }
 
     @Test
@@ -93,31 +97,24 @@ class AuthControllerTest {
                 "sangyun"
         ));
 
-        LoginResponse loginResponse = authService.login(new LoginRequest(
+        AuthTokenResponse authTokenResponse = authService.login(new LoginRequest(
                 "test@test.com",
                 "12345678"
         ));
 
-        ReissueRequest request = new ReissueRequest(
-                loginResponse.refreshToken()
-        );
-
         mockMvc.perform(post("/api/auth/reissue")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .cookie(new Cookie("refreshToken", authTokenResponse.refreshToken())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists());
+                .andExpect(cookie().exists("refreshToken"))
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.user.email").value("test@test.com"))
+                .andExpect(jsonPath("$.user.nickname").value("sangyun"));
     }
 
     @Test
     void 잘못된_리프레시_토큰으로_재발급하면_실패한다() throws Exception {
-        ReissueRequest request = new ReissueRequest(
-                "invalid-refresh-token"
-        );
-
         mockMvc.perform(post("/api/auth/reissue")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .cookie(new Cookie("refreshToken", "invalid-refresh-token")))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -129,19 +126,28 @@ class AuthControllerTest {
                 "sangyun"
         ));
 
-        LoginResponse loginResponse = authService.login(new LoginRequest(
+        AuthTokenResponse authTokenResponse = authService.login(new LoginRequest(
                 "test@test.com",
                 "12345678"
         ));
 
-        LogoutRequest request = new LogoutRequest(
-                loginResponse.refreshToken()
-        );
-
         mockMvc.perform(post("/api/auth/logout")
-                        .header("Authorization", "Bearer " + loginResponse.accessToken())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk());
+                        .header("Authorization", "Bearer " + authTokenResponse.accessToken())
+                        .cookie(new Cookie("refreshToken", authTokenResponse.refreshToken())))
+                .andExpect(status().isOk())
+                .andExpect(cookie().value("refreshToken", ""))
+                .andExpect(cookie().maxAge("refreshToken", 0))
+                .andExpect(cookie().httpOnly("refreshToken", true));
+    }
+
+    @Test
+    void 로그아웃_preflight_요청은_인증_없이_통과한다() throws Exception {
+        mockMvc.perform(options("/api/auth/logout")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
     }
 }
