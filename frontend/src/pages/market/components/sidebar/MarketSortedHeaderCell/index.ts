@@ -1,1 +1,1 @@
-export {default} from "./MarketSortedHeaderCell.tsx";
+export {default} from "./MarketSortedHeaderCell";

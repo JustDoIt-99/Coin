@@ -5,8 +5,8 @@ import {
     CoinName,
     Muted, OrderButton,
     Profit
-} from "./AssetTableRow.styles.ts";
-import type {Asset} from "@pages/portfolio/types.ts";
+} from "./AssetTableRow.styles";
+import type {Asset} from "@pages/portfolio/types";
 
 interface Props {
     asset: Asset;

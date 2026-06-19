@@ -1,6 +1,6 @@
 import {useEffect, useRef} from "react";
-import { useAuth } from "./useAuth";
-import {API} from "@constants/api.ts";
+import { useAuth } from "@auth/useAuth";
+import {API} from "@constants/api";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
     const { login, setIsLoading } = useAuth();

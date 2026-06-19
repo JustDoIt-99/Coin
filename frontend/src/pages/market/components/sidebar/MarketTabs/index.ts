@@ -1,1 +1,1 @@
-export {default} from "./MarketTabs.tsx";
+export {default} from "./MarketTabs";

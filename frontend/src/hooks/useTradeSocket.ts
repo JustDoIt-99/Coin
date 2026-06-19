@@ -5,7 +5,7 @@ import {
     type IFrame,
     type StompSubscription,
 } from "@stomp/stompjs";
-import { subscribeTrade } from "@api/api.ts";
+import { subscribeTrade } from "@api/api";
 
 const WS_URL = import.meta.env.VITE_WS_URL;
 
@@ -45,6 +45,10 @@ function useServerTradeSocket(
             await subscribeTrade(code);
 
             if (requestIdRef.current !== requestId) {
+                return;
+            }
+
+            if (clientRef.current !== client || !client.connected) {
                 return;
             }
 

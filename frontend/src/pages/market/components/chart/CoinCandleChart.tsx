@@ -1,25 +1,26 @@
 import {useEffect, useRef} from "react";
 import {
+    type BusinessDay,
     type CandlestickData,
     CandlestickSeries,
     createChart,
     type IChartApi,
-    type ISeriesApi, type LogicalRange, type Time
+    type ISeriesApi, type LogicalRange, type Time,
+    TickMarkType
 } from "lightweight-charts";
 import {useQuery} from "@tanstack/react-query";
-import {fetchMinuteCandlesPage, type MinuteCandle} from "@api/api.ts";
-import {KST_OFFSET_SECONDS} from "@constants/chart.ts";
+import {fetchCandlesPage, type CandleInterval, type MinuteCandle} from "@api/api";
 
 interface Props {
     marketCode: string;
-    unit?: number;
+    interval: CandleInterval;
     currentPrice?: number,
     active?: boolean
 }
 
 const LOAD_MORE_THRESHOLD = 20;
 
-function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
+function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
     const chartContainerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -31,10 +32,10 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
     const isFirstLoadingChartRef = useRef<boolean>(true);
 
     const {data: candles} = useQuery({
-        queryKey: ["candle-chart", marketCode, unit],
-        queryFn: () => fetchMinuteCandlesPage(marketCode, unit,  3),
+        queryKey: ["candle-chart", marketCode, interval.type, interval.unit],
+        queryFn: () => fetchCandlesPage(marketCode, interval,  3),
         enabled: !!marketCode,
-        refetchInterval: 1000 * 60 * unit
+        refetchInterval: getRefetchInterval(interval)
     });
 
     useEffect(() => {
@@ -45,11 +46,11 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
         requestedOlderRef.current = false;
         isLoadingOlderRef.current = false;
         candleSeriesRef.current?.setData([]);
-    }, [marketCode, unit]);
+    }, [marketCode, interval.type, interval.unit]);
 
     const toChartData = (candles: MinuteCandle[]): CandlestickData<Time>[] => {
         return [...candles].reverse().map((candle) => ({
-            time: Math.floor(candle.timestamp / 1000 + KST_OFFSET_SECONDS) as Time,
+            time: toChartTime(candle.candle_date_time_kst, interval),
             open: candle.opening_price,
             high: candle.high_price,
             low: candle.low_price,
@@ -60,13 +61,13 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
     const normalizeChartData = (
         data: CandlestickData<Time>[]
     ): CandlestickData<Time>[] => {
-        const map = new Map<number, CandlestickData<Time>>();
+        const map = new Map<string, CandlestickData<Time>>();
         data.forEach((item) => {
-            map.set(Number(item.time), item);
+            map.set(getTimeKey(item.time), item);
         });
 
         return Array.from(map.values())
-            .sort((a, b) => Number(a.time) - Number(b.time));
+            .sort((a, b) => getTimeValue(a.time) - getTimeValue(b.time));
     };
 
     useEffect(() => {
@@ -77,16 +78,16 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
             height: 420,
             layout: {
                 background : { color: "#ffffff"},
-                textColor: "#333",
-                attributionLogo: false
+                textColor: "#333"
             },
             grid: {
                 vertLines: {color: "#f1f3f5"},
                 horzLines: {color: "#f1f3f5"}
             },
             timeScale: {
-                timeVisible: true,
-                secondsVisible: false
+                timeVisible: interval.type === "minute",
+                secondsVisible: false,
+                tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => formatTickMark(time, tickMarkType)
             },
             rightPriceScale : {
                 borderVisible: true
@@ -132,9 +133,9 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
             const candleSeries = candleSeriesRef.current;
 
             try {
-                const olderCandles = await fetchMinuteCandlesPage(
+                const olderCandles = await fetchCandlesPage(
                     marketCode,
-                    unit,
+                    interval,
                     3,
                     oldestCandleRef.current
                 );
@@ -192,7 +193,7 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
             chartRef.current = null;
             candleSeriesRef.current = null;
         }
-    }, [marketCode, unit]);
+    }, [marketCode, interval.type, interval.unit]);
 
     useEffect(() => {
         if (!candles || !candleSeriesRef.current || !chartRef.current) return;
@@ -241,6 +242,107 @@ function CoinCandleChart({marketCode, unit = 15, currentPrice, active}: Props) {
     }, [active]);
 
     return <div ref={chartContainerRef} style={{width: "100%", height: 420}}/>
+}
+
+function getRefetchInterval(interval: CandleInterval) {
+    if (interval.type === "minute") {
+        return 1000 * 60 * (interval.unit ?? 15);
+    }
+
+    return 1000 * 60 * 5;
+}
+
+function toChartTime(kstDateTime: string, interval: CandleInterval) {
+    const parsedDate = parseKstDateTime(kstDateTime);
+
+    if (interval.type !== "minute") {
+        return {
+            year: parsedDate.year,
+            month: parsedDate.month,
+            day: parsedDate.day,
+        } as BusinessDay;
+    }
+
+    return Math.floor(
+        Date.UTC(
+            parsedDate.year,
+            parsedDate.month - 1,
+            parsedDate.day,
+            parsedDate.hour,
+            parsedDate.minute,
+            parsedDate.second
+        ) / 1000
+    ) as Time;
+}
+
+function parseKstDateTime(kstDateTime: string) {
+    const [datePart, timePart] = kstDateTime.split("T");
+    const [year, month, day] = datePart.split("-").map(Number);
+    const [hour = 0, minute = 0, second = 0] = (timePart ?? "00:00:00").split(":").map(Number);
+
+    return {year, month, day, hour, minute, second};
+}
+
+function formatTickMark(time: Time, tickMarkType: TickMarkType) {
+    const dateParts = getDateParts(time);
+
+    switch (tickMarkType) {
+        case TickMarkType.Year:
+            return String(dateParts.year);
+        case TickMarkType.Month:
+            return `${dateParts.year}.${pad(dateParts.month)}`;
+        case TickMarkType.DayOfMonth:
+            return `${pad(dateParts.month)}/${pad(dateParts.day)}`;
+        case TickMarkType.Time:
+        default:
+            return `${pad(dateParts.hour)}:${pad(dateParts.minute)}`;
+    }
+}
+
+function getTimeKey(time: Time) {
+    if (isBusinessDay(time)) {
+        return `${time.year}-${pad(time.month)}-${pad(time.day)}`;
+    }
+
+    return String(time);
+}
+
+function getTimeValue(time: Time) {
+    if (isBusinessDay(time)) {
+        return Date.UTC(time.year, time.month - 1, time.day);
+    }
+
+    return Number(time) * 1000;
+}
+
+function isBusinessDay(time: Time): time is BusinessDay {
+    return typeof time === "object";
+}
+
+function getDateParts(time: Time) {
+    if (isBusinessDay(time)) {
+        return {
+            year: time.year,
+            month: time.month,
+            day: time.day,
+            hour: 0,
+            minute: 0,
+        };
+    }
+
+    const date = new Date(Number(time) * 1000);
+
+    return {
+        year: date.getUTCFullYear(),
+        month: date.getUTCMonth() + 1,
+        day: date.getUTCDate(),
+        hour: date.getUTCHours(),
+        minute: date.getUTCMinutes(),
+    };
+}
+
+function pad(value: number) {
+    return String(value).padStart(2, "0");
 }
 
 export default CoinCandleChart;

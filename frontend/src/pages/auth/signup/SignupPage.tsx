@@ -13,10 +13,10 @@ import {
     Divider,
     SocialButton,
     LinkRow,
-} from "../AuthPage.styles";
-import {API} from "@constants/api.ts";
-import {useAuth} from "@auth/useAuth.ts";
-import type {LoginResponse} from "../../../types/User.ts";
+} from "@pages/auth/AuthPage.styles";
+import {API} from "@constants/api";
+import {useAuth} from "@auth/useAuth";
+import type {LoginResponse} from "@Type/User";
 
 function SignupPage() {
     const [email, setEmail] = useState("");

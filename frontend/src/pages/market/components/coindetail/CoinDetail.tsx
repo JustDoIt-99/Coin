@@ -5,8 +5,8 @@ import {
     CoinIcon,
     CoinTitle, Container, Content,
     Header, MainPrice, MiniChartBox, Price, Red, StatGroup, StatRow,
-} from "./CoinDetail.styles.ts";
-import type {Market, Ticker} from "@api/api.ts";
+} from "./CoinDetail.styles";
+import type {Market, Ticker} from "@api/api";
 import MiniPriceChart from "@pages/market/components/coindetail/MiniPriceChart";
 import * as React from "react";
 

@@ -1,5 +1,5 @@
-import type {MarketTab} from "@pages/market/MarketPage.tsx";
-import {TabButton, Tabs} from "./MarketTabs.styles.ts";
+import type {MarketTab} from "@pages/market/MarketPage";
+import {TabButton, Tabs} from "./MarketTabs.styles";
 
 interface Props {
     activeTab: MarketTab;

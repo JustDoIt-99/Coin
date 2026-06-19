@@ -6,10 +6,10 @@ import {
     MarketInfoWrapper,
     OrderBookContainer, OrderBookHeader,
     Section
-} from "@pages/market/components/orderbook/OrderBook/OrderBook.styles.ts";
+} from "@pages/market/components/orderbook/OrderBook/OrderBook.styles";
 import TradeListPanel from "@pages/market/components/orderbook/TradeListPanel";
-import type {Ticker} from "@api/api.ts";
-import useOrderBookSocket, {type OrderbookMessage} from "@hooks/useOrderBookSocket.ts";
+import type {Ticker} from "@api/api";
+import useOrderBookSocket, {type OrderbookMessage} from "@hooks/useOrderBookSocket";
 
 interface Props {
     marketCode: string;
@@ -53,6 +53,12 @@ function OrderBook({marketCode, prevClosingPrice, ticker, active}: Props) {
         rate: prevClosingPrice ? ((unit.bid_price - prevClosingPrice) / prevClosingPrice * 100) : 0
     }));
 
+    const maxSize = Math.max(
+        0,
+        ...askRows.map((row) => row.size),
+        ...bidRows.map((row) => row.size)
+    );
+
     return (
         <OrderBookContainer active={active}>
             <OrderBookHeader>
@@ -64,13 +70,13 @@ function OrderBook({marketCode, prevClosingPrice, ticker, active}: Props) {
                 </ColumnHeader>
             </OrderBookHeader>
             <Section>
-                <OrderBookPanel type={"ask"} rows={askRows}/>
+                <OrderBookPanel type={"ask"} rows={askRows} maxSize={maxSize}/>
                 <MarketInfoWrapper>
                     <MarketInfoPanel ticker={ticker}/>
                 </MarketInfoWrapper>
             </Section>
             <Section>
-                <OrderBookPanel type={"bid"} rows={bidRows}/>
+                <OrderBookPanel type={"bid"} rows={bidRows} maxSize={maxSize}/>
                 <TradeListPanel marketCode={marketCode} ticker={ticker}/>
             </Section>
         </OrderBookContainer>

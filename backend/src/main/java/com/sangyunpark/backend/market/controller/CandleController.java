@@ -24,4 +24,30 @@ public class CandleController {
         return candleService.getMinuteCandles(market, unit, count, to);
     }
 
+    @GetMapping("/days")
+    public List<CandleResponse> getDayCandles(
+            @RequestParam String market,
+            @RequestParam(defaultValue = "200") int count,
+            @RequestParam(required = false) String to
+    ) {
+        return candleService.getDayCandles(market, count, to);
+    }
+
+    @GetMapping("/weeks")
+    public List<CandleResponse> getWeekCandles(
+            @RequestParam String market,
+            @RequestParam(defaultValue = "200") int count,
+            @RequestParam(required = false) String to
+    ) {
+        return candleService.getWeekCandles(market, count, to);
+    }
+
+    @GetMapping("/months")
+    public List<CandleResponse> getMonthCandles(
+            @RequestParam String market,
+            @RequestParam(defaultValue = "200") int count,
+            @RequestParam(required = false) String to
+    ) {
+        return candleService.getMonthCandles(market, count, to);
+    }
 }

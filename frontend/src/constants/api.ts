@@ -7,5 +7,5 @@ export const API = {
     AUTH_LOGOUT: `${SERVER_URL}/auth/logout`,
     MARKETS: `${SERVER_URL}/markets`,
     TICKERS: `${SERVER_URL}/tickers`,
-    CANDLES: `${SERVER_URL}/candles/minutes`,
+    CANDLES: `${SERVER_URL}/candles`,
 };

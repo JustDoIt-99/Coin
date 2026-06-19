@@ -1,4 +1,4 @@
-import {CHART_COLORS, CHART_MIN_PADDING_RATIO, CHART_PADDING_RATIO} from "@constants/chart.ts";
+import {CHART_COLORS, CHART_MIN_PADDING_RATIO, CHART_PADDING_RATIO} from "@constants/chart";
 
 export interface ChartPoint {
     index: number;

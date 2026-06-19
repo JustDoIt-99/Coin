@@ -1,6 +1,6 @@
-import {PercentButton, PercentGrid, PercentRow} from "@pages/market/components/common/PercentButtons/PercentButtons.styles.ts";
+import {PercentButton, PercentGrid, PercentRow} from "@pages/market/components/common/PercentButtons/PercentButtons.styles";
 import {useState} from "react";
-import {PercentInput} from "@pages/market/components/order/OrderForm/OrderForm.styles.ts";
+import {PercentInput} from "@pages/market/components/order/OrderForm/OrderForm.styles";
 
 interface Props {
     values: readonly string[];

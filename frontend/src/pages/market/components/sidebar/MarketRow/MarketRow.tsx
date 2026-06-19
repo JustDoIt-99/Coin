@@ -1,6 +1,6 @@
-import type {Market, Ticker} from "@api/api.ts";
+import type {Market, Ticker} from "@api/api";
 import {Star} from "lucide-react";
-import {Change, NameBox, Price, PriceBox, Row, Volume} from "./MarketRow.styles.ts";
+import {Change, NameBox, Price, PriceBox, Row, Volume} from "./MarketRow.styles";
 
 interface Props {
     market: Market;

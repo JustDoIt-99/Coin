@@ -1,1 +1,1 @@
-export {default} from "./MarketHeaderRow.tsx";
+export {default} from "./MarketHeaderRow";

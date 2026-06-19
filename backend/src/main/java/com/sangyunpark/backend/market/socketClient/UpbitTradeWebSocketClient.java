@@ -41,6 +41,7 @@ public class UpbitTradeWebSocketClient {
     private final Set<String> subscribedMarketCodes = ConcurrentHashMap.newKeySet();
     private final AtomicBoolean reconnectScheduled = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
+    private final AtomicBoolean connecting = new AtomicBoolean(false);
 
     private volatile WebSocketSession session;
     private volatile ScheduledFuture<?> reconnectFuture;
@@ -99,6 +100,11 @@ public class UpbitTradeWebSocketClient {
             return;
         }
 
+        if (!connecting.compareAndSet(false, true)) {
+            log.info("trade 웹소켓 연결 시도 중입니다.");
+            return;
+        }
+
         connectWebSocket();
     }
 
@@ -108,6 +114,7 @@ public class UpbitTradeWebSocketClient {
             @Override
             public void afterConnectionEstablished(WebSocketSession session) {
                 UpbitTradeWebSocketClient.this.session = session;
+                connecting.set(false);
                 reconnectScheduled.set(false);
                 cancelReconnect();
 
@@ -157,6 +164,7 @@ public class UpbitTradeWebSocketClient {
             }
         }, UPBIT_WS_URL).whenComplete((session, ex) -> {
             if (ex != null) {
+                connecting.set(false);
                 log.error("Upbit trade 웹소켓 연결 실패", ex);
                 reconnectScheduled.set(false);
                 scheduleReconnect();

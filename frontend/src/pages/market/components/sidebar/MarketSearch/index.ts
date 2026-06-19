@@ -1,1 +1,1 @@
-export {default} from "./MarketSearch.tsx";
+export {default} from "./MarketSearch";

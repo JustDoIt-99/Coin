@@ -1,1 +1,1 @@
-export {default} from "./MarketInfoPanel.tsx";
+export {default} from "./MarketInfoPanel";

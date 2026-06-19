@@ -7,8 +7,8 @@ import {
     DateText,
     RedValue,
     BlueValue,
-} from "./MarketInfoPanel.styles.ts";
-import type {Ticker} from "@api/api.ts";
+} from "./MarketInfoPanel.styles";
+import type {Ticker} from "@api/api";
 
 interface Props {
     ticker?: Ticker;

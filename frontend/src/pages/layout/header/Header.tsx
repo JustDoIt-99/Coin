@@ -5,8 +5,8 @@ import {
     Nav,
     NavItem,
     RightArea, SignupButton, LogoutButton
-} from "./Header.styles.ts";
-import {useAuth} from "@auth/useAuth.ts";
+} from "./Header.styles";
+import {useAuth} from "@auth/useAuth";
 
 function Header() {
 

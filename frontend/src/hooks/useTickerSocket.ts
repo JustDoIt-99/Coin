@@ -4,7 +4,7 @@ import {
     type IMessage,
     type IFrame,
 } from "@stomp/stompjs";
-import type {TickerMessage} from "@pages/market/components/sidebar/MarketSidebar/MarketSidebar.tsx";
+import type {TickerMessage} from "@pages/market/components/sidebar/MarketSidebar/MarketSidebar";
 
 const WS_URL = import.meta.env.VITE_WS_URL;
 

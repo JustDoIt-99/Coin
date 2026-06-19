@@ -43,6 +43,7 @@ public class UpbitTickerWebSocketClient {
 
     private final AtomicBoolean reconnectScheduled = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
+    private final AtomicBoolean connecting = new AtomicBoolean(false);
 
     private final Map<String, TickerResponse> tickerCache = new ConcurrentHashMap<>();
 
@@ -96,6 +97,11 @@ public class UpbitTickerWebSocketClient {
             return;
         }
 
+        if (!connecting.compareAndSet(false, true)) {
+            log.info("Upbit ticker 웹소켓 연결 시도 중입니다.");
+            return;
+        }
+
         connectWebSocket(marketCodes);
     }
 
@@ -105,6 +111,7 @@ public class UpbitTickerWebSocketClient {
             @Override
             public void afterConnectionEstablished(WebSocketSession session) throws Exception {
                 UpbitTickerWebSocketClient.this.session = session;
+                connecting.set(false);
                 reconnectScheduled.set(false);
                 cancelReconnect();
 
@@ -160,6 +167,7 @@ public class UpbitTickerWebSocketClient {
             }
         }, UPBIT_WS_URL).whenComplete((session, ex) -> {
             if (ex != null) {
+                connecting.set(false);
                 log.error("Upbit ticker 웹소켓 연결 실패", ex);
                 reconnectScheduled.set(false);
                 scheduleReconnect();

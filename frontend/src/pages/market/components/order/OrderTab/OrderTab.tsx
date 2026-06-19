@@ -1,5 +1,5 @@
 import * as React from "react";
-import {TabButton, TabContainer} from "@pages/market/components/order/OrderTab/OrderTab.styles.ts";
+import {TabButton, TabContainer} from "@pages/market/components/order/OrderTab/OrderTab.styles";
 
 interface Props {
     activeTab: "buy" | "sell" | "history";

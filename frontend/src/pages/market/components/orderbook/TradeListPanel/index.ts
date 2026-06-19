@@ -1,1 +1,1 @@
-export {default} from "./TradeListPanel.tsx";
+export {default} from "./TradeListPanel";

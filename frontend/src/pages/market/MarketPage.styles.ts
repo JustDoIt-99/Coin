@@ -64,3 +64,28 @@ export const ChartArea = styled.div`
     min-width: 930px;
     background: #fff;
 `;
+
+export const ChartToolbar = styled.div`
+    display: flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 10px;
+    border-bottom: 1px solid #e5e8ee;
+`;
+
+export const ChartIntervalSelect = styled.select`
+    height: 28px;
+    min-width: 96px;
+    padding: 0 28px 0 10px;
+    border: 1px solid #d9dee8;
+    background: #fff;
+    color: #333;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+
+    &:focus {
+        border-color: #126ee2;
+    }
+`;

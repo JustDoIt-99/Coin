@@ -1,1 +1,1 @@
-export {default} from "./MiniPriceChart.tsx";
+export {default} from "./MiniPriceChart";

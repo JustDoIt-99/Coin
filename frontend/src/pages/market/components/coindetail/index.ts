@@ -1,1 +1,1 @@
-export {default} from "./CoinDetail.tsx";
+export {default} from "./CoinDetail";

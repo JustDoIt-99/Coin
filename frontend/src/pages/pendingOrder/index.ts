@@ -1,1 +1,1 @@
-export {default} from "./PendingOrder.tsx";
+export {default} from "./PendingOrder";

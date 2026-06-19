@@ -1,7 +1,7 @@
 import {Languages} from "lucide-react";
-import {Header, Name} from "./MarketHeaderRow.styles.ts";
+import {Header, Name} from "./MarketHeaderRow.styles";
 import MarketSortedHeaderCell from "../MarketSortedHeaderCell";
-import type {NameType, SortedKey, SortOrder} from "../type.ts";
+import type {NameType, SortedKey, SortOrder} from "../type";
 
 interface Props {
     nameType: NameType;

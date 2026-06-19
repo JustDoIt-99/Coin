@@ -1,7 +1,7 @@
 import {useEffect, useState} from "react";
-import type {TradeType} from "@pages/market/components/order/OrderForm/OrderForm.styles.ts";
-import {formatDecimalWithComma, formatIntegerWithComma, removeComma} from "@utils/orderform/numberFormat.ts";
-import type {Ticker} from "@api/api.ts";
+import type {TradeType} from "@pages/market/components/order/OrderForm/OrderForm.styles";
+import {formatDecimalWithComma, formatIntegerWithComma, removeComma} from "@utils/orderform/numberFormat";
+import type {Ticker} from "@api/api";
 
 const MOCK_AVAILABLE_KRW = 1_000_000;
 const MOCK_AVAILABLE_BTC = 0.52341234;
