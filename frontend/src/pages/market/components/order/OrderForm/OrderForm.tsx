@@ -11,14 +11,14 @@ import {
     Row,
     SubmitButton,
     type TradeType
-} from "@pages/market/components/order/OrderForm/OrderForm.styles.ts";
-import PercentButtons from "@pages/market/components/common/PercentButtons/PercentButtons.tsx";
-import type {Ticker} from "@api/api.ts";
-import OrderInputRow from "@pages/market/components/common/OrderInputRow/OrderInputRow.tsx";
-import useOrderForm from "@hooks/useOrderForm.ts";
+} from "@pages/market/components/order/OrderForm/OrderForm.styles";
+import PercentButtons from "@pages/market/components/common/PercentButtons/PercentButtons";
+import type {Ticker} from "@api/api";
+import OrderInputRow from "@pages/market/components/common/OrderInputRow/OrderInputRow";
+import useOrderForm from "@hooks/useOrderForm";
 import {useNavigate, useLocation} from "react-router-dom";
 import * as React from "react";
-import {useAuth} from "@auth/useAuth.ts";
+import {useAuth} from "@auth/useAuth";
 
 interface OrderFormProps {
     tradeType: TradeType;

@@ -1,8 +1,8 @@
 import {Area, ComposedChart, Line, ResponsiveContainer, XAxis, YAxis} from "recharts";
 import {useQuery} from "@tanstack/react-query";
-import {fetchMinuteCandles} from "@api/api.ts";
+import {fetchMinuteCandles} from "@api/api";
 import {memo, useMemo} from "react";
-import {type ChartPoint, type ChartRange, getChartRange, makeSegments} from "@utils/chart/makeSegment.ts";
+import {type ChartPoint, type ChartRange, getChartRange, makeSegments} from "@utils/chart/makeSegment";
 
 interface Props {
     marketCode: string;

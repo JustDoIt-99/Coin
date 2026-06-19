@@ -2,8 +2,8 @@ import {useState} from "react";
 import OrderTab from "@pages/market/components/order/OrderTab";
 import OrderForm from "@pages/market/components/order/OrderForm";
 import OrderHistory from "@pages/market/components/order/OrderHistory";
-import {Container} from "@pages/market/components/order/Order/Order.styles.ts";
-import type {Ticker} from "@api/api.ts";
+import {Container} from "@pages/market/components/order/Order/Order.styles";
+import type {Ticker} from "@api/api";
 
 interface Props {
     ticker?: Ticker;

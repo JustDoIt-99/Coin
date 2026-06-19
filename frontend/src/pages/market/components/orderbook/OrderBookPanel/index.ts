@@ -1,1 +1,1 @@
-export {default} from "./OrderBookPanel.tsx";
+export {default} from "./OrderBookPanel";

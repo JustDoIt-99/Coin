@@ -43,6 +43,7 @@ public class UpbitTickerWebSocketClient {
 
     private final AtomicBoolean reconnectScheduled = new AtomicBoolean(false);
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
+    private final AtomicBoolean connecting = new AtomicBoolean(false);
 
     private final Map<String, TickerResponse> tickerCache = new ConcurrentHashMap<>();
 
@@ -96,75 +97,89 @@ public class UpbitTickerWebSocketClient {
             return;
         }
 
+        if (!connecting.compareAndSet(false, true)) {
+            log.info("Upbit ticker 웹소켓 연결 시도 중입니다.");
+            return;
+        }
+
         connectWebSocket(marketCodes);
     }
 
     private void connectWebSocket(List<String> marketCodes) {
-        webSocketClient.execute(new BinaryWebSocketHandler() {
+        try {
+            webSocketClient.execute(new BinaryWebSocketHandler() {
 
-            @Override
-            public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-                UpbitTickerWebSocketClient.this.session = session;
-                reconnectScheduled.set(false);
-                cancelReconnect();
+                @Override
+                public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+                    UpbitTickerWebSocketClient.this.session = session;
+                    connecting.set(false);
+                    reconnectScheduled.set(false);
+                    cancelReconnect();
 
-                String subscribeMessage = objectMapper.writeValueAsString(
-                        List.of(
-                                Map.of("ticket", "coinco-ticker"),
-                                Map.of("type", "ticker", "codes", marketCodes)
-                        )
-                );
+                    String subscribeMessage = objectMapper.writeValueAsString(
+                            List.of(
+                                    Map.of("ticket", "coinco-ticker"),
+                                    Map.of("type", "ticker", "codes", marketCodes)
+                            )
+                    );
 
-                session.sendMessage(new TextMessage(subscribeMessage));
-                log.info("Upbit ticker 웹소켓 연결 성공, 구독중인 마켓 개수: {}", marketCodes.size());
-            }
-
-            @Override
-            protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
-                ByteBuffer buffer = message.getPayload();
-                String payload = StandardCharsets.UTF_8.decode(buffer).toString();
-
-                try {
-                    TickerResponse ticker = objectMapper.readValue(payload, TickerResponse.class);
-                    String marketCode = ticker.marketCode();
-
-                    if (marketCode == null || marketCode.isBlank()) {
-                        log.debug("marketCode가 비어있는 ticker 메시지는 무시합니다. payload={}", payload);
-                        return;
-                    }
-
-                    tickerCache.put(marketCode, ticker);
-                    messagingTemplate.convertAndSend(TICKER_TOPIC, ticker);
-
-                } catch (Exception e) {
-                    log.error("Ticker 메시지 파싱 실패. payload={}", payload, e);
+                    session.sendMessage(new TextMessage(subscribeMessage));
+                    log.info("Upbit ticker 웹소켓 연결 성공, 구독중인 마켓 개수: {}", marketCodes.size());
                 }
-            }
 
-            @Override
-            public void handleTransportError(WebSocketSession session, Throwable exception) {
-                log.error("Upbit ticker 웹소켓 transport error", exception);
-                clearSession(session);
-                closeSession(session);
-                scheduleReconnect();
-            }
+                @Override
+                protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) {
+                    ByteBuffer buffer = message.getPayload();
+                    String payload = StandardCharsets.UTF_8.decode(buffer).toString();
 
-            @Override
-            public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-                log.warn("Upbit ticker 웹소켓 연결 종료. status={}", status);
-                clearSession(session);
+                    try {
+                        TickerResponse ticker = objectMapper.readValue(payload, TickerResponse.class);
+                        String marketCode = ticker.marketCode();
 
-                if (!shuttingDown.get()) {
+                        if (marketCode == null || marketCode.isBlank()) {
+                            log.debug("marketCode가 비어있는 ticker 메시지는 무시합니다. payload={}", payload);
+                            return;
+                        }
+
+                        tickerCache.put(marketCode, ticker);
+                        messagingTemplate.convertAndSend(TICKER_TOPIC, ticker);
+
+                    } catch (Exception e) {
+                        log.error("Ticker 메시지 파싱 실패. payload={}", payload, e);
+                    }
+                }
+
+                @Override
+                public void handleTransportError(WebSocketSession session, Throwable exception) {
+                    log.error("Upbit ticker 웹소켓 transport error", exception);
+                    clearSession(session);
+                    closeSession(session);
                     scheduleReconnect();
                 }
-            }
-        }, UPBIT_WS_URL).whenComplete((session, ex) -> {
-            if (ex != null) {
-                log.error("Upbit ticker 웹소켓 연결 실패", ex);
-                reconnectScheduled.set(false);
-                scheduleReconnect();
-            }
-        });
+
+                @Override
+                public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+                    log.warn("Upbit ticker 웹소켓 연결 종료. status={}", status);
+                    clearSession(session);
+
+                    if (!shuttingDown.get()) {
+                        scheduleReconnect();
+                    }
+                }
+            }, UPBIT_WS_URL).whenComplete((session, ex) -> {
+                if (ex != null) {
+                    connecting.set(false);
+                    log.error("Upbit ticker 웹소켓 연결 실패", ex);
+                    reconnectScheduled.set(false);
+                    scheduleReconnect();
+                }
+            });
+        } catch (RuntimeException e) {
+            connecting.set(false);
+            log.error("Upbit ticker 웹소켓 연결 요청 실패", e);
+            reconnectScheduled.set(false);
+            scheduleReconnect();
+        }
     }
 
     private void scheduleReconnect() {

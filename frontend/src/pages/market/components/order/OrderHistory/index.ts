@@ -1,1 +1,1 @@
-export {default} from "./OrderHistory.tsx";
+export {default} from "./OrderHistory";

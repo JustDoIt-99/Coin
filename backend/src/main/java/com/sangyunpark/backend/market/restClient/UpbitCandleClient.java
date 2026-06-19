@@ -21,11 +21,27 @@ public class UpbitCandleClient {
             .build();
 
     public List<CandleResponse> fetchMinuteCandles(String market, int unit, int count, String to) {
+        return fetchCandles("/candles/minutes/{unit}", market, count, to, unit);
+    }
+
+    public List<CandleResponse> fetchDayCandles(String market, int count, String to) {
+        return fetchCandles("/candles/days", market, count, to);
+    }
+
+    public List<CandleResponse> fetchWeekCandles(String market, int count, String to) {
+        return fetchCandles("/candles/weeks", market, count, to);
+    }
+
+    public List<CandleResponse> fetchMonthCandles(String market, int count, String to) {
+        return fetchCandles("/candles/months", market, count, to);
+    }
+
+    private List<CandleResponse> fetchCandles(String path, String market, int count, String to, Object... uriVariables) {
         try {
             CandleResponse[] response = restClient.get()
                     .uri(uriBuilder -> {
                         UriBuilder builder = uriBuilder
-                                .path("/candles/minutes/{unit}")
+                                .path(path)
                                 .queryParam("market", market)
                                 .queryParam("count", count);
 
@@ -33,7 +49,7 @@ public class UpbitCandleClient {
                             builder.queryParam("to", to);
                         }
 
-                        return builder.build(unit);
+                        return builder.build(uriVariables);
                     })
                     .retrieve()
                     .body(CandleResponse[].class);

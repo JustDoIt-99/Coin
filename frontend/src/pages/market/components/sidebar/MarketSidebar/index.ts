@@ -1,1 +1,1 @@
-export {default} from "./MarketSidebar.tsx";
+export {default} from "./MarketSidebar";

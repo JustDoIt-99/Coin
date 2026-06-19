@@ -5,7 +5,7 @@ import {
     type IFrame,
     type StompSubscription,
 } from "@stomp/stompjs";
-import { subscribeOrderBook } from "@api/api.ts";
+import { subscribeOrderBook } from "@api/api";
 
 export interface OrderBookUnitMessage {
     ask_price: number;
@@ -52,6 +52,10 @@ function useServerOrderBookSocket(
             await subscribeOrderBook(code);
 
             if (requestIdRef.current !== requestId) {
+                return;
+            }
+
+            if (clientRef.current !== client || !client.connected) {
                 return;
             }
 

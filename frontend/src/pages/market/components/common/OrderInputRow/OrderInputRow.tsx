@@ -1,4 +1,4 @@
-import {InputBox, Label, Row} from "@pages/market/components/order/OrderForm/OrderForm.styles.ts";
+import {InputBox, Label, Row} from "@pages/market/components/order/OrderForm/OrderForm.styles";
 
 interface Props {
     label: string,

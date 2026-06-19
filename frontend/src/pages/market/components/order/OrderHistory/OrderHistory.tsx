@@ -3,7 +3,7 @@ import {
     FilterBar, Header, HeaderCell, MarketCell, Period, PriceCell, QuantityCell,
     RadioGroup, Row,
     type Side, SideText, Table, TableScroll
-} from "@pages/market/components/order/OrderHistory/OrderHistory.styles.ts";
+} from "@pages/market/components/order/OrderHistory/OrderHistory.styles";
 
 interface TradeItem {
     id: number;

@@ -8,7 +8,7 @@ import MarketTabs from "../MarketTabs/MarketTabs";
 import MarketHeaderRow from "../MarketHeaderRow";
 import MarketSearch from "../MarketSearch";
 import { Container, RowList } from "./MarketSidebar.styles";
-import useTickerSocket from "@hooks/useTickerSocket.ts";
+import useTickerSocket from "@hooks/useTickerSocket";
 
 interface Props {
     markets: Market[] | null;

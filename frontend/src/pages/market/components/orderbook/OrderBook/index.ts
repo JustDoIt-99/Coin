@@ -1,1 +1,1 @@
-export {default} from "./OrderBook.tsx";
+export {default} from "./OrderBook";

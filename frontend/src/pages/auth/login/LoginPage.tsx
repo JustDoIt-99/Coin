@@ -11,13 +11,13 @@ import {
     Divider,
     SocialButton,
     LinkRow, SignupLink,
-} from "../AuthPage.styles";
+} from "@pages/auth/AuthPage.styles";
 import {useState} from "react";
 import * as React from "react";
-import {useAuth} from "@auth/useAuth.ts";
+import {useAuth} from "@auth/useAuth";
 import {useLocation, useNavigate} from "react-router-dom";
-import {API} from "@constants/api.ts";
-import type {LoginResponse} from "../../../types/User.ts";
+import {API} from "@constants/api";
+import type {LoginResponse} from "@Type/User";
 
 function LoginPage() {
     const [email, setEmail] = useState("");

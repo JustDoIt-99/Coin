@@ -4,10 +4,10 @@ import {
     StrengthRow,
     TradeList,
     TradeRow, Volume
-} from "@pages/market/components/orderbook/TradeListPanel/TradeListPanel.styles.ts";
-import useTradeSocket, {type UpBitTrade} from "@hooks/useTradeSocket.ts";
+} from "@pages/market/components/orderbook/TradeListPanel/TradeListPanel.styles";
+import useTradeSocket, {type UpBitTrade} from "@hooks/useTradeSocket";
 import {useState} from "react";
-import type {Ticker} from "@api/api.ts";
+import type {Ticker} from "@api/api";
 
 interface Props {
     marketCode: string;

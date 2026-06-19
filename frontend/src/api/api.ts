@@ -1,4 +1,4 @@
-import {API} from "../constants/endpoints.ts";
+import {API} from "@constants/endpoints";
 
 export interface Market {
     market:string;
@@ -38,6 +38,13 @@ export interface MinuteCandle {
     unit: number;
 }
 
+export type CandleType = "minute" | "day" | "week" | "month";
+
+export interface CandleInterval {
+    type: CandleType;
+    unit?: number;
+}
+
 export async function fetchMarkets(): Promise<Market[]> {
     const response = await fetch(API.MARKETS);
 
@@ -65,6 +72,15 @@ export async function fetchMinuteCandles(
     count = 100,
     to?: string
     ): Promise<MinuteCandle[]> {
+    return fetchCandles(market, {type: "minute", unit}, count, to);
+}
+
+export async function fetchCandles(
+    market:string,
+    interval: CandleInterval,
+    count = 100,
+    to?: string
+): Promise<MinuteCandle[]> {
     const params = new URLSearchParams({
         market,
         count: String(count),
@@ -74,7 +90,8 @@ export async function fetchMinuteCandles(
         params.append("to", to);
     }
 
-    const response = await fetch(`${API.CANDLES}/${unit}?${params}`);
+    const path = getCandlePath(interval);
+    const response = await fetch(`${API.CANDLES}/${path}?${params}`);
 
     if (!response.ok) {
         throw new Error("캔들 데이터 조회 실패");
@@ -83,9 +100,31 @@ export async function fetchMinuteCandles(
     return response.json();
 }
 
+function getCandlePath(interval: CandleInterval) {
+    switch (interval.type) {
+        case "minute":
+            return `minutes/${interval.unit ?? 15}`;
+        case "day":
+            return "days";
+        case "week":
+            return "weeks";
+        case "month":
+            return "months";
+    }
+}
+
 export async function fetchMinuteCandlesPage(
     market: string,
     unit: number,
+    pageCount = 3,
+    to?: string
+): Promise<MinuteCandle[]> {
+    return fetchCandlesPage(market, {type: "minute", unit}, pageCount, to);
+}
+
+export async function fetchCandlesPage(
+    market: string,
+    interval: CandleInterval,
     pageCount = 3,
     to?: string
 ): Promise<MinuteCandle[]> {
@@ -93,7 +132,7 @@ export async function fetchMinuteCandlesPage(
     let nextTo = to;
 
     for (let i = 0; i < pageCount; i++) {
-        const candles = await fetchMinuteCandles(market,  unit,  200, nextTo);
+        const candles = await fetchCandles(market, interval, 200, nextTo);
 
         if (candles.length == 0) break;
 

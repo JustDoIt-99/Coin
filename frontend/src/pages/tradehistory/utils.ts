@@ -1,4 +1,4 @@
-import type {PeriodType} from "@pages/tradehistory/types.ts";
+import type {PeriodType} from "@pages/tradehistory/types";
 
 export const parseHistoryDate = (dateText: string) => {
     const [date, time] = dateText.split(" ");

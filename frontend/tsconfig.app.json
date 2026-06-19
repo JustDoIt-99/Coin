@@ -30,7 +30,8 @@
       "@constants/*": ["./src/constants/*"],
       "@pages/*": ["./src/pages/*"],
       "@utils/*": ["./src/utils/*"],
-      "@auth/*": ["./src/auth/*"]
+      "@auth/*": ["./src/auth/*"],
+      "@Type/*": ["./src/types/*"]
     }
   },
   "include": [

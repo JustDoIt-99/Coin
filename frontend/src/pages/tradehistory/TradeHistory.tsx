@@ -9,15 +9,15 @@ import {
     HistoryTable
 } from "./TradeHistory.styles";
 import { useMemo, useState } from "react";
-import type {HistoryType, PeriodType} from "@pages/tradehistory/types.ts";
-import {histories, historyHeaders, periodButtons, typeButtons} from "@pages/tradehistory/constants.ts";
+import type {HistoryType, PeriodType} from "@pages/tradehistory/types";
+import {histories, historyHeaders, periodButtons, typeButtons} from "@pages/tradehistory/constants";
 import {
     formatDate,
     getEndOfDay,
     getStartDateByPeriod,
     parseHistoryDate,
     toDateInputValue
-} from "@pages/tradehistory/utils.ts";
+} from "@pages/tradehistory/utils";
 
 function TradeHistory() {
     const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>("1개월");

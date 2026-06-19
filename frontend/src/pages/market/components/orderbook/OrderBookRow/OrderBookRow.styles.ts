@@ -35,6 +35,7 @@ export const SizeBar = styled.div<{
 }>`
     position: absolute;
     top: 10px;
+    right: 0;
     bottom: 10px;
     width: ${({ ratio }) => `${Math.min(ratio, 100)}%`};
     background: ${({ type }) =>
@@ -43,19 +44,21 @@ export const SizeBar = styled.div<{
         : "rgba(214, 67, 72, 0.14)"};
 `;
 
-export const PriceCell = styled.div<{ type: "ask" | "bid" }>`
+export const PriceCell = styled.div<{ direction: "up" | "down" | "flat" }>`
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 17px;
     font-weight: 700;
-    color: ${({ type }) =>
-            type === "ask"
-                    ? "#126ee2"
-                    : "#d64348"};
+    color: ${({ direction }) =>
+            direction === "up"
+                    ? "#d64348"
+                    : direction === "down"
+                            ? "#126ee2"
+                            : "#666"};
 `;
 
-export const RateCell = styled.div<{ type: "ask" | "bid" }>`
+export const RateCell = styled.div<{ direction: "up" | "down" | "flat" }>`
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -63,8 +66,10 @@ export const RateCell = styled.div<{ type: "ask" | "bid" }>`
     font-size: 15px;
     font-weight: 500;
 
-    color: ${({ type }) =>
-            type === "ask"
-                    ? "#126ee2"
-                    : "#d64348"};
+    color: ${({ direction }) =>
+            direction === "up"
+                    ? "#d64348"
+                    : direction === "down"
+                            ? "#126ee2"
+                            : "#666"};
 `;

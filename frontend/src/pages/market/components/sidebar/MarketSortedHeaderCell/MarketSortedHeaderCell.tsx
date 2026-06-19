@@ -1,6 +1,6 @@
 import {ChevronDown, ChevronUp} from "lucide-react";
-import {Cell, SortIcon} from "./MarketSortedHeaderCell.styles.ts";
-import type {SortedKey, SortOrder} from "../type.ts";
+import {Cell, SortIcon} from "./MarketSortedHeaderCell.styles";
+import type {SortedKey, SortOrder} from "../type";
 
 interface Props {
     label: string;

@@ -1,6 +1,6 @@
 import {Search, Settings} from "lucide-react";
 import {useEffect, useState} from "react";
-import {Input, SearchBar, SearchButton, SettingButton} from "./MarketSearch.styles.ts";
+import {Input, SearchBar, SearchButton, SettingButton} from "./MarketSearch.styles";
 
 interface Props {
     onSearch: (value: string) => void;

@@ -5,9 +5,9 @@ import {
     isAuthenticatedAtom,
     userAtom,
     type User,
-} from "./authAtom";
-import {API} from "@constants/api.ts";
-import {authFetch} from "./authFetch.ts";
+} from "@auth/authAtom";
+import {API} from "@constants/api";
+import {authFetch} from "@auth/authFetch";
 
 export function useAuth() {
     const [user, setUser] = useAtom(userAtom);
