@@ -1,4 +1,4 @@
-import type {Market, Ticker} from "frontend/src/api/api.ts";
+import type {Market, Ticker} from "@api/api.ts";
 import {Star} from "lucide-react";
 import {Change, NameBox, Price, PriceBox, Row, Volume} from "./MarketRow.styles.ts";
 

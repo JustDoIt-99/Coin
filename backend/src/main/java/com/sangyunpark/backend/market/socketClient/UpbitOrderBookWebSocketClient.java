@@ -64,6 +64,12 @@ public class UpbitOrderBookWebSocketClient {
         boolean added = subscribedMarketCodes.add(marketCode);
         if (!added) {
             log.info("이미 구독 중인 orderbook 마켓입니다. marketCode={}", marketCode);
+            if (isSessionOpen()) {
+                sendSubscribeMessage();
+                return;
+            }
+
+            connect();
             return;
         }
 
@@ -151,6 +157,7 @@ public class UpbitOrderBookWebSocketClient {
         }, UPBIT_WS_URL).whenComplete((session, ex) -> {
             if (ex != null) {
                 log.error("Upbit orderbook 웹소켓 연결 실패", ex);
+                reconnectScheduled.set(false);
                 scheduleReconnect();
             }
         });
@@ -198,10 +205,10 @@ public class UpbitOrderBookWebSocketClient {
         reconnectFuture = taskScheduler.schedule(() -> {
             try {
                 log.info("Upbit orderbook 웹소켓 재연결을 시도합니다.");
+                reconnectScheduled.set(false);
                 connect();
             } catch (Exception e) {
                 log.error("Upbit orderbook 웹소켓 재연결 중 예외 발생", e);
-                reconnectScheduled.set(false);
                 scheduleReconnect();
             }
         }, Instant.now().plusSeconds(RECONNECT_DELAY_SECONDS));

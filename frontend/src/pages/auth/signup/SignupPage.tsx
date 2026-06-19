@@ -1,5 +1,5 @@
 import { useState, type ComponentProps } from "react";
-import { Link } from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import {
     Page,
     LoginCard,
@@ -14,13 +14,19 @@ import {
     SocialButton,
     LinkRow,
 } from "../AuthPage.styles";
+import {API} from "@constants/api.ts";
+import {useAuth} from "@auth/useAuth.ts";
+import type {LoginResponse} from "../../../types/User.ts";
 
 function SignupPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [passwordConfirm, setPasswordConfirm] = useState("");
+    const [nickname, setNickname] = useState("");
+    const {login} = useAuth();
+    const navigate = useNavigate();
 
-    const handleSignup: ComponentProps<"form">["onSubmit"] = (e) => {
+    const handleSignup: ComponentProps<"form">["onSubmit"] = async (e) => {
         e.preventDefault();
 
         if (password !== passwordConfirm) {
@@ -28,8 +34,31 @@ function SignupPage() {
             return;
         }
 
-        console.log(email);
-        console.log(password);
+        try {
+            const response = await fetch(API.AUTH_SIGNUP, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                credentials: "include",
+                body: JSON.stringify({
+                    email,
+                    password,
+                    nickname
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("회원가입 실패");
+            }
+
+            const data: LoginResponse = await response.json();
+            login(data.accessToken, data.user);
+            navigate("/");
+            alert("회원가입이 완료되었습니다.");
+        } catch (e) {
+            alert("회원가입 중 오류가 발생했습니다.");
+        }
     };
 
     return (
@@ -66,6 +95,16 @@ function SignupPage() {
                             placeholder="비밀번호를 다시 입력하세요"
                             value={passwordConfirm}
                             onChange={(e) => setPasswordConfirm(e.target.value)}
+                        />
+                    </Field>
+
+                    <Field>
+                        <Label>닉네임</Label>
+                        <Input
+                            type="text"
+                            placeholder="닉네임을 입력하세요"
+                            value={nickname}
+                            onChange={(e) => setNickname(e.target.value)}
                         />
                     </Field>
 

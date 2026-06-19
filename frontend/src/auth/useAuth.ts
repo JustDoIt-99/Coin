@@ -6,6 +6,8 @@ import {
     userAtom,
     type User,
 } from "./authAtom";
+import {API} from "@constants/api.ts";
+import {authFetch} from "./authFetch.ts";
 
 export function useAuth() {
     const [user, setUser] = useAtom(userAtom);
@@ -20,9 +22,8 @@ export function useAuth() {
 
     const logout = async () => {
         try {
-            await fetch("/api/auth/logout", {
+            await authFetch(API.AUTH_LOGOUT, {
                 method: "POST",
-                credentials: "include",
             });
         } finally {
             setAccessToken(null);

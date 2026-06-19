@@ -18,10 +18,7 @@ public class TradeController {
     private final TradeSubscriptionService tradeSubscriptionService;
 
     @PostMapping("/subscribe")
-
     public void subscribe(@RequestParam @NotBlank String marketCode) {
-
         tradeSubscriptionService.subscribe(marketCode);
-
     }
 }

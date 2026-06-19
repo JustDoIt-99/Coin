@@ -16,9 +16,9 @@ import PercentButtons from "@pages/market/components/common/PercentButtons/Perce
 import type {Ticker} from "@api/api.ts";
 import OrderInputRow from "@pages/market/components/common/OrderInputRow/OrderInputRow.tsx";
 import useOrderForm from "@hooks/useOrderForm.ts";
-import {useNavigate} from "react-router-dom";
+import {useNavigate, useLocation} from "react-router-dom";
 import * as React from "react";
-import {useAuth} from "../../../../../auth/useAuth.ts";
+import {useAuth} from "@auth/useAuth.ts";
 
 interface OrderFormProps {
     tradeType: TradeType;
@@ -39,6 +39,7 @@ function OrderForm({tradeType, ticker}: OrderFormProps) {
     const {state, flags, display, actions} = useOrderForm({ tradeType, ticker });
     const {isAuthenticated} = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const percentButtons = (
         <PercentButtons
@@ -53,7 +54,7 @@ function OrderForm({tradeType, ticker}: OrderFormProps) {
 
         if (!isAuthenticated) {
             alert("로그인이 필요한 서비스 입니다.");
-            navigate("/login")
+            navigate("/login", {state: {from: location}});
             return;
         }
 
