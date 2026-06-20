@@ -159,12 +159,21 @@ function CoinCandleChart({
         }
 
         const lastCandle = lastCandleRef.current;
+        const lastCandleIndex = candleDataRef.current.length - 1;
+        if (lastCandleIndex < 0) {
+            return;
+        }
+
         const currentTime = interval.type === "minute" && timestamp
             ? toChartTime(timestamp, interval)
             : lastCandle.time;
 
         const isNextCandle = interval.type === "minute"
             && getTimeValue(currentTime) > getTimeValue(lastCandle.time);
+
+        if (!isNextCandle && lastCandle.close === price && volume <= 0) {
+            return;
+        }
 
         const updatedCandle: CandlestickData<Time> = {
             time: isNextCandle ? currentTime : lastCandle.time,
@@ -174,21 +183,17 @@ function CoinCandleChart({
             low: isNextCandle ? price : Math.min(lastCandle.low, price),
         };
 
-        const updatedChartData = isNextCandle
-            ? [...candleDataRef.current, updatedCandle]
-            : candleDataRef.current.map((candle) =>
-                getTimeKey(candle.time) === getTimeKey(updatedCandle.time) ? updatedCandle : candle
-            );
+        if (isNextCandle) {
+            candleDataRef.current.push(updatedCandle);
+        } else {
+            candleDataRef.current[lastCandleIndex] = updatedCandle;
+        }
 
-        const updatedVolumeData = updateRealtimeVolumeData(updatedCandle, volume, isNextCandle);
-
-        candleDataRef.current = updatedChartData;
-        volumeDataRef.current = updatedVolumeData;
+        updateRealtimeVolumeData(updatedCandle, volume, isNextCandle);
         lastCandleRef.current = updatedCandle;
 
         candleSeriesRef.current.update(updatedCandle);
-        volumeSeriesRef.current?.setData(updatedVolumeData);
-        setMovingAverageSeriesData(updatedChartData);
+        updateMovingAverageLastPoints();
     };
 
     const updateRealtimeVolumeData = (
@@ -199,25 +204,53 @@ function CoinCandleChart({
         const volumeColor = candle.close >= candle.open ? RISE_VOLUME_COLOR : FALL_VOLUME_COLOR;
 
         if (isNextCandle) {
-            return [
-                ...volumeDataRef.current,
-                {
-                    time: candle.time,
-                    value: volume,
-                    color: volumeColor,
-                },
-            ];
+            const nextVolume = {
+                time: candle.time,
+                value: volume,
+                color: volumeColor,
+            };
+
+            volumeDataRef.current.push(nextVolume);
+            volumeSeriesRef.current?.update(nextVolume);
+            return;
         }
 
-        return volumeDataRef.current.map((item) =>
-            getTimeKey(item.time) === getTimeKey(candle.time)
-                ? {
-                    ...item,
-                    value: item.value + volume,
-                    color: volumeColor,
-                }
-                : item
-        );
+        const lastVolumeIndex = volumeDataRef.current.length - 1;
+        const lastVolume = volumeDataRef.current[lastVolumeIndex];
+
+        if (!lastVolume || getTimeKey(lastVolume.time) !== getTimeKey(candle.time)) {
+            return;
+        }
+
+        const updatedVolume = {
+            ...lastVolume,
+            value: lastVolume.value + volume,
+            color: volumeColor,
+        };
+
+        volumeDataRef.current[lastVolumeIndex] = updatedVolume;
+        volumeSeriesRef.current?.update(updatedVolume);
+    };
+
+    const updateMovingAverageLastPoints = () => {
+        const candles = candleDataRef.current;
+
+        Object.entries(movingAverageSeriesRef.current).forEach(([periodValue, series]) => {
+            const period = Number(periodValue);
+            if (candles.length < period) {
+                return;
+            }
+
+            let sum = 0;
+            for (let index = candles.length - period; index < candles.length; index += 1) {
+                sum += candles[index].close;
+            }
+
+            series.update({
+                time: candles[candles.length - 1].time,
+                value: sum / period,
+            });
+        });
     };
 
     const normalizeChartData = <T extends { time: Time }>(data: T[]): T[] => {
