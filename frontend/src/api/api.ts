@@ -22,6 +22,7 @@ export interface Ticker {
     lowest_52_week_date: string;
     acc_bid_volume: number;
     acc_ask_volume: number;
+    timestamp?: number;
 }
 
 export interface MinuteCandle {

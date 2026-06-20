@@ -48,7 +48,9 @@ public record TickerResponse(
         BigDecimal accBidVolume,
 
         @JsonProperty("acc_ask_volume")
-        BigDecimal accAskVolume
+        BigDecimal accAskVolume,
+
+        Long timestamp
 ) {
 
     public String marketCode() {

@@ -33,6 +33,7 @@ export interface TickerMessage {
     lowest_52_week_date: string;
     acc_bid_volume: number;
     acc_ask_volume: number;
+    timestamp?: number;
 }
 
 function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : Props) {
@@ -128,7 +129,8 @@ function MarketSidebar({markets,  onSelectedMarket, tickerMap, setTickerMap} : P
                     lowest_52_week_price: data.lowest_52_week_price,
                     lowest_52_week_date: data.lowest_52_week_date,
                     acc_bid_volume: data.acc_bid_volume,
-                    acc_ask_volume: data.acc_ask_volume
+                    acc_ask_volume: data.acc_ask_volume,
+                    timestamp: data.timestamp ?? Date.now(),
                 },
             };
         });

@@ -3,33 +3,65 @@ import {
     type CandlestickData,
     CandlestickSeries,
     createChart,
+    type HistogramData,
+    HistogramSeries,
     type IChartApi,
-    type ISeriesApi, type LogicalRange, type Time,
+    type ISeriesApi,
+    type LineData,
+    LineSeries,
+    type LogicalRange,
+    type Time,
     TickMarkType
 } from "lightweight-charts";
 import {useQuery} from "@tanstack/react-query";
 import {fetchCandlesPage, type CandleInterval, type MinuteCandle} from "@api/api";
+import useTradeSocket from "@hooks/useTradeSocket";
 
 interface Props {
     marketCode: string;
     interval: CandleInterval;
+    movingAverages: MovingAverageLine[];
     currentPrice?: number,
+    currentPriceTimestamp?: number,
     active?: boolean
 }
 
-const LOAD_MORE_THRESHOLD = 20;
-const KST_OFFSET_SECONDS = 9 * 60 * 60;
+export interface MovingAverageLine {
+    period: number;
+    color: string;
+}
 
-function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
+const LOAD_MORE_THRESHOLD = 20;
+const CHART_HEIGHT = 500;
+const KST_OFFSET_SECONDS = 9 * 60 * 60;
+const RISE_COLOR = "#d64348";
+const FALL_COLOR = "#126ee2";
+const RISE_VOLUME_COLOR = RISE_COLOR;
+const FALL_VOLUME_COLOR = FALL_COLOR;
+const PINCH_ZOOM_SENSITIVITY = 0.004;
+const MIN_VISIBLE_BARS = 8;
+
+function CoinCandleChart({
+    marketCode,
+    interval,
+    movingAverages,
+    currentPrice,
+    currentPriceTimestamp,
+    active
+}: Props) {
     const chartContainerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+    const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+    const movingAverageSeriesRef = useRef<Record<number, ISeriesApi<"Line">>>({});
     const candleDataRef = useRef<CandlestickData<Time>[]>([]);
+    const volumeDataRef = useRef<HistogramData<Time>[]>([]);
     const lastCandleRef = useRef<CandlestickData | null>(null);
     const oldestCandleRef = useRef<string>("");
     const requestedOlderRef = useRef(false);
     const isLoadingOlderRef = useRef<boolean>(false);
     const isFirstLoadingChartRef = useRef<boolean>(true);
+    const activeRef = useRef<boolean>(!!active);
 
     const {data: candles} = useQuery({
         queryKey: ["candle-chart", marketCode, interval.type, interval.unit],
@@ -38,19 +70,26 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
         refetchInterval: getRefetchInterval(interval)
     });
 
+    useTradeSocket(marketCode, (trade) => {
+        updateRealtimeCandle(trade.trade_price, trade.trade_timestamp, trade.trade_volume);
+    });
+
     useEffect(() => {
         isFirstLoadingChartRef.current = true;
         candleDataRef.current = [];
+        volumeDataRef.current = [];
         oldestCandleRef.current = "";
         lastCandleRef.current = null;
         requestedOlderRef.current = false;
         isLoadingOlderRef.current = false;
         candleSeriesRef.current?.setData([]);
+        volumeSeriesRef.current?.setData([]);
+        setMovingAverageSeriesData([]);
     }, [marketCode, interval.type, interval.unit]);
 
     const toChartData = (candles: MinuteCandle[]): CandlestickData<Time>[] => {
         return [...candles].reverse().map((candle) => ({
-            time: toChartTime(candle.timestamp),
+            time: toChartTime(candle.timestamp, interval),
             open: candle.opening_price,
             high: candle.high_price,
             low: candle.low_price,
@@ -58,10 +97,131 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
         }));
     };
 
-    const normalizeChartData = (
-        data: CandlestickData<Time>[]
-    ): CandlestickData<Time>[] => {
-        const map = new Map<string, CandlestickData<Time>>();
+    const toVolumeData = (candles: MinuteCandle[]): HistogramData<Time>[] => {
+        return [...candles].reverse().map((candle) => ({
+            time: toChartTime(candle.timestamp, interval),
+            value: candle.candle_acc_trade_volume,
+            color: candle.trade_price >= candle.opening_price ? RISE_VOLUME_COLOR : FALL_VOLUME_COLOR,
+        }));
+    };
+
+    const toMovingAverageData = (
+        candles: CandlestickData<Time>[],
+        period: number
+    ): LineData<Time>[] => {
+        const result: LineData<Time>[] = [];
+        let sum = 0;
+
+        candles.forEach((candle, index) => {
+            sum += candle.close;
+
+            if (index >= period) {
+                sum -= candles[index - period].close;
+            }
+
+            if (index >= period - 1) {
+                result.push({
+                    time: candle.time,
+                    value: sum / period,
+                });
+            }
+        });
+
+        return result;
+    };
+
+    const setMovingAverageSeriesData = (candles: CandlestickData<Time>[]) => {
+        Object.entries(movingAverageSeriesRef.current).forEach(([period, series]) => {
+            series.setData(toMovingAverageData(candles, Number(period)));
+        });
+    };
+
+    const createMovingAverageSeries = (chart: IChartApi, lines: MovingAverageLine[]) => {
+        return lines.reduce<Record<number, ISeriesApi<"Line">>>(
+            (seriesMap, {period, color}) => {
+                seriesMap[period] = chart.addSeries(LineSeries, {
+                    color,
+                    lineWidth: 1,
+                    priceLineVisible: false,
+                    lastValueVisible: false,
+                    crosshairMarkerVisible: false,
+                }, 0);
+
+                return seriesMap;
+            },
+            {}
+        );
+    };
+
+    const updateRealtimeCandle = (price: number, timestamp?: number, volume = 0) => {
+        if (!lastCandleRef.current || !candleSeriesRef.current) {
+            return;
+        }
+
+        const lastCandle = lastCandleRef.current;
+        const currentTime = interval.type === "minute" && timestamp
+            ? toChartTime(timestamp, interval)
+            : lastCandle.time;
+
+        const isNextCandle = interval.type === "minute"
+            && getTimeValue(currentTime) > getTimeValue(lastCandle.time);
+
+        const updatedCandle: CandlestickData<Time> = {
+            time: isNextCandle ? currentTime : lastCandle.time,
+            open: isNextCandle ? price : lastCandle.open,
+            close: price,
+            high: isNextCandle ? price : Math.max(lastCandle.high, price),
+            low: isNextCandle ? price : Math.min(lastCandle.low, price),
+        };
+
+        const updatedChartData = isNextCandle
+            ? [...candleDataRef.current, updatedCandle]
+            : candleDataRef.current.map((candle) =>
+                getTimeKey(candle.time) === getTimeKey(updatedCandle.time) ? updatedCandle : candle
+            );
+
+        const updatedVolumeData = updateRealtimeVolumeData(updatedCandle, volume, isNextCandle);
+
+        candleDataRef.current = updatedChartData;
+        volumeDataRef.current = updatedVolumeData;
+        lastCandleRef.current = updatedCandle;
+
+        candleSeriesRef.current.update(updatedCandle);
+        volumeSeriesRef.current?.setData(updatedVolumeData);
+        setMovingAverageSeriesData(updatedChartData);
+    };
+
+    const updateRealtimeVolumeData = (
+        candle: CandlestickData<Time>,
+        volume: number,
+        isNextCandle: boolean
+    ) => {
+        const volumeColor = candle.close >= candle.open ? RISE_VOLUME_COLOR : FALL_VOLUME_COLOR;
+
+        if (isNextCandle) {
+            return [
+                ...volumeDataRef.current,
+                {
+                    time: candle.time,
+                    value: volume,
+                    color: volumeColor,
+                },
+            ];
+        }
+
+        return volumeDataRef.current.map((item) =>
+            getTimeKey(item.time) === getTimeKey(candle.time)
+                ? {
+                    ...item,
+                    value: item.value + volume,
+                    color: volumeColor,
+                }
+                : item
+        );
+    };
+
+    const normalizeChartData = <T extends { time: Time }>(data: T[]): T[] => {
+        const map = new Map<string, T>();
         data.forEach((item) => {
             map.set(getTimeKey(item.time), item);
         });
@@ -75,7 +235,7 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
 
         const chart = createChart(chartContainerRef.current, {
             width: chartContainerRef.current.clientWidth,
-            height: 420,
+            height: CHART_HEIGHT,
             layout: {
                 background : { color: "#ffffff"},
                 textColor: "#333"
@@ -85,6 +245,9 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
                 horzLines: {color: "#f1f3f5"}
             },
             timeScale: {
+                barSpacing: 10,
+                minBarSpacing: 0.1,
+                maxBarSpacing: 80,
                 timeVisible: interval.type === "minute",
                 secondsVisible: false,
                 tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => formatTickMark(time, tickMarkType)
@@ -103,19 +266,33 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
         });
 
         const candleSeries = chart.addSeries(CandlestickSeries, {
-            upColor: "#d64348",
-            downColor: "#126ee2",
-            borderUpColor: "#d64348",
-            borderDownColor: "#126ee2",
-            wickUpColor: "#d64348",
-            wickDownColor: "#126ee2",
-        });
+            upColor: RISE_COLOR,
+            downColor: FALL_COLOR,
+            borderUpColor: RISE_COLOR,
+            borderDownColor: FALL_COLOR,
+            wickUpColor: RISE_COLOR,
+            wickDownColor: FALL_COLOR,
+        }, 0);
+
+        movingAverageSeriesRef.current = createMovingAverageSeries(chart, movingAverages);
+
+        const volumeSeries = chart.addSeries(HistogramSeries, {
+            priceFormat: {
+                type: "volume",
+            },
+            priceLineVisible: false,
+            lastValueVisible: false,
+        }, 1);
+
+        const [pricePane, volumePane] = chart.panes();
+        pricePane?.setStretchFactor(2);
+        volumePane?.setStretchFactor(1);
 
         chartRef.current = chart;
         candleSeriesRef.current = candleSeries;
+        volumeSeriesRef.current = volumeSeries;
 
         const handleVisibleRangeChange = async (range: LogicalRange | null) => {
-            console.log("visible range", range);
             if (!range) return;
             if (range.from >= LOAD_MORE_THRESHOLD) {
                 requestedOlderRef.current = false;
@@ -126,11 +303,13 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
             if (isLoadingOlderRef.current) return;
             if (!oldestCandleRef.current) return;
             if (!candleSeriesRef.current) return;
+            if (!volumeSeriesRef.current) return;
 
             requestedOlderRef.current = true;
             isLoadingOlderRef.current = true;
 
             const candleSeries = candleSeriesRef.current;
+            const volumeSeries = volumeSeriesRef.current;
 
             try {
                 const olderCandles = await fetchCandlesPage(
@@ -147,14 +326,22 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
                 const beforeLength = candleDataRef.current.length;
 
                 const olderChartData = toChartData(olderCandles);
+                const olderVolumeData = toVolumeData(olderCandles);
 
                 const mergedData = normalizeChartData([
                     ...olderChartData,
                     ...candleDataRef.current,
                 ]);
+                const mergedVolumeData = normalizeChartData([
+                    ...olderVolumeData,
+                    ...volumeDataRef.current,
+                ]);
 
                 candleDataRef.current = mergedData;
+                volumeDataRef.current = mergedVolumeData;
                 candleSeries.setData(mergedData);
+                setMovingAverageSeriesData(mergedData);
+                volumeSeries.setData(mergedVolumeData);
 
                 const addedCount = mergedData.length - beforeLength;
 
@@ -176,6 +363,33 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
 
         chart.timeScale().subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
 
+        const handlePinchWheel = (event: WheelEvent) => {
+            if (!activeRef.current) return;
+            if (!event.ctrlKey) return;
+
+            const visibleRange = chart.timeScale().getVisibleLogicalRange();
+            if (!visibleRange) return;
+
+            event.preventDefault();
+
+            const rangeWidth = visibleRange.to - visibleRange.from;
+            if (rangeWidth <= 0) return;
+
+            const containerRect = chartContainerRef.current?.getBoundingClientRect();
+            const pointerRatio = containerRect
+                ? Math.min(Math.max((event.clientX - containerRect.left) / containerRect.width, 0), 1)
+                : 0.5;
+            const pointerPosition = visibleRange.from + rangeWidth * pointerRatio;
+            const scale = Math.exp(event.deltaY * PINCH_ZOOM_SENSITIVITY);
+            const nextWidth = Math.max(rangeWidth * scale, MIN_VISIBLE_BARS);
+            const nextScale = nextWidth / rangeWidth;
+
+            chart.timeScale().setVisibleLogicalRange({
+                from: pointerPosition - (pointerPosition - visibleRange.from) * nextScale,
+                to: pointerPosition + (visibleRange.to - pointerPosition) * nextScale,
+            });
+        };
+
         const handleResize = () => {
             if (!chartContainerRef.current) return;
 
@@ -184,27 +398,48 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
             });
         }
 
+        chartContainerRef.current.addEventListener("wheel", handlePinchWheel, {passive: false});
         window.addEventListener("resize", handleResize);
 
         return () => {
+            chartContainerRef.current?.removeEventListener("wheel", handlePinchWheel);
             window.removeEventListener("resize", handleResize);
             chart.remove();
             chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
             chartRef.current = null;
             candleSeriesRef.current = null;
+            volumeSeriesRef.current = null;
+            movingAverageSeriesRef.current = {};
         }
     }, [marketCode, interval.type, interval.unit]);
 
     useEffect(() => {
-        if (!candles || !candleSeriesRef.current || !chartRef.current) return;
+        const chart = chartRef.current;
+        if (!chart) return;
+
+        Object.values(movingAverageSeriesRef.current).forEach((series) => {
+            chart.removeSeries(series);
+        });
+
+        movingAverageSeriesRef.current = createMovingAverageSeries(chart, movingAverages);
+
+        setMovingAverageSeriesData(candleDataRef.current);
+    }, [movingAverages]);
+
+    useEffect(() => {
+        if (!candles || !candleSeriesRef.current || !volumeSeriesRef.current || !chartRef.current) return;
 
         if (!isFirstLoadingChartRef.current) return;
 
         oldestCandleRef.current = candles[candles.length - 1].candle_date_time_utc;
         const chartData = normalizeChartData(toChartData(candles));
+        const volumeData = normalizeChartData(toVolumeData(candles));
 
         candleDataRef.current = chartData;
+        volumeDataRef.current = volumeData;
         candleSeriesRef.current.setData(chartData);
+        setMovingAverageSeriesData(chartData);
+        volumeSeriesRef.current.setData(volumeData);
         chartRef.current.timeScale().fitContent();
         isFirstLoadingChartRef.current = false;
         lastCandleRef.current = chartData[chartData.length - 1];
@@ -214,20 +449,12 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
         if (currentPrice === undefined || !lastCandleRef.current || !candleSeriesRef.current) {
             return;
         }
-        const lastCandle = lastCandleRef.current;
-
-        const updatedCandle: CandlestickData = {
-            ...lastCandle,
-            close: currentPrice,
-            high: Math.max(lastCandle.high, currentPrice),
-            low: Math.min(lastCandle.low, currentPrice),
-        }
-
-        candleSeriesRef.current.update(updatedCandle);
-        lastCandleRef.current = updatedCandle;
-    }, [currentPrice]);
+        updateRealtimeCandle(currentPrice, currentPriceTimestamp);
+    }, [currentPrice, currentPriceTimestamp, interval.type, interval.unit]);
 
     useEffect(() => {
+        activeRef.current = !!active;
+
         if (!chartRef.current) return;
         chartRef.current.applyOptions({
             handleScroll: {
@@ -241,7 +468,7 @@ function CoinCandleChart({marketCode, interval, currentPrice, active}: Props) {
         });
     }, [active]);
 
-    return <div ref={chartContainerRef} style={{width: "100%", height: 420}}/>
+    return <div ref={chartContainerRef} style={{width: "100%", height: CHART_HEIGHT}}/>
 }
 
 function getRefetchInterval(interval: CandleInterval) {
@@ -252,8 +479,15 @@ function getRefetchInterval(interval: CandleInterval) {
     return 1000 * 60 * 5;
 }
 
-function toChartTime(timestamp: number) {
-    return (Math.floor(timestamp / 1000) + KST_OFFSET_SECONDS) as Time;
+function toChartTime(timestamp: number, interval: CandleInterval) {
+    const kstTimestampSeconds = Math.floor(timestamp / 1000) + KST_OFFSET_SECONDS;
+
+    if (interval.type === "minute") {
+        const unitSeconds = (interval.unit ?? 15) * 60;
+        return (Math.floor(kstTimestampSeconds / unitSeconds) * unitSeconds) as Time;
+    }
+
+    return kstTimestampSeconds as Time;
 }
 
 function formatTickMark(time: Time, tickMarkType: TickMarkType) {
