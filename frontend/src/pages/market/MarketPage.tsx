@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import {ChevronDown, Plus, X} from "lucide-react";
 
 import { fetchMarkets, type Market, type Ticker } from "@api/api";
 import Loading from "@pages/layout/Loading";
@@ -10,6 +11,15 @@ import {
     ChartIntervalSelect,
     ChartToolbar,
     ContentArea,
+    MovingAverageButton,
+    MovingAverageChip,
+    MovingAverageColor,
+    MovingAverageControls,
+    MovingAverageDropdown,
+    MovingAverageForm,
+    MovingAverageInput,
+    MovingAverageRemoveButton,
+    MovingAverageTrigger,
     OrderPanel,
     PageBackground,
     PageLayout,
@@ -17,7 +27,7 @@ import {
     TradingOrderPanel,
     TradingPanel,
 } from "@pages/market/MarketPage.styles";
-import CoinCandleChart from "@pages/market/components/chart/CoinCandleChart";
+import CoinCandleChart, {type MovingAverageLine} from "@pages/market/components/chart/CoinCandleChart";
 import OrderBook from "@pages/market/components/orderbook/OrderBook/OrderBook";
 import Order from "@pages/market/components/order/Order";
 import type {CandleInterval} from "@api/api";
@@ -39,6 +49,13 @@ const candleIntervals: {label: string; value: CandleInterval}[] = [
     {label: "월", value: {type: "month"}},
 ];
 
+const movingAverageColors = ["#f59f00", "#22a06b", "#7c3aed", "#0f766e", "#db2777", "#64748b"];
+const defaultMovingAverages: MovingAverageLine[] = [
+    {period: 5, color: movingAverageColors[0]},
+    {period: 20, color: movingAverageColors[1]},
+    {period: 60, color: movingAverageColors[2]},
+];
+
 function MarketPage() {
 
     const {isLoading, data: markets, isError,} = useQuery({
@@ -50,12 +67,42 @@ function MarketPage() {
     const [tickerMap, setTickerMap] = useState<Record<string, Ticker>>({});
     const [activePanel, setActivePanel] = useState<ActivePanel>(null);
     const [candleInterval, setCandleInterval] = useState<CandleInterval>({type: "minute", unit: 15});
+    const [movingAverages, setMovingAverages] = useState<MovingAverageLine[]>(defaultMovingAverages);
+    const [movingAverageInput, setMovingAverageInput] = useState("");
+    const [isMovingAverageMenuOpen, setIsMovingAverageMenuOpen] = useState(false);
 
     const marketCode = selectedMarket?.market ?? "KRW-BTC";
     const ticker = tickerMap[marketCode];
 
     if (isLoading) return <Loading/>;
     if (isError) return <div>데이터를 불러오지 못했습니다.</div>;
+
+    const addMovingAverage = () => {
+        const period = Number(movingAverageInput);
+
+        if (!Number.isInteger(period) || period <= 0 || period > 300) {
+            setMovingAverageInput("");
+            return;
+        }
+
+        if (movingAverages.some((movingAverage) => movingAverage.period === period)) {
+            setMovingAverageInput("");
+            return;
+        }
+
+        setMovingAverages((prev) => [
+            ...prev,
+            {
+                period,
+                color: movingAverageColors[prev.length % movingAverageColors.length],
+            },
+        ].sort((a, b) => a.period - b.period));
+        setMovingAverageInput("");
+    };
+
+    const removeMovingAverage = (period: number) => {
+        setMovingAverages((prev) => prev.filter((movingAverage) => movingAverage.period !== period));
+    };
 
     return (
         <PageBackground onMouseDown={() => setActivePanel(null)}>
@@ -65,7 +112,7 @@ function MarketPage() {
                     <ChartArea onMouseDown={(e) => {
                         e.stopPropagation();
                         setActivePanel("chart");
-                    }}>
+                    }} onMouseEnter={() => setActivePanel("chart")}>
                         <ChartToolbar>
                             <ChartIntervalSelect
                                 value={getCandleIntervalKey(candleInterval)}
@@ -88,9 +135,60 @@ function MarketPage() {
                                     </option>
                                 ))}
                             </ChartIntervalSelect>
+                            <MovingAverageControls>
+                                <MovingAverageTrigger
+                                    type="button"
+                                    onClick={() => setIsMovingAverageMenuOpen((prev) => !prev)}
+                                >
+                                    이동평균 {movingAverages.length}
+                                    <ChevronDown size={14}/>
+                                </MovingAverageTrigger>
+                                {isMovingAverageMenuOpen && (
+                                    <MovingAverageDropdown>
+                                        {movingAverages.map((movingAverage) => (
+                                            <MovingAverageChip key={movingAverage.period}>
+                                                <MovingAverageColor color={movingAverage.color}/>
+                                                MA{movingAverage.period}
+                                                <MovingAverageRemoveButton
+                                                    type="button"
+                                                    title={`MA${movingAverage.period} 제거`}
+                                                    onClick={() => removeMovingAverage(movingAverage.period)}
+                                                >
+                                                    <X size={12}/>
+                                                </MovingAverageRemoveButton>
+                                            </MovingAverageChip>
+                                        ))}
+                                        <MovingAverageForm
+                                            onSubmit={(event) => {
+                                                event.preventDefault();
+                                                addMovingAverage();
+                                            }}
+                                        >
+                                            <MovingAverageInput
+                                                type="number"
+                                                min={1}
+                                                max={300}
+                                                value={movingAverageInput}
+                                                aria-label="이동 평균 기간"
+                                                placeholder="MA"
+                                                onChange={(event) => setMovingAverageInput(event.target.value)}
+                                            />
+                                            <MovingAverageButton type="submit" title="이동 평균 추가">
+                                                <Plus size={14}/>
+                                            </MovingAverageButton>
+                                        </MovingAverageForm>
+                                    </MovingAverageDropdown>
+                                )}
+                            </MovingAverageControls>
                         </ChartToolbar>
-                        <CoinCandleChart marketCode={marketCode} interval={candleInterval} currentPrice={ticker?.trade_price}
-                                         active={activePanel === "chart"}/>
+                        <CoinCandleChart
+                            marketCode={marketCode}
+                            interval={candleInterval}
+                            movingAverages={movingAverages}
+                            currentPrice={ticker?.trade_price}
+                            currentPriceTimestamp={ticker?.timestamp}
+                            active={activePanel === "chart"}
+                        />
                     </ChartArea>
                     <TradingOrderPanel>
                         <TradingPanel
