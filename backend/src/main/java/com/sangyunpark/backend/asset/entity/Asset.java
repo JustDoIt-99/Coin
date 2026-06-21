@@ -72,10 +72,18 @@ public class Asset extends BaseEntity {
     }
 
     public void deposit(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(OrderErrorCode.INVALID_ASSET_AMOUNT);
+        }
+
         this.balance = balance.add(amount);
     }
 
     public void sell(BigDecimal quantity) {
+        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(OrderErrorCode.INVALID_ASSET_AMOUNT);
+        }
+
         withdraw(quantity);
 
         if (balance.compareTo(BigDecimal.ZERO) == 0) {

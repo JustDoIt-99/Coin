@@ -1,7 +1,7 @@
 import {getDefaultStore} from "jotai";
 import {accessTokenAtom, userAtom} from "@auth/authAtom";
 import type {LoginResponse} from "@Type/User";
-import {API} from "@constants/api.ts";
+import {API} from "@constants/endpoints.ts";
 import {dispatchAuthExpiredEvent} from "@auth/authEvents";
 
 const store = getDefaultStore();

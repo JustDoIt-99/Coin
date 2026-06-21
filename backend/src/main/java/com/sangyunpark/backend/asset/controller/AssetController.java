@@ -1,6 +1,7 @@
 package com.sangyunpark.backend.asset.controller;
 
 import com.sangyunpark.backend.asset.controller.dto.response.AssetResponse;
+import com.sangyunpark.backend.asset.controller.dto.response.PortfolioAssetSummaryResponse;
 import com.sangyunpark.backend.asset.service.AssetService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -23,5 +24,11 @@ public class AssetController {
     public List<AssetResponse> getAssets(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute(USER_ID);
         return assetService.getAssets(userId);
+    }
+
+    @GetMapping("/summary")
+    public PortfolioAssetSummaryResponse getPortfolioAssetSummary(HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute(USER_ID);
+        return assetService.getPortfolioAssetSummary(userId);
     }
 }

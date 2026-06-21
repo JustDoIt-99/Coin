@@ -14,7 +14,7 @@ import {
     SocialButton,
     LinkRow,
 } from "@pages/auth/AuthPage.styles";
-import {API} from "@constants/api";
+import {API} from "@constants/endpoints.ts";
 import {useAuth} from "@auth/useAuth";
 import type {LoginResponse} from "@Type/User";
 

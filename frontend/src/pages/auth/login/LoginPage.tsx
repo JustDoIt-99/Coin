@@ -16,7 +16,7 @@ import {useState} from "react";
 import * as React from "react";
 import {useAuth} from "@auth/useAuth";
 import {useLocation, useNavigate} from "react-router-dom";
-import {API} from "@constants/api";
+import {API} from "@constants/endpoints.ts";
 import type {LoginResponse} from "@Type/User";
 
 function LoginPage() {
