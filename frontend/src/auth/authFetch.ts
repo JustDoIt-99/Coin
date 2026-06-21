@@ -2,6 +2,7 @@ import {getDefaultStore} from "jotai";
 import {accessTokenAtom, userAtom} from "@auth/authAtom";
 import type {LoginResponse} from "@Type/User";
 import {API} from "@constants/api.ts";
+import {dispatchAuthExpiredEvent} from "@auth/authEvents";
 
 const store = getDefaultStore();
 let reissuePromise: Promise<LoginResponse | null> | null = null;
@@ -27,6 +28,7 @@ export async function authFetch(input: RequestInfo | URL, init: AuthFetchInit = 
     if (!data) {
         store.set(accessTokenAtom, null);
         store.set(userAtom, null);
+        dispatchAuthExpiredEvent();
         return response;
     }
 
@@ -52,6 +54,7 @@ async function reissueAccessToken() {
             store.set(userAtom, data.user);
             return data;
         })
+        .catch(() => null)
         .finally(() => {
             reissuePromise = null;
         });
