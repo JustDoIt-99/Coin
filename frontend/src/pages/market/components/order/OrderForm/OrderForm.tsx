@@ -68,7 +68,7 @@ function OrderForm({marketCode, tradeType, ticker}: OrderFormProps) {
         }
 
         const amount = Number(removeComma(state.totalAmount));
-        if (!amount) {
+        if (Number.isNaN(amount) || amount <= 0) {
             setSubmitMessage("주문총액을 입력해주세요.");
             return;
         }
