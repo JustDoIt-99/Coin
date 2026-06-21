@@ -16,6 +16,7 @@ import com.sangyunpark.backend.user.entity.User;
 import com.sangyunpark.backend.user.repository.UserJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,7 +80,7 @@ class OrderServiceTest {
                     assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00200000"));
                     assertThat(asset.getAverageBuyPrice()).isEqualByComparingTo(new BigDecimal("50000000"));
                 });
-        assertThat(tradeHistoryJpaRepository.findByUserOrderByCreatedAtDesc(user))
+        assertThat(tradeHistoryJpaRepository.findByUserOrderByIdDesc(user, PageRequest.of(0, 10)))
                 .hasSize(1)
                 .first()
                 .satisfies(tradeHistory -> {
@@ -159,7 +160,7 @@ class OrderServiceTest {
                 new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
         );
 
-        List<TradeHistoryResponse> responses = orderService.getTradeHistories(signupResponse.user().id());
+        List<TradeHistoryResponse> responses = orderService.getTradeHistories(signupResponse.user().id(), null, 20).items();
 
         assertThat(responses)
                 .hasSize(1)
@@ -172,6 +173,33 @@ class OrderServiceTest {
                     assertThat(response.orderedAt()).isNotNull();
                     assertThat(response.executedAt()).isNotNull();
                 });
+    }
+
+    @Test
+    void 거래내역은_커서_기반으로_조회한다() {
+        AuthTokenResponse signupResponse = signup();
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(new BigDecimal("50000000"));
+
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        );
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("200000"))
+        );
+
+        var firstPage = orderService.getTradeHistories(signupResponse.user().id(), null, 1);
+        var secondPage = orderService.getTradeHistories(signupResponse.user().id(), firstPage.nextCursorId(), 1);
+
+        assertThat(firstPage.items()).hasSize(1);
+        assertThat(firstPage.hasNext()).isTrue();
+        assertThat(firstPage.nextCursorId()).isEqualTo(firstPage.items().get(0).id());
+        assertThat(secondPage.items()).hasSize(1);
+        assertThat(secondPage.hasNext()).isFalse();
+        assertThat(secondPage.nextCursorId()).isNull();
+        assertThat(firstPage.items().get(0).id()).isGreaterThan(secondPage.items().get(0).id());
     }
 
     private AuthTokenResponse signup() {

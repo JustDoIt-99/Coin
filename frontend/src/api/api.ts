@@ -79,6 +79,12 @@ export interface TradeHistoryResponse {
     executedAt: string;
 }
 
+export interface TradeHistoryCursorResponse {
+    items: TradeHistoryResponse[];
+    nextCursorId: number | null;
+    hasNext: boolean;
+}
+
 export async function fetchMarkets(): Promise<Market[]> {
     const response = await fetch(API.MARKETS);
 
@@ -226,8 +232,16 @@ export async function marketBuy(request: MarketBuyRequest): Promise<MarketBuyRes
     return response.json();
 }
 
-export async function fetchTradeHistories(): Promise<TradeHistoryResponse[]> {
-    const response = await authFetch(API.TRADE_HISTORIES);
+export async function fetchTradeHistories(cursorId?: number | null, size = 20): Promise<TradeHistoryCursorResponse> {
+    const params = new URLSearchParams({
+        size: String(size),
+    });
+
+    if (cursorId) {
+        params.append("cursorId", String(cursorId));
+    }
+
+    const response = await authFetch(`${API.TRADE_HISTORIES}?${params}`);
 
     if (!response.ok) {
         throw new Error("거래내역 조회에 실패했습니다.");

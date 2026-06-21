@@ -36,9 +36,9 @@ function OrderHistory({marketCode}: OrderHistoryProps) {
                 setIsLoading(true);
                 setErrorMessage("");
 
-                const response = await fetchTradeHistories();
+                const response = await fetchTradeHistories(null, 50);
                 if (!ignore) {
-                    setTrades(response.map(toTradeItem));
+                    setTrades(response.items.map(toTradeItem));
                 }
             } catch (error) {
                 console.error("주문창 거래내역 조회 실패", error);

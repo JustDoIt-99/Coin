@@ -147,3 +147,27 @@ export const HistoryTable = styled.table`
         width: 10%;
     }
 `;
+
+export const LoadMoreArea = styled.div`
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+`;
+
+export const LoadMoreButton = styled.button`
+    min-width: 112px;
+    height: 40px;
+    border: 1px solid #d2d7df;
+    border-radius: 4px;
+    background: #fff;
+    color: #344054;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:disabled {
+        color: #98a2b3;
+        cursor: default;
+    }
+`;

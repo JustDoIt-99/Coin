@@ -6,7 +6,9 @@ import {
     PeriodButtonGroup,
     FilterButton,
     CoinSearchBox,
-    HistoryTable
+    HistoryTable,
+    LoadMoreArea,
+    LoadMoreButton
 } from "./TradeHistory.styles";
 import {useEffect, useMemo, useState} from "react";
 import type {HistoryType, PeriodType, TradeHistoryItem} from "@pages/tradehistory/types";
@@ -24,6 +26,8 @@ function TradeHistory() {
     const [histories, setHistories] = useState<TradeHistoryItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
+    const [nextCursorId, setNextCursorId] = useState<number | null>(null);
+    const [hasNext, setHasNext] = useState(false);
     const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>("1개월");
     const [selectedType, setSelectedType] = useState<HistoryType>("전체");
     const [searchKeyword, setSearchKeyword] = useState("");
@@ -69,9 +73,11 @@ function TradeHistory() {
                 setIsLoading(true);
                 setErrorMessage("");
 
-                const response = await fetchTradeHistories();
+                const response = await fetchTradeHistories(null, 20);
                 if (!ignore) {
-                    setHistories(response.map(toTradeHistoryItem));
+                    setHistories(response.items.map(toTradeHistoryItem));
+                    setNextCursorId(response.nextCursorId);
+                    setHasNext(response.hasNext);
                 }
             } catch (error) {
                 console.error("거래내역 조회 실패", error);
@@ -91,6 +97,28 @@ function TradeHistory() {
             ignore = true;
         };
     }, []);
+
+    const handleLoadMore = async () => {
+        if (!hasNext || !nextCursorId || isLoading) return;
+
+        try {
+            setIsLoading(true);
+            setErrorMessage("");
+
+            const response = await fetchTradeHistories(nextCursorId, 20);
+            setHistories((prev) => [
+                ...prev,
+                ...response.items.map(toTradeHistoryItem),
+            ]);
+            setNextCursorId(response.nextCursorId);
+            setHasNext(response.hasNext);
+        } catch (error) {
+            console.error("거래내역 추가 조회 실패", error);
+            setErrorMessage("거래내역을 불러오지 못했습니다.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const filteredHistories = useMemo(() => {
         const keyword = searchKeyword.trim().toLowerCase();
@@ -195,7 +223,7 @@ function TradeHistory() {
                 </thead>
 
                 <tbody>
-                {isLoading && (
+                {isLoading && histories.length === 0 && (
                     <tr>
                         <td colSpan={historyHeaders.length}>거래내역을 불러오는 중입니다.</td>
                     </tr>
@@ -210,7 +238,7 @@ function TradeHistory() {
                         <td colSpan={historyHeaders.length}>거래내역이 없습니다.</td>
                     </tr>
                 )}
-                {!isLoading && !errorMessage && filteredHistories.map((history) => (
+                {!errorMessage && filteredHistories.map((history) => (
                     <tr key={history.id}>
                         <td>{history.executedAt}</td>
                         <td>{history.coin}</td>
@@ -226,6 +254,13 @@ function TradeHistory() {
                 ))}
                 </tbody>
             </HistoryTable>
+            {hasNext && (
+                <LoadMoreArea>
+                    <LoadMoreButton type="button" disabled={isLoading} onClick={handleLoadMore}>
+                        {isLoading ? "조회 중" : "더 보기"}
+                    </LoadMoreButton>
+                </LoadMoreArea>
+            )}
         </HistoryContainer>
     );
 }

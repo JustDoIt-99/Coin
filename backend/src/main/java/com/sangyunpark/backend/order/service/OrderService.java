@@ -7,6 +7,7 @@ import com.sangyunpark.backend.common.exception.BusinessException;
 import com.sangyunpark.backend.market.price.UpbitMarketPriceProvider;
 import com.sangyunpark.backend.order.controller.dto.request.MarketBuyRequest;
 import com.sangyunpark.backend.order.controller.dto.response.MarketBuyResponse;
+import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryCursorResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryResponse;
 import com.sangyunpark.backend.order.entity.TradeHistory;
 import com.sangyunpark.backend.order.exception.OrderErrorCode;
@@ -15,6 +16,7 @@ import com.sangyunpark.backend.order.service.dto.MarketPair;
 import com.sangyunpark.backend.user.entity.User;
 import com.sangyunpark.backend.user.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,7 @@ import java.util.List;
 public class OrderService {
 
     private static final int QUANTITY_SCALE = 8;
+    private static final int MAX_TRADE_HISTORY_SIZE = 100;
     private static final BigDecimal MIN_EXECUTED_QUANTITY = new BigDecimal("0.00000001");
 
     private final UserJpaRepository userJpaRepository;
@@ -91,14 +94,30 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<TradeHistoryResponse> getTradeHistories(Long userId) {
+    public TradeHistoryCursorResponse getTradeHistories(Long userId, Long cursorId, int size) {
         User user = userJpaRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
 
-        return tradeHistoryJpaRepository.findByUserOrderByCreatedAtDesc(user)
-                .stream()
+        int limit = Math.max(1, Math.min(size, MAX_TRADE_HISTORY_SIZE));
+        List<TradeHistory> tradeHistories = findTradeHistories(user, cursorId, limit + 1);
+        boolean hasNext = tradeHistories.size() > limit;
+        List<TradeHistoryResponse> items = tradeHistories.stream()
+                .limit(limit)
                 .map(TradeHistoryResponse::from)
                 .toList();
+        Long nextCursorId = hasNext ? items.get(items.size() - 1).id() : null;
+
+        return new TradeHistoryCursorResponse(items, nextCursorId, hasNext);
+    }
+
+    private List<TradeHistory> findTradeHistories(User user, Long cursorId, int limit) {
+        PageRequest pageRequest = PageRequest.of(0, limit);
+
+        if (cursorId == null) {
+            return tradeHistoryJpaRepository.findByUserOrderByIdDesc(user, pageRequest);
+        }
+
+        return tradeHistoryJpaRepository.findByUserAndIdLessThanOrderByIdDesc(user, cursorId, pageRequest);
     }
 
     private MarketPair parseMarketCode(String marketCode) {
