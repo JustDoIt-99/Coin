@@ -1,7 +1,9 @@
 package com.sangyunpark.backend.order.controller;
 
 import com.sangyunpark.backend.order.controller.dto.request.MarketBuyRequest;
+import com.sangyunpark.backend.order.controller.dto.request.MarketSellRequest;
 import com.sangyunpark.backend.order.controller.dto.response.MarketBuyResponse;
+import com.sangyunpark.backend.order.controller.dto.response.MarketSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryCursorResponse;
 import com.sangyunpark.backend.order.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,6 +29,12 @@ public class OrderController {
     public MarketBuyResponse marketBuy(HttpServletRequest request, @Valid @RequestBody MarketBuyRequest marketBuyRequest) {
         Long userId = (Long) request.getAttribute(USER_ID);
         return orderService.marketBuy(userId, marketBuyRequest);
+    }
+
+    @PostMapping("/market-sell")
+    public MarketSellResponse marketSell(HttpServletRequest request, @Valid @RequestBody MarketSellRequest marketSellRequest) {
+        Long userId = (Long) request.getAttribute(USER_ID);
+        return orderService.marketSell(userId, marketSellRequest);
     }
 
     @GetMapping("/trade-histories")

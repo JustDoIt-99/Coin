@@ -3,18 +3,25 @@ import type {TradeType} from "@pages/market/components/order/OrderForm/OrderForm
 import {formatDecimalWithComma, formatIntegerWithComma, removeComma} from "@utils/orderform/numberFormat";
 import type {Ticker} from "@api/api";
 
-const MOCK_AVAILABLE_KRW = 1_000_000;
-const MOCK_AVAILABLE_BTC = 0.52341234;
 const MIN_ORDER_KRW = 5000;
 
 export type OrderType = "limit" | "market" | "reserve";
 
 interface Props {
     tradeType: TradeType,
+    isAuthenticated: boolean,
+    availableBaseBalance: number,
+    availableTargetBalance: number,
     ticker?: Ticker
 }
 
-function useOrderForm({tradeType, ticker} : Props) {
+function useOrderForm({
+    tradeType,
+    isAuthenticated,
+    availableBaseBalance,
+    availableTargetBalance,
+    ticker
+} : Props) {
     const [orderType, setOrderType] = useState<OrderType>("limit");
     const [orderPrice, setOrderPrice] = useState("");
     const [selectedPercent, setSelectedPercent] = useState<string | undefined>();
@@ -28,16 +35,18 @@ function useOrderForm({tradeType, ticker} : Props) {
     const isReserve = orderType === "reserve";
 
     const coinSymbol = ticker?.market?.split("-")[1] ?? "";
-    const availableAsset = isBuy
-        ? `${MOCK_AVAILABLE_KRW.toLocaleString()} KRW`
-        : `${MOCK_AVAILABLE_BTC} ${coinSymbol}`;
+    const availableAsset = !isAuthenticated
+        ? "로그인 필요"
+        : isBuy
+            ? `${formatKrw(availableBaseBalance)} KRW`
+            : `${formatCoin(availableTargetBalance)} ${coinSymbol}`;
 
     const submitLabel = isReserve
         ? isBuy ? "예약 매수" : "예약 매도"
         : isBuy ? "매수" : "매도";
 
     const applyBuyPercent = (percent: number) => {
-        const total = MOCK_AVAILABLE_KRW * (percent / 100);
+        const total = availableBaseBalance * (percent / 100);
 
         setTotalAmount(Math.floor(total).toLocaleString());
 
@@ -53,7 +62,7 @@ function useOrderForm({tradeType, ticker} : Props) {
     };
 
     const applySellPercent = (percent: number) => {
-        const qty = MOCK_AVAILABLE_BTC * (percent / 100);
+        const qty = availableTargetBalance * (percent / 100);
 
         setQuantity(formatDecimalWithComma(qty.toFixed(8)));
 
@@ -170,10 +179,10 @@ function useOrderForm({tradeType, ticker} : Props) {
         if (orderTotalNumber < MIN_ORDER_KRW) {
             return "최소 주문금액은 5,000 KRW입니다.";
         }
-        if (isBuy && orderTotalNumber > MOCK_AVAILABLE_KRW) {
+        if (isAuthenticated && isBuy && orderTotalNumber > availableBaseBalance) {
             return "주문가능 금액을 초과했습니다.";
         }
-        if (!isBuy && quantityNumber > MOCK_AVAILABLE_BTC) {
+        if (isAuthenticated && !isBuy && quantityNumber > availableTargetBalance) {
             return "보유 수량을 초과했습니다.";
         }
         if (isReserve && !Number(removeComma(triggerPrice))) {
@@ -221,6 +230,14 @@ function useOrderForm({tradeType, ticker} : Props) {
             handlePercentClick,
         }
     };
+}
+
+function formatKrw(value: number) {
+    return Math.floor(value).toLocaleString();
+}
+
+function formatCoin(value: number) {
+    return formatDecimalWithComma(value.toFixed(8));
 }
 
 export default useOrderForm;

@@ -6,7 +6,9 @@ import com.sangyunpark.backend.auth.exception.AuthErrorCode;
 import com.sangyunpark.backend.common.exception.BusinessException;
 import com.sangyunpark.backend.market.price.UpbitMarketPriceProvider;
 import com.sangyunpark.backend.order.controller.dto.request.MarketBuyRequest;
+import com.sangyunpark.backend.order.controller.dto.request.MarketSellRequest;
 import com.sangyunpark.backend.order.controller.dto.response.MarketBuyResponse;
+import com.sangyunpark.backend.order.controller.dto.response.MarketSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryCursorResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryResponse;
 import com.sangyunpark.backend.order.entity.TradeHistory;
@@ -87,6 +89,56 @@ public class OrderService {
                 executedAmount,
                 currentPrice,
                 executedQuantity,
+                baseAsset.getBalance(),
+                targetAsset.getBalance(),
+                targetAsset.getAverageBuyPrice()
+        );
+    }
+
+    @Transactional
+    public MarketSellResponse marketSell(Long userId, MarketSellRequest request) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
+
+        BigDecimal orderQuantity = request.quantity();
+        MarketPair marketPair = parseMarketCode(request.marketCode());
+
+        Asset baseAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.baseAssetCode())
+                .orElseGet(() -> Asset.create(user, marketPair.baseAssetCode()));
+
+        Asset targetAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.targetAssetCode())
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
+
+        if (targetAsset.getBalance().compareTo(orderQuantity) < 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
+        }
+
+        BigDecimal currentPrice = upbitMarketPriceProvider.getCurrentPrice(request.marketCode());
+        validateCurrentPrice(currentPrice);
+
+        BigDecimal executedAmount = orderQuantity.multiply(currentPrice);
+
+        targetAsset.sell(orderQuantity);
+        baseAsset.deposit(executedAmount);
+        assetJpaRepository.save(baseAsset);
+
+        TradeHistory tradeHistory = tradeHistoryJpaRepository.save(
+                TradeHistory.marketSell(
+                        user,
+                        request.marketCode(),
+                        orderQuantity,
+                        currentPrice,
+                        executedAmount
+                )
+        );
+
+        return new MarketSellResponse(
+                tradeHistory.getId(),
+                request.marketCode(),
+                orderQuantity,
+                executedAmount,
+                currentPrice,
+                orderQuantity,
                 baseAsset.getBalance(),
                 targetAsset.getBalance(),
                 targetAsset.getAverageBuyPrice()
