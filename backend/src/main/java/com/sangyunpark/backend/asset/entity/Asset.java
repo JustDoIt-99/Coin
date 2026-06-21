@@ -72,6 +72,12 @@ public class Asset extends BaseEntity {
     }
 
     public void buy(BigDecimal quantity, BigDecimal price) {
+        if (balance.compareTo(BigDecimal.ZERO) == 0) {
+            this.averageBuyPrice = price;
+            this.balance = quantity;
+            return;
+        }
+
         BigDecimal previousTotalAmount = balance.multiply(averageBuyPrice);
         BigDecimal buyAmount = quantity.multiply(price);
         BigDecimal nextBalance = balance.add(quantity);
