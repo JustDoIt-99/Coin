@@ -29,9 +29,13 @@ export const SummaryRow = styled.div`
     font-size: 17px;
 `;
 
-export const SummaryValue = styled.strong<{ $danger?: boolean }>`
+export const SummaryValue = styled.strong<{ $trend?: "up" | "down" }>`
     font-size: 24px;
-    color: ${({ $danger }) => ($danger ? "#e53946" : "#111827")};
+    color: ${({ $trend }) => {
+        if ($trend === "up") return "#e53946";
+        if ($trend === "down") return "#126ee2";
+        return "#111827";
+    }};
 
     small {
         font-size: 12px;
@@ -48,58 +52,49 @@ export const SummaryRight = styled.div`
     font-size: 18px;
 `;
 
-export const AssetHeader = styled.div`
-    height: 58px;
-    background: #fff;
-    border-left: 1px solid #dfe3ea;
-    border-right: 1px solid #dfe3ea;
+export const ChartBox = styled.div`
     display: flex;
-    align-items: center;
-    padding: 0 28px;
-
-    h3 {
-        margin: 0;
-        font-size: 20px;
-    }
-
-    label {
-        margin-left: auto;
-        color: #5f6876;
-        font-size: 14px;
-    }
+    align-items: flex-start;
+    justify-content: center;
+    gap: 32px;
+    width: 100%;
 `;
 
-export const AssetTable = styled.table`
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-    background: #fff;
+export const DonutBox = styled.div`
+    width: 180px;
+    height: 180px;
+    flex-shrink: 0;
+`;
 
-    th,
-    td {
-        padding: 0 18px;
-    }
+export const LegendList = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 32px;
+`;
 
-    th {
-        height: 42px;
-        background: #f7f8fa;
-        color: #6b7280;
-        font-size: 13px;
-        font-weight: 600;
-        border-bottom: 1px solid #e5e8ef;
-        text-align: right;
-    }
+export const ColorDot = styled.div<{ $color: string }>`
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: ${({ $color }) => $color};
+    flex-shrink: 0;
+`;
 
-    td {
-        height: 82px;
-        text-align: right;
-        border-bottom: 1px solid #edf0f5;
-        font-size: 16px;
-        color: #222;
-    }
+export const LegendItem = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+`;
 
-    th:first-of-type,
-    td:first-of-type {
-        text-align: center;
-    }
+export const CoinName = styled.span`
+    font-size: 15px;
+    font-weight: 500;
+    color: #6b7280;
+`;
+
+export const CoinWeight = styled.span`
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
 `;

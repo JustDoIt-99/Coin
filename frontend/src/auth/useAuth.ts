@@ -6,7 +6,7 @@ import {
     userAtom,
     type User,
 } from "@auth/authAtom";
-import {API} from "@constants/api";
+import {API} from "@constants/endpoints.ts";
 import {authFetch} from "@auth/authFetch";
 
 export function useAuth() {

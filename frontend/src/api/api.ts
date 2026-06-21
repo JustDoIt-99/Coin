@@ -108,6 +108,29 @@ export interface TradeHistoryCursorResponse {
     hasNext: boolean;
 }
 
+export interface PortfolioAssetResponse {
+    assetCode: string;
+    balance: number;
+    averageBuyPrice: number | null;
+    currentPrice: number;
+    buyAmount: number;
+    valuationAmount: number;
+    profitAmount: number;
+    profitRate: number;
+    weight: number;
+}
+
+export interface PortfolioAssetSummaryResponse {
+    cashBalance: number;
+    totalAssetAmount: number;
+    totalBuyAmount: number;
+    totalValuationAmount: number;
+    totalProfitAmount: number;
+    totalProfitRate: number;
+    availableOrderAmount: number;
+    assets: PortfolioAssetResponse[];
+}
+
 export async function fetchMarkets(): Promise<Market[]> {
     const response = await fetch(API.MARKETS);
 
@@ -294,6 +317,25 @@ export async function fetchTradeHistories(cursorId?: number | null, size = 20): 
 
     if (!response.ok) {
         throw new Error("거래내역 조회에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+
+export async function getPortfolioAssetSummary(
+    accessToken: string
+): Promise<PortfolioAssetSummaryResponse> {
+    const response = await fetch(API.PORTFOLIO_SUMMARY, {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: "include",
+    });
+
+    if (!response.ok) {
+        throw new Error("포트폴리오 요약 조회 실패");
     }
 
     return response.json();
