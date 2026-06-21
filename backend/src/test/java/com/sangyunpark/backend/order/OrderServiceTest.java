@@ -119,6 +119,36 @@ class OrderServiceTest {
     }
 
     @Test
+    void 시장가_매수_현재가가_null이면_예외가_발생한다() {
+        AuthTokenResponse signupResponse = signup();
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(null);
+
+        assertThatThrownBy(() -> orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderErrorCode.INVALID_MARKET_PRICE);
+    }
+
+    @Test
+    void 시장가_매수_현재가가_0이하면_예외가_발생한다() {
+        AuthTokenResponse signupResponse = signup();
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(BigDecimal.ZERO);
+
+        assertThatThrownBy(() -> orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderErrorCode.INVALID_MARKET_PRICE);
+    }
+
+    @Test
     void 거래내역을_최신순으로_조회한다() {
         AuthTokenResponse signupResponse = signup();
         when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))

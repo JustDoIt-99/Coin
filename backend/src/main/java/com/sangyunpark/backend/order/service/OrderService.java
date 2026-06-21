@@ -50,6 +50,8 @@ public class OrderService {
         }
 
         BigDecimal currentPrice = upbitMarketPriceProvider.getCurrentPrice(request.marketCode());
+        validateCurrentPrice(currentPrice);
+
         BigDecimal executedQuantity = calculateExecutedQuantity(orderAmount, currentPrice);
 
         if (executedQuantity.compareTo(MIN_EXECUTED_QUANTITY) < 0) {
@@ -111,5 +113,11 @@ public class OrderService {
 
     private BigDecimal calculateExecutedQuantity(BigDecimal orderAmount, BigDecimal currentPrice) {
         return orderAmount.divide(currentPrice, QUANTITY_SCALE, RoundingMode.DOWN);
+    }
+
+    private void validateCurrentPrice(BigDecimal currentPrice) {
+        if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(OrderErrorCode.INVALID_MARKET_PRICE);
+        }
     }
 }

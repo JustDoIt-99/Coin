@@ -11,7 +11,8 @@ public enum OrderErrorCode implements ErrorCode {
 
     INVALID_MARKET_CODE(HttpStatus.BAD_REQUEST, "지원하지 않는 마켓 코드입니다."),
     INSUFFICIENT_BALANCE(HttpStatus.BAD_REQUEST, "잔액이 부족합니다."),
-    ORDER_AMOUNT_TOO_SMALL(HttpStatus.BAD_REQUEST, "주문 금액이 너무 작습니다.");
+    ORDER_AMOUNT_TOO_SMALL(HttpStatus.BAD_REQUEST, "주문 금액이 너무 작습니다."),
+    INVALID_MARKET_PRICE(HttpStatus.BAD_REQUEST, "유효하지 않은 시장 가격입니다.");
 
     private final HttpStatus status;
     private final String message;
