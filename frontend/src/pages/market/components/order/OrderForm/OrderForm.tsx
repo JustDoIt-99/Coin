@@ -13,18 +13,21 @@ import {
     type TradeType
 } from "@pages/market/components/order/OrderForm/OrderForm.styles";
 import PercentButtons from "@pages/market/components/common/PercentButtons/PercentButtons";
-import {marketBuy, type Ticker} from "@api/api";
+import {marketBuy, marketSell, type Ticker} from "@api/api";
 import OrderInputRow from "@pages/market/components/common/OrderInputRow/OrderInputRow";
 import useOrderForm from "@hooks/useOrderForm";
 import {useNavigate, useLocation} from "react-router-dom";
-import {useAuth} from "@auth/useAuth";
 import {removeComma} from "@utils/orderform/numberFormat";
 import {type ComponentProps, useState} from "react";
 
 interface OrderFormProps {
     marketCode: string;
     tradeType: TradeType;
+    isAuthenticated: boolean;
+    availableBaseBalance: number;
+    availableTargetBalance: number;
     ticker?: Ticker;
+    onOrderCompleted?: () => void;
 }
 
 const PERCENT = ["10%", "25%", "50%", "100%", "입력"] as const;
@@ -37,9 +40,22 @@ const ORDER_TYPES = [
 
 const DEFAULT_NOTICE = "최소주문: 5,000 KRW · 수수료(부가세 포함): 0.05%";
 
-function OrderForm({marketCode, tradeType, ticker}: OrderFormProps) {
-    const {state, flags, display, actions} = useOrderForm({ tradeType, ticker });
-    const {isAuthenticated} = useAuth();
+function OrderForm({
+    marketCode,
+    tradeType,
+    isAuthenticated,
+    availableBaseBalance,
+    availableTargetBalance,
+    ticker,
+    onOrderCompleted,
+}: OrderFormProps) {
+    const {state, flags, display, actions} = useOrderForm({
+        tradeType,
+        isAuthenticated,
+        availableBaseBalance,
+        availableTargetBalance,
+        ticker
+    });
     const navigate = useNavigate();
     const location = useLocation();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,14 +78,8 @@ function OrderForm({marketCode, tradeType, ticker}: OrderFormProps) {
             return;
         }
 
-        if (!(flags.isBuy && flags.isMarket)) {
-            setSubmitMessage("현재는 시장가 매수만 지원합니다.");
-            return;
-        }
-
-        const amount = Number(removeComma(state.totalAmount));
-        if (Number.isNaN(amount) || amount <= 0) {
-            setSubmitMessage("주문총액을 입력해주세요.");
+        if (!flags.isMarket) {
+            setSubmitMessage("현재는 시장가 주문만 지원합니다.");
             return;
         }
 
@@ -77,22 +87,57 @@ function OrderForm({marketCode, tradeType, ticker}: OrderFormProps) {
             setIsSubmitting(true);
             setSubmitMessage("");
 
-            const response = await marketBuy({
-                marketCode,
-                amount,
-            });
+            const isSubmitted = flags.isBuy
+                ? await submitMarketBuy()
+                : await submitMarketSell();
 
-            setSubmitMessage(
-                `${response.executedAmount.toLocaleString()} ${marketCode.split("-")[0]} 체결 완료`
-            );
-            actions.handleReset();
+            if (isSubmitted) {
+                onOrderCompleted?.();
+                actions.handleReset();
+            }
         } catch (error) {
-            console.error("시장가 매수 실패", error);
-            setSubmitMessage("시장가 매수에 실패했습니다.");
+            console.error("시장가 주문 실패", error);
+            setSubmitMessage("시장가 주문에 실패했습니다.");
         } finally {
             setIsSubmitting(false);
         }
     }
+
+    const submitMarketBuy = async () => {
+        const amount = Number(removeComma(state.totalAmount));
+        if (Number.isNaN(amount) || amount <= 0) {
+            setSubmitMessage("주문총액을 입력해주세요.");
+            return false;
+        }
+
+        const response = await marketBuy({
+            marketCode,
+            amount,
+        });
+
+        setSubmitMessage(
+            `${response.executedAmount.toLocaleString()} ${marketCode.split("-")[0]} 매수 완료`
+        );
+        return true;
+    };
+
+    const submitMarketSell = async () => {
+        const quantity = Number(removeComma(state.quantity));
+        if (Number.isNaN(quantity) || quantity <= 0) {
+            setSubmitMessage("주문수량을 입력해주세요.");
+            return false;
+        }
+
+        const response = await marketSell({
+            marketCode,
+            quantity,
+        });
+
+        setSubmitMessage(
+            `${response.executedAmount.toLocaleString()} ${marketCode.split("-")[0]} 매도 완료`
+        );
+        return true;
+    };
 
     const priceLabel = flags.isBuy ? "매수가격" : "매도가격";
 

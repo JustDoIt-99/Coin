@@ -7,7 +7,9 @@ import com.sangyunpark.backend.auth.service.AuthService;
 import com.sangyunpark.backend.common.exception.BusinessException;
 import com.sangyunpark.backend.market.price.UpbitMarketPriceProvider;
 import com.sangyunpark.backend.order.controller.dto.request.MarketBuyRequest;
+import com.sangyunpark.backend.order.controller.dto.request.MarketSellRequest;
 import com.sangyunpark.backend.order.controller.dto.response.MarketBuyResponse;
+import com.sangyunpark.backend.order.controller.dto.response.MarketSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryResponse;
 import com.sangyunpark.backend.order.exception.OrderErrorCode;
 import com.sangyunpark.backend.order.repository.TradeHistoryJpaRepository;
@@ -92,12 +94,97 @@ class OrderServiceTest {
     }
 
     @Test
+    void 시장가_매도에_성공하면_코인이_차감되고_현금과_거래내역이_증가한다() {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(new BigDecimal("50000000"));
+
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        );
+
+        MarketSellResponse response = orderService.marketSell(
+                signupResponse.user().id(),
+                new MarketSellRequest("KRW-BTC", new BigDecimal("0.00100000"))
+        );
+
+        assertThat(response.marketCode()).isEqualTo("KRW-BTC");
+        assertThat(response.orderQuantity()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+        assertThat(response.executedPrice()).isEqualByComparingTo(new BigDecimal("50000000"));
+        assertThat(response.executedQuantity()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+        assertThat(response.executedAmount()).isEqualByComparingTo(new BigDecimal("50000"));
+        assertThat(response.cashBalance()).isEqualByComparingTo(new BigDecimal("950000"));
+        assertThat(response.coinBalance()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+        assertThat(response.averageBuyPrice()).isEqualByComparingTo(new BigDecimal("50000000"));
+
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "KRW"))
+                .hasValueSatisfying(asset ->
+                        assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("950000"))
+                );
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "BTC"))
+                .hasValueSatisfying(asset -> {
+                    assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+                    assertThat(asset.getAverageBuyPrice()).isEqualByComparingTo(new BigDecimal("50000000"));
+                });
+        assertThat(tradeHistoryJpaRepository.findByUserOrderByIdDesc(user, PageRequest.of(0, 10)))
+                .hasSize(2)
+                .first()
+                .satisfies(tradeHistory -> {
+                    assertThat(tradeHistory.getMarketCode()).isEqualTo("KRW-BTC");
+                    assertThat(tradeHistory.getQuantity()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+                    assertThat(tradeHistory.getPrice()).isEqualByComparingTo(new BigDecimal("50000000"));
+                    assertThat(tradeHistory.getTotalAmount()).isEqualByComparingTo(new BigDecimal("50000"));
+                });
+    }
+
+    @Test
+    void 시장가_전량_매도에_성공하면_코인_평균_매수가가_초기화된다() {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(new BigDecimal("50000000"));
+
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        );
+
+        MarketSellResponse response = orderService.marketSell(
+                signupResponse.user().id(),
+                new MarketSellRequest("KRW-BTC", new BigDecimal("0.00200000"))
+        );
+
+        assertThat(response.coinBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(response.averageBuyPrice()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "BTC"))
+                .hasValueSatisfying(asset -> {
+                    assertThat(asset.getBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+                    assertThat(asset.getAverageBuyPrice()).isEqualByComparingTo(BigDecimal.ZERO);
+                });
+    }
+
+    @Test
     void 시장가_매수_금액이_잔액보다_크면_예외가_발생한다() {
         AuthTokenResponse signupResponse = signup();
 
         assertThatThrownBy(() -> orderService.marketBuy(
                 signupResponse.user().id(),
                 new MarketBuyRequest("KRW-BTC", new BigDecimal("1000001"))
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderErrorCode.INSUFFICIENT_BALANCE);
+    }
+
+    @Test
+    void 시장가_매도_수량이_보유_수량보다_크면_예외가_발생한다() {
+        AuthTokenResponse signupResponse = signup();
+
+        assertThatThrownBy(() -> orderService.marketSell(
+                signupResponse.user().id(),
+                new MarketSellRequest("KRW-BTC", new BigDecimal("0.001"))
         ))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
@@ -143,6 +230,27 @@ class OrderServiceTest {
         assertThatThrownBy(() -> orderService.marketBuy(
                 signupResponse.user().id(),
                 new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderErrorCode.INVALID_MARKET_PRICE);
+    }
+
+    @Test
+    void 시장가_매도_현재가가_0이하면_예외가_발생한다() {
+        AuthTokenResponse signupResponse = signup();
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(new BigDecimal("50000000"));
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        );
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(BigDecimal.ZERO);
+
+        assertThatThrownBy(() -> orderService.marketSell(
+                signupResponse.user().id(),
+                new MarketSellRequest("KRW-BTC", new BigDecimal("0.001"))
         ))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")

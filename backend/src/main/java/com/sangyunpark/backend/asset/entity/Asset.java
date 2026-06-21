@@ -71,6 +71,18 @@ public class Asset extends BaseEntity {
         this.balance = balance.subtract(amount);
     }
 
+    public void deposit(BigDecimal amount) {
+        this.balance = balance.add(amount);
+    }
+
+    public void sell(BigDecimal quantity) {
+        withdraw(quantity);
+
+        if (balance.compareTo(BigDecimal.ZERO) == 0) {
+            this.averageBuyPrice = BigDecimal.ZERO;
+        }
+    }
+
     public void buy(BigDecimal quantity, BigDecimal price) {
         if (balance.compareTo(BigDecimal.ZERO) == 0) {
             this.averageBuyPrice = price;

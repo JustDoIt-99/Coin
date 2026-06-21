@@ -52,6 +52,12 @@ export interface MarketBuyRequest {
     amount: number;
 }
 
+export interface AssetResponse {
+    assetCode: string;
+    balance: number;
+    averageBuyPrice: number;
+}
+
 export interface MarketBuyResponse {
     orderId: number;
     marketCode: string;
@@ -60,6 +66,23 @@ export interface MarketBuyResponse {
     executedPrice: number;
     executedQuantity: number;
     remainingCashBalance: number;
+    coinBalance: number;
+    averageBuyPrice: number;
+}
+
+export interface MarketSellRequest {
+    marketCode: string;
+    quantity: number;
+}
+
+export interface MarketSellResponse {
+    orderId: number;
+    marketCode: string;
+    orderQuantity: number;
+    executedAmount: number;
+    executedPrice: number;
+    executedQuantity: number;
+    cashBalance: number;
     coinBalance: number;
     averageBuyPrice: number;
 }
@@ -90,6 +113,16 @@ export async function fetchMarkets(): Promise<Market[]> {
 
     if (!response.ok) {
         throw new Error("Market 데이터 조회 실패");
+    }
+
+    return response.json();
+}
+
+export async function fetchAssets(): Promise<AssetResponse[]> {
+    const response = await authFetch(API.ASSETS);
+
+    if (!response.ok) {
+        throw new Error("자산 조회에 실패했습니다.");
     }
 
     return response.json();
@@ -227,6 +260,22 @@ export async function marketBuy(request: MarketBuyRequest): Promise<MarketBuyRes
 
     if (!response.ok) {
         throw new Error("시장가 매수에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+export async function marketSell(request: MarketSellRequest): Promise<MarketSellResponse> {
+    const response = await authFetch(API.MARKET_SELL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        throw new Error("시장가 매도에 실패했습니다.");
     }
 
     return response.json();
