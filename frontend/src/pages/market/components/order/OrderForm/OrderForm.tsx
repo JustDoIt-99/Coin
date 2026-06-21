@@ -13,14 +13,16 @@ import {
     type TradeType
 } from "@pages/market/components/order/OrderForm/OrderForm.styles";
 import PercentButtons from "@pages/market/components/common/PercentButtons/PercentButtons";
-import type {Ticker} from "@api/api";
+import {marketBuy, type Ticker} from "@api/api";
 import OrderInputRow from "@pages/market/components/common/OrderInputRow/OrderInputRow";
 import useOrderForm from "@hooks/useOrderForm";
 import {useNavigate, useLocation} from "react-router-dom";
-import * as React from "react";
 import {useAuth} from "@auth/useAuth";
+import {removeComma} from "@utils/orderform/numberFormat";
+import {type ComponentProps, useState} from "react";
 
 interface OrderFormProps {
+    marketCode: string;
     tradeType: TradeType;
     ticker?: Ticker;
 }
@@ -35,11 +37,13 @@ const ORDER_TYPES = [
 
 const DEFAULT_NOTICE = "최소주문: 5,000 KRW · 수수료(부가세 포함): 0.05%";
 
-function OrderForm({tradeType, ticker}: OrderFormProps) {
+function OrderForm({marketCode, tradeType, ticker}: OrderFormProps) {
     const {state, flags, display, actions} = useOrderForm({ tradeType, ticker });
     const {isAuthenticated} = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitMessage, setSubmitMessage] = useState("");
 
     const percentButtons = (
         <PercentButtons
@@ -49,7 +53,7 @@ function OrderForm({tradeType, ticker}: OrderFormProps) {
         />
     );
 
-    const handleSubmit: React.ComponentProps<"form">["onSubmit"] = (e) => {
+    const handleSubmit: ComponentProps<"form">["onSubmit"] = async (e) => {
         e.preventDefault();
 
         if (!isAuthenticated) {
@@ -58,7 +62,36 @@ function OrderForm({tradeType, ticker}: OrderFormProps) {
             return;
         }
 
-        console.log("주문 API 호출");
+        if (!(flags.isBuy && flags.isMarket)) {
+            setSubmitMessage("현재는 시장가 매수만 지원합니다.");
+            return;
+        }
+
+        const amount = Number(removeComma(state.totalAmount));
+        if (Number.isNaN(amount) || amount <= 0) {
+            setSubmitMessage("주문총액을 입력해주세요.");
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            setSubmitMessage("");
+
+            const response = await marketBuy({
+                marketCode,
+                amount,
+            });
+
+            setSubmitMessage(
+                `${response.executedAmount.toLocaleString()} ${marketCode.split("-")[0]} 체결 완료`
+            );
+            actions.handleReset();
+        } catch (error) {
+            console.error("시장가 매수 실패", error);
+            setSubmitMessage("시장가 매수에 실패했습니다.");
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     const priceLabel = flags.isBuy ? "매수가격" : "매도가격";
@@ -117,15 +150,15 @@ function OrderForm({tradeType, ticker}: OrderFormProps) {
                 </>
             )}
             <Divider/>
-            <Notice>{display.validationMessage || DEFAULT_NOTICE}</Notice>
+            <Notice>{submitMessage || display.validationMessage || DEFAULT_NOTICE}</Notice>
             <ButtonRow>
                 <ResetButton type="button" onClick={actions.handleReset}>초기화</ResetButton>
                 <SubmitButton
                     type="submit"
                     tradeType={tradeType}
-                    disabled={!!display.validationMessage}
+                    disabled={isSubmitting || !!display.validationMessage}
                 >
-                    {display.submitLabel}
+                    {isSubmitting ? "주문 중" : display.submitLabel}
                 </SubmitButton>
             </ButtonRow>
 

@@ -1,6 +1,6 @@
-package com.sangyunpark.backend.auth.dto.response;
+package com.sangyunpark.backend.user.dto.response;
 
-import com.sangyunpark.backend.auth.entity.User;
+import com.sangyunpark.backend.user.entity.User;
 
 public record UserResponse(
         Long id,

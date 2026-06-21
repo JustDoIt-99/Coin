@@ -1,12 +1,12 @@
 package com.sangyunpark.backend.auth.entity;
 
+import com.sangyunpark.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import javax.naming.Name;
 import java.time.LocalDateTime;
 
 @Entity

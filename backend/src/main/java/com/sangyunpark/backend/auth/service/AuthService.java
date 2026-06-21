@@ -1,27 +1,35 @@
 package com.sangyunpark.backend.auth.service;
 
+import com.sangyunpark.backend.asset.entity.Asset;
+import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
 import com.sangyunpark.backend.auth.dto.response.*;
 import com.sangyunpark.backend.auth.entity.RefreshToken;
-import com.sangyunpark.backend.auth.entity.User;
 import com.sangyunpark.backend.auth.dto.request.LoginRequest;
 import com.sangyunpark.backend.auth.dto.request.SignupRequest;
 import com.sangyunpark.backend.auth.exception.AuthErrorCode;
 import com.sangyunpark.backend.auth.jwt.JwtTokenProvider;
 import com.sangyunpark.backend.auth.repositiory.RefreshTokenJpaRepository;
-import com.sangyunpark.backend.auth.repositiory.UserJpaRepository;
 import com.sangyunpark.backend.common.exception.BusinessException;
+import com.sangyunpark.backend.user.dto.response.UserResponse;
+import com.sangyunpark.backend.user.entity.User;
+import com.sangyunpark.backend.user.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final String INITIAL_CASH_ASSET_CODE = "KRW";
+    private static final BigDecimal INITIAL_CASH_BALANCE = new BigDecimal("1000000");
+
     private final UserJpaRepository userJpaRepository;
+    private final AssetJpaRepository assetJpaRepository;
     private final RefreshTokenJpaRepository refreshTokenJpaRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
@@ -39,6 +47,9 @@ public class AuthService {
                 .build();
 
         User savedUser = userJpaRepository.save(user);
+        assetJpaRepository.save(
+                Asset.createWithBalance(savedUser, INITIAL_CASH_ASSET_CODE, INITIAL_CASH_BALANCE)
+        );
 
         String accessToken = jwtTokenProvider.createAccessToken(savedUser.getId());
         String refreshToken = jwtTokenProvider.createRefreshToken(savedUser.getId());

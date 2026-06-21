@@ -6,18 +6,19 @@ import {Container} from "@pages/market/components/order/Order/Order.styles";
 import type {Ticker} from "@api/api";
 
 interface Props {
+    marketCode: string;
     ticker?: Ticker;
 }
 
-function Order({ticker}: Props) {
+function Order({marketCode, ticker}: Props) {
 
     const [activeTab, setActiveTab] = useState<"buy" | "sell" | "history">("buy");
 
     return (
         <Container>
             <OrderTab activeTab={activeTab} setActiveTab={setActiveTab}/>
-            {activeTab !== "history" && (<OrderForm tradeType={activeTab} ticker={ticker}/>)}
-            {activeTab === "history" && (<OrderHistory/>)}
+            {activeTab !== "history" && (<OrderForm marketCode={marketCode} tradeType={activeTab} ticker={ticker}/>)}
+            {activeTab === "history" && (<OrderHistory marketCode={marketCode}/>)}
         </Container>
     );
 }

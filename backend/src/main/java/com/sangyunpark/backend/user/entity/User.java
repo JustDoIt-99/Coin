@@ -1,4 +1,4 @@
-package com.sangyunpark.backend.auth.entity;
+package com.sangyunpark.backend.user.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -35,5 +35,4 @@ public class User {
         this.password = password;
         this.nickname = nickname;
     }
-
 }
