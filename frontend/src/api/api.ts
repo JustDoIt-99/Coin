@@ -323,16 +323,8 @@ export async function fetchTradeHistories(cursorId?: number | null, size = 20): 
 }
 
 
-export async function getPortfolioAssetSummary(
-    accessToken: string
-): Promise<PortfolioAssetSummaryResponse> {
-    const response = await fetch(API.PORTFOLIO_SUMMARY, {
-        method: "GET",
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-        },
-        credentials: "include",
-    });
+export async function getPortfolioAssetSummary(): Promise<PortfolioAssetSummaryResponse> {
+    const response = await authFetch(API.PORTFOLIO_SUMMARY);
 
     if (!response.ok) {
         throw new Error("포트폴리오 요약 조회 실패");

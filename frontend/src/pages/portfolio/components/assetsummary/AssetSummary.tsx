@@ -12,9 +12,10 @@ import {
 import {useAuth} from "@auth/useAuth.ts";
 import {useQuery} from "@tanstack/react-query";
 import {getPortfolioAssetSummary} from "@api/api.ts";
-import {useMemo, useState} from "react";
+import {useCallback, useMemo, useState} from "react";
 import {PieChart, Pie, ResponsiveContainer, Tooltip} from "recharts";
 import useTickerSocket from "@hooks/useTickerSocket";
+import type {TickerMessage} from "@pages/market/components/sidebar/MarketSidebar/MarketSidebar";
 
 type Trend = "up" | "down";
 
@@ -25,6 +26,8 @@ type SummaryItem = {
     trend?: Trend;
 };
 
+const COIN_COLORS = ["#f7931a", "#627eea", "#3c3c3d", "#00c6ff", "#e84142", "#9c27b0"];
+
 function AssetSummary() {
     const {accessToken} = useAuth();
 
@@ -32,7 +35,7 @@ function AssetSummary() {
 
     const {data, isLoading, error} = useQuery({
         queryKey: ["portfolio-summary"],
-        queryFn: () => getPortfolioAssetSummary(accessToken!),
+        queryFn: getPortfolioAssetSummary,
         enabled: !!accessToken,
     });
 
@@ -44,7 +47,7 @@ function AssetSummary() {
         );
     }, [data]);
 
-    useTickerSocket((ticker) => {
+    const handleTickerMessage = useCallback((ticker: TickerMessage) => {
         if (!holdingMarketCodes.has(ticker.code)) return;
 
         setTickerMap((prev) => {
@@ -55,7 +58,9 @@ function AssetSummary() {
                 [ticker.code]: ticker.trade_price,
             };
         });
-    });
+    }, [holdingMarketCodes]);
+
+    useTickerSocket(handleTickerMessage);
 
     const summary = useMemo(() => {
         if (!data) return null;
@@ -92,7 +97,7 @@ function AssetSummary() {
         const coinAssets = data.assets.filter((asset) => asset.assetCode !== "KRW");
 
         const coinValues = coinAssets
-            .map((asset) => {
+            .map((asset, index) => {
                 const marketCode = `KRW-${asset.assetCode}`;
                 const currentPrice = tickerMap[marketCode] ?? asset.currentPrice;
                 const valuationAmount = asset.balance * currentPrice;
@@ -100,7 +105,7 @@ function AssetSummary() {
                 return {
                     name: asset.assetCode,
                     value: valuationAmount,
-                    fill: "#f7931a",
+                    fill: COIN_COLORS[index % COIN_COLORS.length],
                 };
             })
             .filter((asset) => asset.value > 0);

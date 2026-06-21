@@ -82,6 +82,10 @@ public class AssetService {
 
     private PortfolioAssetResponse toPortfolioAssetResponse(Asset asset) {
         BigDecimal currentPrice = getCurrentPrice(asset.getAssetCode());
+        if (currentPrice == null) {
+            currentPrice = asset.getAverageBuyPrice();
+        }
+
         BigDecimal valuationAmount = asset.getBalance().multiply(currentPrice);
         BigDecimal buyAmount = asset.getAssetCode().equals(CASH_ASSET_CODE)
                 ? BigDecimal.ZERO

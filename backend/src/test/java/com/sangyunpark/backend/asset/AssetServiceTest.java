@@ -104,6 +104,37 @@ class AssetServiceTest {
     }
 
     @Test
+    void 실시간_시세를_조회하지_못하면_평균_매수가로_포트폴리오_보유자산_요약을_계산한다() {
+        AuthTokenResponse signupResponse = authService.signup(new SignupRequest(
+                "test@test.com",
+                "12345678",
+                "sangyun"
+        ));
+        var user = userJpaRepository.findById(signupResponse.user().id()).orElseThrow();
+        Asset btcAsset = Asset.create(user, "BTC");
+        btcAsset.buy(new BigDecimal("0.00200000"), new BigDecimal("50000000"));
+        assetJpaRepository.save(btcAsset);
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(null);
+
+        PortfolioAssetSummaryResponse response = assetService.getPortfolioAssetSummary(signupResponse.user().id());
+
+        assertThat(response.totalAssetAmount()).isEqualByComparingTo(new BigDecimal("1100000.00000000"));
+        assertThat(response.totalValuationAmount()).isEqualByComparingTo(new BigDecimal("100000.00000000"));
+        assertThat(response.totalProfitAmount()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(response.totalProfitRate()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(response.assets())
+                .filteredOn(asset -> asset.assetCode().equals("BTC"))
+                .first()
+                .satisfies(asset -> {
+                    assertThat(asset.currentPrice()).isEqualByComparingTo(new BigDecimal("50000000"));
+                    assertThat(asset.valuationAmount()).isEqualByComparingTo(new BigDecimal("100000.00000000"));
+                    assertThat(asset.profitAmount()).isEqualByComparingTo(BigDecimal.ZERO);
+                    assertThat(asset.profitRate()).isEqualByComparingTo(BigDecimal.ZERO);
+                });
+    }
+
+    @Test
     void 자산에_0이하_금액을_입금하면_예외가_발생한다() {
         AuthTokenResponse signupResponse = authService.signup(new SignupRequest(
                 "test@test.com",
