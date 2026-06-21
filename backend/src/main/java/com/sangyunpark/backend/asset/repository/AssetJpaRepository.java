@@ -10,6 +10,8 @@ import java.util.Optional;
 
 public interface AssetJpaRepository extends JpaRepository<Asset, Long> {
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Asset> findByUserAndAssetCode(User user, String assetCode);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<Asset> findForUpdateByUserAndAssetCode(User user, String assetCode);
 }

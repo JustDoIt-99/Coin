@@ -42,7 +42,7 @@ public class OrderService {
         BigDecimal orderAmount = request.amount();
         MarketPair marketPair = parseMarketCode(request.marketCode());
 
-        Asset baseAsset = assetJpaRepository.findByUserAndAssetCode(user, marketPair.baseAssetCode())
+        Asset baseAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.baseAssetCode())
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
 
         if (baseAsset.getBalance().compareTo(orderAmount) < 0) {
@@ -58,7 +58,7 @@ public class OrderService {
 
         BigDecimal executedAmount = executedQuantity.multiply(currentPrice);
 
-        Asset targetAsset = assetJpaRepository.findByUserAndAssetCode(user, marketPair.targetAssetCode())
+        Asset targetAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.targetAssetCode())
                 .orElseGet(() -> Asset.create(user, marketPair.targetAssetCode()));
 
         baseAsset.withdraw(executedAmount);
