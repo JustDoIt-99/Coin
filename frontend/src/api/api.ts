@@ -1,4 +1,5 @@
 import {API} from "@constants/endpoints";
+import {authFetch} from "@auth/authFetch";
 
 export interface Market {
     market:string;
@@ -44,6 +45,38 @@ export type CandleType = "minute" | "day" | "week" | "month";
 export interface CandleInterval {
     type: CandleType;
     unit?: number;
+}
+
+export interface MarketBuyRequest {
+    marketCode: string;
+    amount: number;
+}
+
+export interface MarketBuyResponse {
+    orderId: number;
+    marketCode: string;
+    orderAmount: number;
+    executedAmount: number;
+    executedPrice: number;
+    executedQuantity: number;
+    remainingCashBalance: number;
+    coinBalance: number;
+    averageBuyPrice: number;
+}
+
+export type TradeSide = "BUY" | "SELL";
+export type ApiOrderType = "MARKET" | "LIMIT";
+
+export interface TradeHistoryResponse {
+    id: number;
+    marketCode: string;
+    tradeSide: TradeSide;
+    orderType: ApiOrderType;
+    quantity: number;
+    price: number;
+    totalAmount: number;
+    orderedAt: string;
+    executedAt: string;
 }
 
 export async function fetchMarkets(): Promise<Market[]> {
@@ -175,4 +208,30 @@ export async function subscribeTrade(marketCode: string): Promise<void> {
     if (!response.ok) {
         throw new Error("체결 데이터 구독 요청에 실패했습니다.");
     }
+}
+
+export async function marketBuy(request: MarketBuyRequest): Promise<MarketBuyResponse> {
+    const response = await authFetch(API.MARKET_BUY, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        throw new Error("시장가 매수에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+export async function fetchTradeHistories(): Promise<TradeHistoryResponse[]> {
+    const response = await authFetch(API.TRADE_HISTORIES);
+
+    if (!response.ok) {
+        throw new Error("거래내역 조회에 실패했습니다.");
+    }
+
+    return response.json();
 }

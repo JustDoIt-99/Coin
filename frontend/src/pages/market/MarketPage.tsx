@@ -206,7 +206,7 @@ function MarketPage() {
                                 setActivePanel("order");
                             }}
                         >
-                            <Order ticker={ticker}/>
+                            <Order marketCode={marketCode} ticker={ticker}/>
                         </OrderPanel>
                     </TradingOrderPanel>
                 </ContentArea>

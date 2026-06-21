@@ -116,6 +116,12 @@ export const QuantityCell = styled(Cell)`
     font-size: 11px;
 `;
 
+export const EmptyCell = styled(Cell)`
+    grid-column: 1 / -1;
+    justify-content: center;
+    color: #6b7280;
+`;
+
 export const RadioGroup = styled.div`
   display: flex;
   align-items: center;

@@ -1,14 +1,17 @@
 import {
     Container, DateCell,
-    FilterBar, Header, HeaderCell, MarketCell, Period, PriceCell, QuantityCell,
+    EmptyCell, FilterBar, Header, HeaderCell, MarketCell, Period, PriceCell, QuantityCell,
     RadioGroup, Row,
     type Side, SideText, Table, TableScroll
 } from "@pages/market/components/order/OrderHistory/OrderHistory.styles";
+import {fetchTradeHistories, type TradeHistoryResponse} from "@api/api";
+import {useEffect, useMemo, useState} from "react";
 
 interface TradeItem {
     id: number;
     date: string;
     time: string;
+    marketCode: string;
     market: string;
     side: Side;
     price: number;
@@ -16,80 +19,51 @@ interface TradeItem {
     quantity: number;
 }
 
-const trades: TradeItem[] = [
-    {
-        id: 1,
-        date: "2026.01.27",
-        time: "15:46",
-        market: "BTC/KRW",
-        side: "sell",
-        price: 129130000,
-        amount: 9999,
-        quantity: 0.00007744,
-    },
-    {
-        id: 2,
-        date: "2025.10.22",
-        time: "19:13",
-        market: "BTC/KRW",
-        side: "buy",
-        price: 163080000,
-        amount: 99955,
-        quantity: 0.00061292,
-    },
-    {
-        id: 3,
-        date: "2026.01.27",
-        time: "15:46",
-        market: "BTC/KRW",
-        side: "sell",
-        price: 129130000,
-        amount: 9999,
-        quantity: 0.00007744,
-    },
-    {
-        id: 4,
-        date: "2025.10.22",
-        time: "19:13",
-        market: "BTC/KRW",
-        side: "buy",
-        price: 163080000,
-        amount: 99955,
-        quantity: 0.00061292,
-    },
-    {
-        id: 5,
-        date: "2025.10.22",
-        time: "19:13",
-        market: "BTC/KRW",
-        side: "buy",
-        price: 163080000,
-        amount: 99955,
-        quantity: 0.00061292,
-    },
-    {
-        id: 6,
-        date: "2025.10.22",
-        time: "19:13",
-        market: "BTC/KRW",
-        side: "buy",
-        price: 163080000,
-        amount: 99955,
-        quantity: 0.00061292,
-    },
-    {
-        id: 7,
-        date: "2025.10.22",
-        time: "19:13",
-        market: "BTC/KRW",
-        side: "buy",
-        price: 163080000,
-        amount: 99955,
-        quantity: 0.00061292,
-    }
-];
+interface OrderHistoryProps {
+    marketCode: string;
+}
 
-function OrderHistory() {
+function OrderHistory({marketCode}: OrderHistoryProps) {
+    const [trades, setTrades] = useState<TradeItem[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+
+    useEffect(() => {
+        let ignore = false;
+
+        const loadTradeHistories = async () => {
+            try {
+                setIsLoading(true);
+                setErrorMessage("");
+
+                const response = await fetchTradeHistories();
+                if (!ignore) {
+                    setTrades(response.map(toTradeItem));
+                }
+            } catch (error) {
+                console.error("주문창 거래내역 조회 실패", error);
+                if (!ignore) {
+                    setErrorMessage("거래내역을 불러오지 못했습니다.");
+                }
+            } finally {
+                if (!ignore) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        void loadTradeHistories();
+
+        return () => {
+            ignore = true;
+        };
+    }, []);
+
+    const filteredTrades = useMemo(
+        () => trades.filter((trade) => trade.marketCode === marketCode),
+        [marketCode, trades]
+    );
+
     return (
         <Container>
             <FilterBar>
@@ -114,8 +88,13 @@ function OrderHistory() {
                         <HeaderCell>체결수량</HeaderCell>
                     </Header>
 
-                    {trades.map((trade, index) => (
-                        <Row key={`${trade.id}-${index}`}>
+                    {isLoading && <EmptyRow>거래내역을 불러오는 중입니다.</EmptyRow>}
+                    {!isLoading && errorMessage && <EmptyRow>{errorMessage}</EmptyRow>}
+                    {!isLoading && !errorMessage && filteredTrades.length === 0 && (
+                        <EmptyRow>거래내역이 없습니다.</EmptyRow>
+                    )}
+                    {!isLoading && !errorMessage && filteredTrades.map((trade) => (
+                        <Row key={trade.id}>
                             <DateCell>
                                 <div>{trade.date}</div>
                                 <div>{trade.time}</div>
@@ -140,6 +119,45 @@ function OrderHistory() {
             </TableScroll>
         </Container>
     );
+}
+
+function EmptyRow({children}: { children: string }) {
+    return (
+        <Row>
+            <EmptyCell>{children}</EmptyCell>
+        </Row>
+    );
+}
+
+function toTradeItem(history: TradeHistoryResponse): TradeItem {
+    const [baseAssetCode = "", targetAssetCode = history.marketCode] = history.marketCode.split("-");
+    const {date, time} = splitDateTime(history.executedAt);
+
+    return {
+        id: history.id,
+        date,
+        time,
+        marketCode: history.marketCode,
+        market: `${targetAssetCode}/${baseAssetCode}`,
+        side: history.tradeSide === "BUY" ? "buy" : "sell",
+        price: history.price,
+        amount: history.totalAmount,
+        quantity: history.quantity,
+    };
+}
+
+function splitDateTime(value: string) {
+    const date = new Date(value);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hour = String(date.getHours()).padStart(2, "0");
+    const minute = String(date.getMinutes()).padStart(2, "0");
+
+    return {
+        date: `${year}.${month}.${day}`,
+        time: `${hour}:${minute}`,
+    };
 }
 
 export default OrderHistory;

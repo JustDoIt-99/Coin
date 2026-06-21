@@ -4,6 +4,7 @@ import com.sangyunpark.backend.auth.dto.request.LoginRequest;
 import com.sangyunpark.backend.auth.dto.request.SignupRequest;
 import com.sangyunpark.backend.auth.dto.response.*;
 import com.sangyunpark.backend.auth.service.AuthService;
+import com.sangyunpark.backend.user.dto.response.UserResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

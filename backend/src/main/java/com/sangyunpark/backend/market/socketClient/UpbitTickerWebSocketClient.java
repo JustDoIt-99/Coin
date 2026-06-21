@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -282,5 +283,9 @@ public class UpbitTickerWebSocketClient {
         scheduleReconnect();
 
         log.info("Upbit 마켓 구독 재연결 예약 완료");
+    }
+
+    public Optional<TickerResponse> getCachedTicker(String marketCode) {
+        return Optional.ofNullable(tickerCache.get(marketCode));
     }
 }

@@ -1,18 +1,21 @@
 package com.sangyunpark.backend.auth;
 
+import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
 import com.sangyunpark.backend.auth.dto.request.LoginRequest;
 import com.sangyunpark.backend.auth.dto.request.SignupRequest;
 import com.sangyunpark.backend.auth.dto.response.AuthTokenResponse;
-import com.sangyunpark.backend.auth.dto.response.UserResponse;
 import com.sangyunpark.backend.auth.exception.AuthErrorCode;
 import com.sangyunpark.backend.auth.repositiory.RefreshTokenJpaRepository;
-import com.sangyunpark.backend.auth.repositiory.UserJpaRepository;
 import com.sangyunpark.backend.auth.service.AuthService;
 import com.sangyunpark.backend.common.exception.BusinessException;
+import com.sangyunpark.backend.user.dto.response.UserResponse;
+import com.sangyunpark.backend.user.repository.UserJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -29,6 +32,9 @@ class AuthServiceTest {
 
     @Autowired
     RefreshTokenJpaRepository refreshTokenJpaRepository;
+
+    @Autowired
+    AssetJpaRepository assetJpaRepository;
 
     @Test
     void 회원가입_성공() {
@@ -48,6 +54,13 @@ class AuthServiceTest {
         assertThat(response.user().nickname()).isEqualTo("sangyun");
 
         assertThat(userJpaRepository.existsByEmail("test@test.com")).isTrue();
+        assertThat(assetJpaRepository.findByUserAndAssetCode(
+                userJpaRepository.findByEmail("test@test.com").orElseThrow(),
+                "KRW"
+        )).hasValueSatisfying(asset -> {
+            assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("1000000"));
+            assertThat(asset.getAverageBuyPrice()).isEqualByComparingTo(BigDecimal.ZERO);
+        });
     }
 
     @Test
