@@ -3,11 +3,13 @@ package com.sangyunpark.backend.market.socketClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sangyunpark.backend.market.dto.response.MarketResponse;
 import com.sangyunpark.backend.market.dto.response.TickerResponse;
+import com.sangyunpark.backend.market.event.TickerPriceUpdatedEvent;
 import com.sangyunpark.backend.market.restClient.UpbitMarketClient;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Component;
@@ -40,6 +42,7 @@ public class UpbitTickerWebSocketClient {
     private final ObjectMapper objectMapper;
     private final SimpMessagingTemplate messagingTemplate;
     private final TaskScheduler taskScheduler;
+    private final ApplicationEventPublisher eventPublisher;
     private final StandardWebSocketClient webSocketClient;
 
     private final AtomicBoolean reconnectScheduled = new AtomicBoolean(false);
@@ -56,12 +59,14 @@ public class UpbitTickerWebSocketClient {
             UpbitMarketClient upbitMarketClient,
             ObjectMapper objectMapper,
             SimpMessagingTemplate messagingTemplate,
-            @Qualifier("upbitTaskScheduler") TaskScheduler taskScheduler
+            @Qualifier("upbitTaskScheduler") TaskScheduler taskScheduler,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.upbitMarketClient = upbitMarketClient;
         this.objectMapper = objectMapper;
         this.messagingTemplate = messagingTemplate;
         this.taskScheduler = taskScheduler;
+        this.eventPublisher = eventPublisher;
         this.webSocketClient = new StandardWebSocketClient();
     }
 
@@ -143,6 +148,7 @@ public class UpbitTickerWebSocketClient {
                         }
 
                         tickerCache.put(marketCode, ticker);
+                        publishTickerPriceUpdatedEvent(ticker, marketCode);
                         messagingTemplate.convertAndSend(TICKER_TOPIC, ticker);
 
                     } catch (Exception e) {
@@ -287,5 +293,17 @@ public class UpbitTickerWebSocketClient {
 
     public Optional<TickerResponse> getCachedTicker(String marketCode) {
         return Optional.ofNullable(tickerCache.get(marketCode));
+    }
+
+    private void publishTickerPriceUpdatedEvent(TickerResponse ticker, String marketCode) {
+        if (ticker.tradePrice() == null || ticker.tradePrice().signum() <= 0) {
+            return;
+        }
+
+        eventPublisher.publishEvent(new TickerPriceUpdatedEvent(
+                marketCode,
+                ticker.tradePrice(),
+                ticker.timestamp()
+        ));
     }
 }

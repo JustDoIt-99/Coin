@@ -52,6 +52,12 @@ export interface MarketBuyRequest {
     amount: number;
 }
 
+export interface LimitBuyRequest {
+    marketCode: string;
+    quantity: number;
+    limitPrice: number;
+}
+
 export interface AssetResponse {
     assetCode: string;
     balance: number;
@@ -85,6 +91,17 @@ export interface MarketSellResponse {
     cashBalance: number;
     coinBalance: number;
     averageBuyPrice: number;
+}
+
+export type OrderStatus = "PENDING" | "EXECUTING" | "FILLED" | "CANCELLED" | "FAILED";
+
+export interface LimitBuyResponse {
+    orderId: number;
+    marketCode: string;
+    quantity: number;
+    limitPrice: number;
+    lockedAmount: number;
+    status: OrderStatus;
 }
 
 export type TradeSide = "BUY" | "SELL";
@@ -299,6 +316,22 @@ export async function marketSell(request: MarketSellRequest): Promise<MarketSell
 
     if (!response.ok) {
         throw new Error("시장가 매도에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+export async function limitBuy(request: LimitBuyRequest): Promise<LimitBuyResponse> {
+    const response = await authFetch(API.LIMIT_BUY, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        throw new Error("지정가 매수 주문에 실패했습니다.");
     }
 
     return response.json();
