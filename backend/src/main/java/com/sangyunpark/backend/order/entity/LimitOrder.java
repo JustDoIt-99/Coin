@@ -11,105 +11,92 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 @Entity
+@Table(name = "orders")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class TradeHistory extends BaseEntity {
+public class LimitOrder extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id" , nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Column(nullable = false, length = 20)
     private String marketCode;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
     private TradeSide tradeSide;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
     private OrderType orderType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private OrderStatus status;
 
     @Column(nullable = false, precision = 24, scale = 8)
     private BigDecimal quantity;
 
     @Column(nullable = false, precision = 24, scale = 8)
-    private BigDecimal price;
+    private BigDecimal limitPrice;
 
     @Column(nullable = false, precision = 24, scale = 8)
-    private BigDecimal totalAmount;
+    private BigDecimal lockedAmount;
+
+    @Column(nullable = false, precision = 24, scale = 8)
+    private BigDecimal executedQuantity;
+
+    @Column(nullable = false, precision = 24, scale = 8)
+    private BigDecimal executedAmount;
 
     @Builder
-    private TradeHistory(
+    private LimitOrder(
             User user,
             String marketCode,
             TradeSide tradeSide,
             OrderType orderType,
+            OrderStatus status,
             BigDecimal quantity,
-            BigDecimal price,
-            BigDecimal totalAmount
+            BigDecimal limitPrice,
+            BigDecimal lockedAmount,
+            BigDecimal executedQuantity,
+            BigDecimal executedAmount
     ) {
         this.user = user;
         this.marketCode = marketCode;
         this.tradeSide = tradeSide;
         this.orderType = orderType;
+        this.status = status;
         this.quantity = quantity;
-        this.price = price;
-        this.totalAmount = totalAmount;
+        this.limitPrice = limitPrice;
+        this.lockedAmount = lockedAmount;
+        this.executedQuantity = executedQuantity;
+        this.executedAmount = executedAmount;
     }
 
-    public static TradeHistory marketBuy(
+    public static LimitOrder limitBuy(
             User user,
             String marketCode,
             BigDecimal quantity,
-            BigDecimal price,
-            BigDecimal totalAmount
+            BigDecimal limitPrice,
+            BigDecimal lockedAmount
     ) {
-        return TradeHistory.builder()
-                .user(user)
-                .marketCode(marketCode)
-                .tradeSide(TradeSide.BUY)
-                .orderType(OrderType.MARKET)
-                .quantity(quantity)
-                .price(price)
-                .totalAmount(totalAmount)
-                .build();
-    }
-
-    public static TradeHistory marketSell(
-            User user,
-            String marketCode,
-            BigDecimal quantity,
-            BigDecimal price,
-            BigDecimal totalAmount
-    ) {
-        return TradeHistory.builder()
-                .user(user)
-                .marketCode(marketCode)
-                .tradeSide(TradeSide.SELL)
-                .orderType(OrderType.MARKET)
-                .quantity(quantity)
-                .price(price)
-                .totalAmount(totalAmount)
-                .build();
-    }
-
-    public static TradeHistory limitBuy(
-            User user,
-            String marketCode,
-            BigDecimal quantity,
-            BigDecimal price,
-            BigDecimal totalAmount
-    ) {
-        return TradeHistory.builder()
+        return LimitOrder.builder()
                 .user(user)
                 .marketCode(marketCode)
                 .tradeSide(TradeSide.BUY)
                 .orderType(OrderType.LIMIT)
+                .status(OrderStatus.PENDING)
                 .quantity(quantity)
-                .price(price)
-                .totalAmount(totalAmount)
+                .limitPrice(limitPrice)
+                .lockedAmount(lockedAmount)
+                .executedQuantity(BigDecimal.ZERO)
+                .executedAmount(BigDecimal.ZERO)
                 .build();
     }
+
 }

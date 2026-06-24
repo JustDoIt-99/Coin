@@ -5,19 +5,28 @@ import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
 import com.sangyunpark.backend.auth.exception.AuthErrorCode;
 import com.sangyunpark.backend.common.exception.BusinessException;
 import com.sangyunpark.backend.market.price.UpbitMarketPriceProvider;
+import com.sangyunpark.backend.order.controller.dto.request.LimitBuyRequest;
 import com.sangyunpark.backend.order.controller.dto.request.MarketBuyRequest;
 import com.sangyunpark.backend.order.controller.dto.request.MarketSellRequest;
+import com.sangyunpark.backend.order.controller.dto.response.CancelLimitOrderResponse;
+import com.sangyunpark.backend.order.controller.dto.response.LimitBuyResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketBuyResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryCursorResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryResponse;
+import com.sangyunpark.backend.order.entity.LimitOrder;
+import com.sangyunpark.backend.order.entity.OrderStatus;
 import com.sangyunpark.backend.order.entity.TradeHistory;
+import com.sangyunpark.backend.order.event.LimitBuyOrderCreatedEvent;
+import com.sangyunpark.backend.order.event.LimitOrderCancelledEvent;
 import com.sangyunpark.backend.order.exception.OrderErrorCode;
+import com.sangyunpark.backend.order.repository.LimitOrderJpaRepository;
 import com.sangyunpark.backend.order.repository.TradeHistoryJpaRepository;
 import com.sangyunpark.backend.order.service.dto.MarketPair;
 import com.sangyunpark.backend.user.entity.User;
 import com.sangyunpark.backend.user.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +47,8 @@ public class OrderService {
     private final AssetJpaRepository assetJpaRepository;
     private final UpbitMarketPriceProvider upbitMarketPriceProvider;
     private final TradeHistoryJpaRepository tradeHistoryJpaRepository;
+    private final LimitOrderJpaRepository limitOrderJpaRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public MarketBuyResponse marketBuy(Long userId, MarketBuyRequest request) {
@@ -145,6 +156,74 @@ public class OrderService {
         );
     }
 
+    @Transactional
+    public LimitBuyResponse limitBuy(Long userId, LimitBuyRequest request) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
+
+        MarketPair marketPair = parseMarketCode(request.marketCode());
+        BigDecimal lockedAmount = request.quantity().multiply(request.limitPrice());
+
+        if (lockedAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
+        }
+
+        int locked = assetJpaRepository.lockBalance(user.getId(), marketPair.baseAssetCode(), lockedAmount);
+        if (locked == 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
+        }
+
+        LimitOrder order = limitOrderJpaRepository.save(
+                LimitOrder.limitBuy(
+                        user,
+                        request.marketCode(),
+                        request.quantity(),
+                        request.limitPrice(),
+                        lockedAmount
+                )
+        );
+        eventPublisher.publishEvent(new LimitBuyOrderCreatedEvent(order.getMarketCode(), order.getLimitPrice()));
+
+        return LimitBuyResponse.from(order);
+    }
+
+    @Transactional
+    public CancelLimitOrderResponse cancelLimitOrder(Long userId, Long orderId) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
+
+        LimitOrder order = limitOrderJpaRepository.findByIdAndUser(orderId, user)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+
+        MarketPair marketPair = parseMarketCode(order.getMarketCode());
+
+        int cancelled = limitOrderJpaRepository.updateStatusByUserId(
+                order.getId(),
+                user.getId(),
+                OrderStatus.PENDING,
+                OrderStatus.CANCELLED
+        );
+        if (cancelled == 0) {
+            throw new BusinessException(OrderErrorCode.ORDER_NOT_CANCELABLE);
+        }
+
+        int released = assetJpaRepository.releaseLockedBalance(
+                user.getId(),
+                marketPair.baseAssetCode(),
+                order.getLockedAmount()
+        );
+        if (released == 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
+        }
+        eventPublisher.publishEvent(new LimitOrderCancelledEvent(order.getMarketCode()));
+
+        return CancelLimitOrderResponse.of(
+                order,
+                order.getLockedAmount(),
+                OrderStatus.CANCELLED
+        );
+    }
+
     @Transactional(readOnly = true)
     public TradeHistoryCursorResponse getTradeHistories(Long userId, Long cursorId, int size) {
         User user = userJpaRepository.findById(userId)
@@ -191,4 +270,5 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.INVALID_MARKET_PRICE);
         }
     }
+
 }

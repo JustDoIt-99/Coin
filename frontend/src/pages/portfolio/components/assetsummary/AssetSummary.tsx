@@ -4,10 +4,7 @@ import {
     SummaryRight,
     SummaryGrid,
     SummaryRow,
-    SummaryValue,
-    LegendItem,
-    LegendList,
-    ChartBox, DonutBox, ColorDot, CoinName, CoinWeight,
+    SummaryValue, CoinWeight, CoinName, LegendItem, ColorDot, LegendList, ChartBox, DonutBox,
 } from "./AssetSummary.styles";
 import {useAuth} from "@auth/useAuth.ts";
 import {useQuery} from "@tanstack/react-query";

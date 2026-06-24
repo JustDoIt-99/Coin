@@ -13,7 +13,7 @@ import {
     type TradeType
 } from "@pages/market/components/order/OrderForm/OrderForm.styles";
 import PercentButtons from "@pages/market/components/common/PercentButtons/PercentButtons";
-import {marketBuy, marketSell, type Ticker} from "@api/api";
+import {limitBuy, marketBuy, marketSell, type Ticker} from "@api/api";
 import OrderInputRow from "@pages/market/components/common/OrderInputRow/OrderInputRow";
 import useOrderForm from "@hooks/useOrderForm";
 import {useNavigate, useLocation} from "react-router-dom";
@@ -78,8 +78,8 @@ function OrderForm({
             return;
         }
 
-        if (!flags.isMarket) {
-            setSubmitMessage("현재는 시장가 주문만 지원합니다.");
+        if (flags.isReserve || (flags.isLimit && !flags.isBuy)) {
+            setSubmitMessage("현재는 지정가 매수와 시장가 주문만 지원합니다.");
             return;
         }
 
@@ -87,21 +87,47 @@ function OrderForm({
             setIsSubmitting(true);
             setSubmitMessage("");
 
-            const isSubmitted = flags.isBuy
-                ? await submitMarketBuy()
-                : await submitMarketSell();
+            const isSubmitted = flags.isLimit
+                ? await submitLimitBuy()
+                : flags.isBuy
+                    ? await submitMarketBuy()
+                    : await submitMarketSell();
 
             if (isSubmitted) {
                 onOrderCompleted?.();
                 actions.handleReset();
             }
         } catch (error) {
-            console.error("시장가 주문 실패", error);
-            setSubmitMessage("시장가 주문에 실패했습니다.");
+            console.error("주문 실패", error);
+            setSubmitMessage("주문에 실패했습니다.");
         } finally {
             setIsSubmitting(false);
         }
     }
+
+    const submitLimitBuy = async () => {
+        const quantity = Number(removeComma(state.quantity));
+        const limitPrice = Number(removeComma(state.orderPrice));
+        if (Number.isNaN(quantity) || quantity <= 0) {
+            setSubmitMessage("주문수량을 입력해주세요.");
+            return false;
+        }
+        if (Number.isNaN(limitPrice) || limitPrice <= 0) {
+            setSubmitMessage("매수가격을 입력해주세요.");
+            return false;
+        }
+
+        const response = await limitBuy({
+            marketCode,
+            quantity,
+            limitPrice,
+        });
+
+        setSubmitMessage(
+            `${response.lockedAmount.toLocaleString()} ${marketCode.split("-")[0]} 지정가 매수 대기`
+        );
+        return true;
+    };
 
     const submitMarketBuy = async () => {
         const amount = Number(removeComma(state.totalAmount));
@@ -140,6 +166,7 @@ function OrderForm({
     };
 
     const priceLabel = flags.isBuy ? "매수가격" : "매도가격";
+    const [baseAssetCode, targetAssetCode] = marketCode.split("-");
 
     return (
         <Form onSubmit={handleSubmit}>
@@ -166,32 +193,32 @@ function OrderForm({
             </Row>
             {flags.isLimit && (
                 <>
-                    <OrderInputRow label={priceLabel} unit={"KRW"} value={state.orderPrice} onChange={actions.handleOrderPriceChange}/>
-                    <OrderInputRow label={"주문수량"} unit={"BTC"} value={state.quantity} onChange={actions.handleQuantityChange}/>
+                    <OrderInputRow label={priceLabel} unit={baseAssetCode} value={state.orderPrice} onChange={actions.handleOrderPriceChange}/>
+                    <OrderInputRow label={"주문수량"} unit={targetAssetCode} value={state.quantity} onChange={actions.handleQuantityChange}/>
                     {percentButtons}
-                    <OrderInputRow label={"주문총액"} unit={"KRW"} value={state.totalAmount} onChange={actions.handleTotalAmountChange}/>
+                    <OrderInputRow label={"주문총액"} unit={baseAssetCode} value={state.totalAmount} onChange={actions.handleTotalAmountChange}/>
                 </>
             )}
             {flags.isMarket && flags.isBuy && (
                 <>
-                    <OrderInputRow label="주문총액" unit="KRW" value={state.totalAmount} onChange={actions.handleTotalAmountChange}/>
+                    <OrderInputRow label="주문총액" unit={baseAssetCode} value={state.totalAmount} onChange={actions.handleTotalAmountChange}/>
                     <PercentButtons values={PERCENT} selected={state.selectedPercent} onClick={actions.handlePercentClick}/>
                 </>
             )}
             {flags.isMarket && !flags.isBuy && (
                 <>
-                    <OrderInputRow label="주문수량" unit="BTC" value={state.quantity} onChange={actions.handleQuantityChange}/>
+                    <OrderInputRow label="주문수량" unit={targetAssetCode} value={state.quantity} onChange={actions.handleQuantityChange}/>
                     {percentButtons}
-                    <OrderInputRow label="예상금액" unit="KRW" value={state.totalAmount}/>
+                    <OrderInputRow label="예상금액" unit={baseAssetCode} value={state.totalAmount}/>
                 </>
             )}
             {flags.isReserve && (
                 <>
-                    <OrderInputRow label={"감시가격"} unit={"KRW"} value={state.triggerPrice} onChange={actions.handleTriggerPriceChange}/>
-                    <OrderInputRow label={priceLabel} unit={"KRW"} value={state.orderPrice} onChange={actions.handleOrderPriceChange}/>
-                    <OrderInputRow label={"주문수량"} unit={"BTC"} value={state.quantity} onChange={actions.handleQuantityChange}/>
+                    <OrderInputRow label={"감시가격"} unit={baseAssetCode} value={state.triggerPrice} onChange={actions.handleTriggerPriceChange}/>
+                    <OrderInputRow label={priceLabel} unit={baseAssetCode} value={state.orderPrice} onChange={actions.handleOrderPriceChange}/>
+                    <OrderInputRow label={"주문수량"} unit={targetAssetCode} value={state.quantity} onChange={actions.handleQuantityChange}/>
                     {percentButtons}
-                    <OrderInputRow label={"주문총액"} unit={"KRW"} value={state.totalAmount} onChange={actions.handleTotalAmountChange}/>
+                    <OrderInputRow label={"주문총액"} unit={baseAssetCode} value={state.totalAmount} onChange={actions.handleTotalAmountChange}/>
                 </>
             )}
             <Divider/>

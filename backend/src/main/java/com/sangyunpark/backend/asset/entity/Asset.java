@@ -35,13 +35,17 @@ public class Asset extends BaseEntity {
     private BigDecimal balance;
 
     @Column(nullable = false, precision = 24, scale = 8)
+    private BigDecimal lockedBalance;
+
+    @Column(nullable = false, precision = 24, scale = 8)
     private BigDecimal averageBuyPrice;
 
     @Builder
-    private Asset(User user, String assetCode, BigDecimal balance, BigDecimal averageBuyPrice) {
+    private Asset(User user, String assetCode, BigDecimal balance, BigDecimal lockedBalance, BigDecimal averageBuyPrice) {
         this.user = user;
         this.assetCode = assetCode;
         this.balance = balance;
+        this.lockedBalance = lockedBalance;
         this.averageBuyPrice = averageBuyPrice;
     }
 
@@ -50,6 +54,7 @@ public class Asset extends BaseEntity {
                 .user(user)
                 .assetCode(assetCode)
                 .balance(BigDecimal.ZERO)
+                .lockedBalance(BigDecimal.ZERO)
                 .averageBuyPrice(BigDecimal.ZERO)
                 .build();
     }
@@ -59,6 +64,7 @@ public class Asset extends BaseEntity {
                 .user(user)
                 .assetCode(assetCode)
                 .balance(balance)
+                .lockedBalance(BigDecimal.ZERO)
                 .averageBuyPrice(BigDecimal.ZERO)
                 .build();
     }
@@ -72,17 +78,13 @@ public class Asset extends BaseEntity {
     }
 
     public void deposit(BigDecimal amount) {
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException(OrderErrorCode.INVALID_ASSET_AMOUNT);
-        }
+        validatePositiveAmount(amount);
 
         this.balance = balance.add(amount);
     }
 
     public void sell(BigDecimal quantity) {
-        if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException(OrderErrorCode.INVALID_ASSET_AMOUNT);
-        }
+        validatePositiveAmount(quantity);
 
         withdraw(quantity);
 
@@ -105,5 +107,11 @@ public class Asset extends BaseEntity {
         this.averageBuyPrice = previousTotalAmount.add(buyAmount)
                 .divide(nextBalance, 8, RoundingMode.HALF_UP);
         this.balance = nextBalance;
+    }
+
+    private void validatePositiveAmount(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(OrderErrorCode.INVALID_ASSET_AMOUNT);
+        }
     }
 }
