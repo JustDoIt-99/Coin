@@ -13,10 +13,13 @@ import com.sangyunpark.backend.order.service.dto.MarketPair;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -25,13 +28,16 @@ import java.util.List;
 public class LimitOrderExecutionService {
 
     private static final int EXECUTION_BATCH_SIZE = 100;
+    private static final int EXECUTION_RETRY_BATCH_SIZE = 100;
+    private static final int EXECUTION_RETRY_SCHEDULE_DELAY_MILLIS = 500;
+    private static final Duration EXECUTION_RETRY_BACKOFF = Duration.ofMillis(500);
 
     private final LimitOrderJpaRepository limitOrderJpaRepository;
     private final AssetJpaRepository assetJpaRepository;
     private final TradeHistoryJpaRepository tradeHistoryJpaRepository;
     private final PendingLimitOrderIndex pendingLimitOrderIndex;
+    private final TransactionTemplate transactionTemplate;
 
-    @Transactional
     public int executePendingBuyOrders(String marketCode, BigDecimal currentPrice) {
         if (marketCode == null || marketCode.isBlank()) {
             return 0;
@@ -64,13 +70,23 @@ public class LimitOrderExecutionService {
         );
 
         int executedCount = 0;
+        boolean shouldRefreshIndex = executableOrders.isEmpty();
         for (LimitOrder order : executableOrders) {
-            if (executeBuyOrder(order, currentPrice)) {
-                executedCount++;
+            try {
+                Boolean executed = transactionTemplate.execute(status -> executeBuyOrder(order, currentPrice));
+                if (Boolean.TRUE.equals(executed)) {
+                    executedCount++;
+                    shouldRefreshIndex = true;
+                }
+            } catch (Exception e) {
+                log.error("지정가 매수 주문 체결 실패. orderId={}, marketCode={}", order.getId(), order.getMarketCode(), e);
+                if (markOrderExecutionRetryPending(order)) {
+                    shouldRefreshIndex = true;
+                }
             }
         }
 
-        if (executedCount > 0 || executableOrders.isEmpty()) {
+        if (shouldRefreshIndex) {
             pendingLimitOrderIndex.refreshBuyLimitPrice(marketCode);
         }
 
@@ -127,6 +143,44 @@ public class LimitOrderExecutionService {
             throw new IllegalStateException("Executing order was not filled. orderId=" + order.getId());
         }
         return true;
+    }
+
+    private boolean markOrderExecutionRetryPending(LimitOrder order) {
+        Boolean markedRetryPending = transactionTemplate.execute(status -> {
+            int updated = limitOrderJpaRepository.updateStatus(
+                    order.getId(),
+                    OrderStatus.PENDING,
+                    OrderStatus.EXECUTION_RETRY_PENDING
+            );
+            return updated > 0;
+        });
+
+        return Boolean.TRUE.equals(markedRetryPending);
+    }
+
+    @Scheduled(fixedDelay = EXECUTION_RETRY_SCHEDULE_DELAY_MILLIS)
+    public void retryExecutionRetryPendingOrders() {
+        LocalDateTime retryBefore = LocalDateTime.now().minus(EXECUTION_RETRY_BACKOFF);
+        List<LimitOrder> orders = limitOrderJpaRepository.findByStatusAndUpdatedAtLessThanEqualOrderByIdAsc(
+                OrderStatus.EXECUTION_RETRY_PENDING,
+                retryBefore,
+                PageRequest.of(0, EXECUTION_RETRY_BATCH_SIZE)
+        );
+
+        for (LimitOrder order : orders) {
+            Boolean restored = transactionTemplate.execute(status -> {
+                int updated = limitOrderJpaRepository.updateStatus(
+                        order.getId(),
+                        OrderStatus.EXECUTION_RETRY_PENDING,
+                        OrderStatus.PENDING
+                );
+                return updated > 0;
+            });
+
+            if (Boolean.TRUE.equals(restored)) {
+                pendingLimitOrderIndex.updateBuyLimitPrice(order.getMarketCode(), order.getLimitPrice());
+            }
+        }
     }
 
     private MarketPair parseMarketCode(String marketCode) {

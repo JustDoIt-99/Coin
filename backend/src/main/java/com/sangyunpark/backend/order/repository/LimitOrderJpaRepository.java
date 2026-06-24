@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,10 +36,17 @@ public interface LimitOrderJpaRepository extends JpaRepository<LimitOrder, Long>
             OrderStatus status
     );
 
+    List<LimitOrder> findByStatusAndUpdatedAtLessThanEqualOrderByIdAsc(
+            OrderStatus status,
+            LocalDateTime updatedAt,
+            Pageable pageable
+    );
+
     @Modifying(flushAutomatically = true)
     @Query("""
             update LimitOrder o
-            set o.status = :nextStatus
+            set o.status = :nextStatus,
+                o.updatedAt = CURRENT_TIMESTAMP
             where o.id = :orderId
               and o.status = :currentStatus
             """)
@@ -51,7 +59,8 @@ public interface LimitOrderJpaRepository extends JpaRepository<LimitOrder, Long>
     @Modifying(flushAutomatically = true)
     @Query("""
             update LimitOrder o
-            set o.status = :nextStatus
+            set o.status = :nextStatus,
+                o.updatedAt = CURRENT_TIMESTAMP
             where o.id = :orderId
               and o.user.id = :userId
               and o.status = :currentStatus
@@ -68,7 +77,8 @@ public interface LimitOrderJpaRepository extends JpaRepository<LimitOrder, Long>
             update LimitOrder o
             set o.status = :filledStatus,
                 o.executedQuantity = :executedQuantity,
-                o.executedAmount = :executedAmount
+                o.executedAmount = :executedAmount,
+                o.updatedAt = CURRENT_TIMESTAMP
             where o.id = :orderId
               and o.status = :executingStatus
             """)

@@ -14,6 +14,7 @@ import com.sangyunpark.backend.order.controller.dto.response.LimitBuyResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketBuyResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryResponse;
+import com.sangyunpark.backend.order.entity.LimitOrder;
 import com.sangyunpark.backend.order.entity.OrderType;
 import com.sangyunpark.backend.order.entity.OrderStatus;
 import com.sangyunpark.backend.order.entity.TradeSide;
@@ -32,10 +33,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -71,6 +76,9 @@ class OrderServiceTest {
 
     @Autowired
     EntityManager entityManager;
+
+    @Autowired
+    TransactionTemplate transactionTemplate;
 
     @MockitoBean
     UpbitMarketPriceProvider upbitMarketPriceProvider;
@@ -468,6 +476,40 @@ class OrderServiceTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 지정가_매수_체결이_실패하면_주문은_재시도_대기상태가_되고_잠긴_현금은_유지된다() {
+        AuthTokenResponse signupResponse = signup();
+        BigDecimal quantity = new BigDecimal("0.00100000");
+        BigDecimal limitPrice = new BigDecimal("50000000");
+        BigDecimal lockedAmount = new BigDecimal("50000.00000000");
+        AtomicReference<Long> orderId = new AtomicReference<>();
+
+        transactionTemplate.executeWithoutResult(status -> {
+            User user = userJpaRepository.findById(signupResponse.user().id()).orElseThrow();
+            int lockedRows = assetJpaRepository.lockBalance(user.getId(), "KRW", lockedAmount);
+            assertThat(lockedRows).isEqualTo(1);
+
+            LimitOrder order = limitOrderJpaRepository.save(
+                    LimitOrder.limitBuy(user, "KRW", quantity, limitPrice, lockedAmount)
+            );
+            orderId.set(order.getId());
+        });
+
+        int executedCount = limitOrderExecutionService.executePendingBuyOrders("KRW", limitPrice);
+
+        assertThat(executedCount).isZero();
+        assertThat(limitOrderJpaRepository.findById(orderId.get()))
+                .hasValueSatisfying(limitOrder ->
+                        assertThat(limitOrder.getStatus()).isEqualTo(OrderStatus.EXECUTION_RETRY_PENDING)
+                );
+        assertThat(assetJpaRepository.findByUserAndAssetCode(findUser(signupResponse.user().id()), "KRW"))
+                .hasValueSatisfying(asset -> {
+                    assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("950000.00000000"));
+                    assertThat(asset.getLockedBalance()).isEqualByComparingTo(lockedAmount);
+                });
+    }
+
+    @Test
     void 이미_체결된_지정가_매수_주문은_다시_체결하지_않는다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
@@ -568,7 +610,7 @@ class OrderServiceTest {
 
     private AuthTokenResponse signup() {
         return authService.signup(new SignupRequest(
-                "test@test.com",
+                "test-" + UUID.randomUUID() + "@test.com",
                 "12345678",
                 "sangyun"
         ));
