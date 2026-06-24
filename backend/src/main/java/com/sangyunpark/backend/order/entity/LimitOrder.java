@@ -99,4 +99,25 @@ public class LimitOrder extends BaseEntity {
                 .build();
     }
 
+    public static LimitOrder limitSell(
+            User user,
+            String marketCode,
+            BigDecimal quantity,
+            BigDecimal limitPrice,
+            BigDecimal lockedAmount
+    ) {
+        return LimitOrder.builder()
+                .user(user)
+                .marketCode(marketCode)
+                .tradeSide(TradeSide.SELL)
+                .orderType(OrderType.LIMIT)
+                .status(OrderStatus.PENDING)
+                .quantity(quantity)
+                .limitPrice(limitPrice)
+                .lockedAmount(lockedAmount)
+                .executedQuantity(BigDecimal.ZERO)
+                .executedAmount(BigDecimal.ZERO)
+                .build();
+    }
+
 }

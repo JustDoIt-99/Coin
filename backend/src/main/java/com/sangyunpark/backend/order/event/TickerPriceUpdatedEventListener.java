@@ -18,5 +18,6 @@ public class TickerPriceUpdatedEventListener {
     @EventListener
     public void handle(TickerPriceUpdatedEvent event) {
         limitOrderExecutionService.executePendingBuyOrders(event.marketCode(), event.tradePrice());
+        limitOrderExecutionService.executePendingSellOrders(event.marketCode(), event.tradePrice());
     }
 }

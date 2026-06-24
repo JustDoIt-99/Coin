@@ -13,7 +13,7 @@ import {
     type TradeType
 } from "@pages/market/components/order/OrderForm/OrderForm.styles";
 import PercentButtons from "@pages/market/components/common/PercentButtons/PercentButtons";
-import {limitBuy, marketBuy, marketSell, type Ticker} from "@api/api";
+import {limitBuy, limitSell, marketBuy, marketSell, type Ticker} from "@api/api";
 import OrderInputRow from "@pages/market/components/common/OrderInputRow/OrderInputRow";
 import useOrderForm from "@hooks/useOrderForm";
 import {useNavigate, useLocation} from "react-router-dom";
@@ -78,8 +78,8 @@ function OrderForm({
             return;
         }
 
-        if (flags.isReserve || (flags.isLimit && !flags.isBuy)) {
-            setSubmitMessage("현재는 지정가 매수와 시장가 주문만 지원합니다.");
+        if (flags.isReserve) {
+            setSubmitMessage("현재는 예약 주문을 지원하지 않습니다.");
             return;
         }
 
@@ -88,7 +88,9 @@ function OrderForm({
             setSubmitMessage("");
 
             const isSubmitted = flags.isLimit
-                ? await submitLimitBuy()
+                ? flags.isBuy
+                    ? await submitLimitBuy()
+                    : await submitLimitSell()
                 : flags.isBuy
                     ? await submitMarketBuy()
                     : await submitMarketSell();
@@ -125,6 +127,30 @@ function OrderForm({
 
         setSubmitMessage(
             `${response.lockedAmount.toLocaleString()} ${marketCode.split("-")[0]} 지정가 매수 대기`
+        );
+        return true;
+    };
+
+    const submitLimitSell = async () => {
+        const quantity = Number(removeComma(state.quantity));
+        const limitPrice = Number(removeComma(state.orderPrice));
+        if (Number.isNaN(quantity) || quantity <= 0) {
+            setSubmitMessage("주문수량을 입력해주세요.");
+            return false;
+        }
+        if (Number.isNaN(limitPrice) || limitPrice <= 0) {
+            setSubmitMessage("매도가격을 입력해주세요.");
+            return false;
+        }
+
+        const response = await limitSell({
+            marketCode,
+            quantity,
+            limitPrice,
+        });
+
+        setSubmitMessage(
+            `${response.lockedAmount.toLocaleString()} ${marketCode.split("-")[1]} 지정가 매도 대기`
         );
         return true;
     };

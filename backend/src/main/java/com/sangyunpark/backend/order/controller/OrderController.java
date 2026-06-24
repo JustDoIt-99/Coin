@@ -2,9 +2,11 @@ package com.sangyunpark.backend.order.controller;
 
 import com.sangyunpark.backend.order.controller.dto.request.MarketBuyRequest;
 import com.sangyunpark.backend.order.controller.dto.request.LimitBuyRequest;
+import com.sangyunpark.backend.order.controller.dto.request.LimitSellRequest;
 import com.sangyunpark.backend.order.controller.dto.request.MarketSellRequest;
 import com.sangyunpark.backend.order.controller.dto.response.CancelLimitOrderResponse;
 import com.sangyunpark.backend.order.controller.dto.response.LimitBuyResponse;
+import com.sangyunpark.backend.order.controller.dto.response.LimitSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketBuyResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryCursorResponse;
@@ -46,6 +48,12 @@ public class OrderController {
     public LimitBuyResponse limitBuy(HttpServletRequest request, @Valid @RequestBody LimitBuyRequest limitBuyRequest) {
         Long userId = (Long) request.getAttribute(USER_ID);
         return orderService.limitBuy(userId, limitBuyRequest);
+    }
+
+    @PostMapping("/limit-sell")
+    public LimitSellResponse limitSell(HttpServletRequest request, @Valid @RequestBody LimitSellRequest limitSellRequest) {
+        Long userId = (Long) request.getAttribute(USER_ID);
+        return orderService.limitSell(userId, limitSellRequest);
     }
 
     @DeleteMapping("/limit/{orderId}")

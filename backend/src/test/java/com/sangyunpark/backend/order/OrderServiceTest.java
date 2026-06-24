@@ -7,10 +7,12 @@ import com.sangyunpark.backend.auth.service.AuthService;
 import com.sangyunpark.backend.common.exception.BusinessException;
 import com.sangyunpark.backend.market.price.UpbitMarketPriceProvider;
 import com.sangyunpark.backend.order.controller.dto.request.LimitBuyRequest;
+import com.sangyunpark.backend.order.controller.dto.request.LimitSellRequest;
 import com.sangyunpark.backend.order.controller.dto.request.MarketBuyRequest;
 import com.sangyunpark.backend.order.controller.dto.request.MarketSellRequest;
 import com.sangyunpark.backend.order.controller.dto.response.CancelLimitOrderResponse;
 import com.sangyunpark.backend.order.controller.dto.response.LimitBuyResponse;
+import com.sangyunpark.backend.order.controller.dto.response.LimitSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketBuyResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryResponse;
@@ -341,6 +343,125 @@ class OrderServiceTest {
     }
 
     @Test
+    void 지정가_매도_주문을_생성하면_코인이_잠기고_PENDING_주문이_생성된다() {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(new BigDecimal("50000000"));
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        );
+
+        LimitSellResponse response = orderService.limitSell(
+                signupResponse.user().id(),
+                new LimitSellRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("60000000"))
+        );
+
+        assertThat(response.marketCode()).isEqualTo("KRW-BTC");
+        assertThat(response.quantity()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+        assertThat(response.limitPrice()).isEqualByComparingTo(new BigDecimal("60000000"));
+        assertThat(response.lockedAmount()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+        assertThat(response.status()).isEqualTo(OrderStatus.PENDING);
+
+        flushAndClear();
+
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "BTC"))
+                .hasValueSatisfying(asset -> {
+                    assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+                    assertThat(asset.getLockedBalance()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+                });
+        assertThat(limitOrderJpaRepository.findById(response.orderId()))
+                .hasValueSatisfying(order -> {
+                    assertThat(order.getTradeSide()).isEqualTo(TradeSide.SELL);
+                    assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+                    assertThat(order.getLockedAmount()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+                });
+    }
+
+    @Test
+    void 지정가_매도_수량이_보유_수량보다_크면_예외가_발생한다() {
+        AuthTokenResponse signupResponse = signup();
+
+        assertThatThrownBy(() -> orderService.limitSell(
+                signupResponse.user().id(),
+                new LimitSellRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("60000000"))
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderErrorCode.INSUFFICIENT_BALANCE);
+    }
+
+    @Test
+    void 지정가_매도_주문을_취소하면_잠긴_코인이_해제된다() {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(new BigDecimal("50000000"));
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        );
+        LimitSellResponse order = orderService.limitSell(
+                signupResponse.user().id(),
+                new LimitSellRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("60000000"))
+        );
+
+        CancelLimitOrderResponse response = orderService.cancelLimitOrder(signupResponse.user().id(), order.orderId());
+
+        assertThat(response.status()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(response.releasedAmount()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+
+        flushAndClear();
+
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "BTC"))
+                .hasValueSatisfying(asset -> {
+                    assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00200000"));
+                    assertThat(asset.getLockedBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+                });
+        assertThat(limitOrderJpaRepository.findById(order.orderId()))
+                .hasValueSatisfying(limitOrder -> assertThat(limitOrder.getStatus()).isEqualTo(OrderStatus.CANCELLED));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 재시도_대기중인_지정가_매도_주문도_취소할_수_있다() {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        String marketCode = "KRW-LS3";
+        when(upbitMarketPriceProvider.getCurrentPrice(marketCode))
+                .thenReturn(new BigDecimal("50000000"));
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest(marketCode, new BigDecimal("100000"))
+        );
+        LimitSellResponse order = orderService.limitSell(
+                signupResponse.user().id(),
+                new LimitSellRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("60000000"))
+        );
+        transactionTemplate.executeWithoutResult(status -> {
+            int updated = limitOrderJpaRepository.updateStatus(
+                    order.orderId(),
+                    OrderStatus.PENDING,
+                    OrderStatus.EXECUTION_RETRY_PENDING
+            );
+            assertThat(updated).isEqualTo(1);
+        });
+
+        CancelLimitOrderResponse response = orderService.cancelLimitOrder(signupResponse.user().id(), order.orderId());
+
+        assertThat(response.status()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(response.releasedAmount()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+        assertThat(limitOrderJpaRepository.findById(order.orderId()))
+                .hasValueSatisfying(limitOrder -> assertThat(limitOrder.getStatus()).isEqualTo(OrderStatus.CANCELLED));
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "LS3"))
+                .hasValueSatisfying(asset -> {
+                    assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00200000"));
+                    assertThat(asset.getLockedBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+                });
+    }
+
+    @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void 현재가가_지정가_이하인_PENDING_매수_주문만_체결_후보로_조회한다() {
         AuthTokenResponse signupResponse = signup();
@@ -516,6 +637,94 @@ class OrderServiceTest {
                 .hasValueSatisfying(asset -> {
                     assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("950000.00000000"));
                     assertThat(asset.getLockedBalance()).isEqualByComparingTo(lockedAmount);
+                });
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 지정가_매도_주문이_체결되면_잠긴_코인이_정산되고_현금과_거래내역이_생성된다() {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        String marketCode = "KRW-LS1";
+        when(upbitMarketPriceProvider.getCurrentPrice(marketCode))
+                .thenReturn(new BigDecimal("50000000"));
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest(marketCode, new BigDecimal("100000"))
+        );
+        LimitSellResponse order = orderService.limitSell(
+                signupResponse.user().id(),
+                new LimitSellRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("60000000"))
+        );
+
+        int executedCount = limitOrderExecutionService.executePendingSellOrders(
+                marketCode,
+                new BigDecimal("61000000")
+        );
+
+        assertThat(executedCount).isEqualTo(1);
+
+        flushAndClear();
+
+        assertThat(limitOrderJpaRepository.findById(order.orderId()))
+                .hasValueSatisfying(limitOrder -> {
+                    assertThat(limitOrder.getStatus()).isEqualTo(OrderStatus.FILLED);
+                    assertThat(limitOrder.getExecutedQuantity()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+                    assertThat(limitOrder.getExecutedAmount()).isEqualByComparingTo(new BigDecimal("61000.00000000"));
+                });
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "KRW"))
+                .hasValueSatisfying(asset -> {
+                    assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("961000.00000000"));
+                    assertThat(asset.getLockedBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+                });
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "LS1"))
+                .hasValueSatisfying(asset -> {
+                    assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+                    assertThat(asset.getLockedBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+                });
+        assertThat(tradeHistoryJpaRepository.findByUserOrderByIdDesc(user, PageRequest.of(0, 10)))
+                .hasSize(2)
+                .first()
+                .satisfies(tradeHistory -> {
+                    assertThat(tradeHistory.getTradeSide()).isEqualTo(TradeSide.SELL);
+                    assertThat(tradeHistory.getOrderType()).isEqualTo(OrderType.LIMIT);
+                    assertThat(tradeHistory.getQuantity()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+                    assertThat(tradeHistory.getPrice()).isEqualByComparingTo(new BigDecimal("61000000"));
+                    assertThat(tradeHistory.getTotalAmount()).isEqualByComparingTo(new BigDecimal("61000.00000000"));
+                });
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 지정가_매도로_코인을_전량_체결하면_평균_매수가가_초기화된다() {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        String marketCode = "KRW-LS2";
+        when(upbitMarketPriceProvider.getCurrentPrice(marketCode))
+                .thenReturn(new BigDecimal("50000000"));
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest(marketCode, new BigDecimal("100000"))
+        );
+        orderService.limitSell(
+                signupResponse.user().id(),
+                new LimitSellRequest(marketCode, new BigDecimal("0.00200000"), new BigDecimal("60000000"))
+        );
+
+        int executedCount = limitOrderExecutionService.executePendingSellOrders(
+                marketCode,
+                new BigDecimal("61000000")
+        );
+
+        assertThat(executedCount).isEqualTo(1);
+
+        flushAndClear();
+
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "LS2"))
+                .hasValueSatisfying(asset -> {
+                    assertThat(asset.getBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+                    assertThat(asset.getLockedBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+                    assertThat(asset.getAverageBuyPrice()).isEqualByComparingTo(BigDecimal.ZERO);
                 });
     }
 

@@ -58,6 +58,12 @@ export interface LimitBuyRequest {
     limitPrice: number;
 }
 
+export interface LimitSellRequest {
+    marketCode: string;
+    quantity: number;
+    limitPrice: number;
+}
+
 export interface AssetResponse {
     assetCode: string;
     balance: number;
@@ -93,9 +99,18 @@ export interface MarketSellResponse {
     averageBuyPrice: number;
 }
 
-export type OrderStatus = "PENDING" | "EXECUTING" | "FILLED" | "CANCELLED" | "FAILED";
+export type OrderStatus = "PENDING" | "EXECUTING" | "EXECUTION_RETRY_PENDING" | "FILLED" | "CANCELLED";
 
 export interface LimitBuyResponse {
+    orderId: number;
+    marketCode: string;
+    quantity: number;
+    limitPrice: number;
+    lockedAmount: number;
+    status: OrderStatus;
+}
+
+export interface LimitSellResponse {
     orderId: number;
     marketCode: string;
     quantity: number;
@@ -332,6 +347,22 @@ export async function limitBuy(request: LimitBuyRequest): Promise<LimitBuyRespon
 
     if (!response.ok) {
         throw new Error("지정가 매수 주문에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+export async function limitSell(request: LimitSellRequest): Promise<LimitSellResponse> {
+    const response = await authFetch(API.LIMIT_SELL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        throw new Error("지정가 매도 주문에 실패했습니다.");
     }
 
     return response.json();
