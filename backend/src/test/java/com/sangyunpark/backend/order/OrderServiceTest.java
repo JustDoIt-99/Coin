@@ -341,23 +341,25 @@ class OrderServiceTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void 현재가가_지정가_이하인_PENDING_매수_주문만_체결_후보로_조회한다() {
         AuthTokenResponse signupResponse = signup();
+        String marketCode = "KRW-LT1";
         orderService.limitBuy(
                 signupResponse.user().id(),
-                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("50000000"))
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("50000000"))
         );
         orderService.limitBuy(
                 signupResponse.user().id(),
-                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("60000000"))
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("60000000"))
         );
         orderService.limitBuy(
                 signupResponse.user().id(),
-                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("40000000"))
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("40000000"))
         );
 
         int executableOrderCount = limitOrderExecutionService.executePendingBuyOrders(
-                "KRW-BTC",
+                marketCode,
                 new BigDecimal("55000000")
         );
 
@@ -365,20 +367,22 @@ class OrderServiceTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void 현재가가_PENDING_매수_최고_지정가보다_높으면_체결_후보_조회없이_스킵한다() {
         AuthTokenResponse signupResponse = signup();
+        String marketCode = "KRW-LT2";
         orderService.limitBuy(
                 signupResponse.user().id(),
-                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("50000000"))
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("50000000"))
         );
 
         int executableOrderCount = limitOrderExecutionService.executePendingBuyOrders(
-                "KRW-BTC",
+                marketCode,
                 new BigDecimal("51000000")
         );
 
         assertThat(executableOrderCount).isZero();
-        assertThat(pendingLimitOrderIndex.mayHaveExecutableBuyOrder("KRW-BTC", new BigDecimal("51000000"))).isFalse();
+        assertThat(pendingLimitOrderIndex.mayHaveExecutableBuyOrder(marketCode, new BigDecimal("51000000"))).isFalse();
     }
 
     @Test
@@ -393,19 +397,21 @@ class OrderServiceTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void 더_높은_지정가_매수_주문이_생기면_체결_가능성_캐시가_갱신된다() {
         AuthTokenResponse signupResponse = signup();
+        String marketCode = "KRW-LT3";
         orderService.limitBuy(
                 signupResponse.user().id(),
-                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("50000000"))
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("50000000"))
         );
         orderService.limitBuy(
                 signupResponse.user().id(),
-                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("52000000"))
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("52000000"))
         );
 
         int executableOrderCount = limitOrderExecutionService.executePendingBuyOrders(
-                "KRW-BTC",
+                marketCode,
                 new BigDecimal("51000000")
         );
 
@@ -413,16 +419,18 @@ class OrderServiceTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void 취소된_지정가_매수_주문은_체결_후보에서_제외한다() {
         AuthTokenResponse signupResponse = signup();
+        String marketCode = "KRW-LT4";
         LimitBuyResponse order = orderService.limitBuy(
                 signupResponse.user().id(),
-                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("50000000"))
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("50000000"))
         );
         orderService.cancelLimitOrder(signupResponse.user().id(), order.orderId());
 
         int executableOrderCount = limitOrderExecutionService.executePendingBuyOrders(
-                "KRW-BTC",
+                marketCode,
                 new BigDecimal("50000000")
         );
 
@@ -430,16 +438,18 @@ class OrderServiceTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void 지정가_매수_주문이_체결되면_잠긴_현금이_정산되고_코인과_거래내역이_생성된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
+        String marketCode = "KRW-LT5";
         LimitBuyResponse order = orderService.limitBuy(
                 signupResponse.user().id(),
-                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("60000000"))
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("60000000"))
         );
 
         int executedCount = limitOrderExecutionService.executePendingBuyOrders(
-                "KRW-BTC",
+                marketCode,
                 new BigDecimal("50000000")
         );
 
@@ -458,7 +468,7 @@ class OrderServiceTest {
                     assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("950000.00000000"));
                     assertThat(asset.getLockedBalance()).isEqualByComparingTo(BigDecimal.ZERO);
                 });
-        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "BTC"))
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "LT5"))
                 .hasValueSatisfying(asset -> {
                     assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00100000"));
                     assertThat(asset.getAverageBuyPrice()).isEqualByComparingTo(new BigDecimal("50000000"));
@@ -510,26 +520,28 @@ class OrderServiceTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void 이미_체결된_지정가_매수_주문은_다시_체결하지_않는다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
+        String marketCode = "KRW-LT6";
         orderService.limitBuy(
                 signupResponse.user().id(),
-                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00100000"), new BigDecimal("50000000"))
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("50000000"))
         );
 
         int firstExecutedCount = limitOrderExecutionService.executePendingBuyOrders(
-                "KRW-BTC",
+                marketCode,
                 new BigDecimal("50000000")
         );
         int secondExecutedCount = limitOrderExecutionService.executePendingBuyOrders(
-                "KRW-BTC",
+                marketCode,
                 new BigDecimal("50000000")
         );
 
         assertThat(firstExecutedCount).isEqualTo(1);
         assertThat(secondExecutedCount).isZero();
-        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "BTC"))
+        assertThat(assetJpaRepository.findByUserAndAssetCode(user, "LT6"))
                 .hasValueSatisfying(asset -> assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00100000")));
         assertThat(tradeHistoryJpaRepository.findByUserOrderByIdDesc(user, PageRequest.of(0, 10))).hasSize(1);
     }
@@ -621,7 +633,9 @@ class OrderServiceTest {
     }
 
     private void flushAndClear() {
-        entityManager.flush();
+        if (entityManager.isJoinedToTransaction()) {
+            entityManager.flush();
+        }
         entityManager.clear();
     }
 }

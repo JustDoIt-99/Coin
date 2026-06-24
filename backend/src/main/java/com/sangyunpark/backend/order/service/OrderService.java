@@ -17,6 +17,8 @@ import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryRespons
 import com.sangyunpark.backend.order.entity.LimitOrder;
 import com.sangyunpark.backend.order.entity.OrderStatus;
 import com.sangyunpark.backend.order.entity.TradeHistory;
+import com.sangyunpark.backend.order.event.LimitBuyOrderCreatedEvent;
+import com.sangyunpark.backend.order.event.LimitOrderCancelledEvent;
 import com.sangyunpark.backend.order.exception.OrderErrorCode;
 import com.sangyunpark.backend.order.repository.LimitOrderJpaRepository;
 import com.sangyunpark.backend.order.repository.TradeHistoryJpaRepository;
@@ -24,6 +26,7 @@ import com.sangyunpark.backend.order.service.dto.MarketPair;
 import com.sangyunpark.backend.user.entity.User;
 import com.sangyunpark.backend.user.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,7 +48,7 @@ public class OrderService {
     private final UpbitMarketPriceProvider upbitMarketPriceProvider;
     private final TradeHistoryJpaRepository tradeHistoryJpaRepository;
     private final LimitOrderJpaRepository limitOrderJpaRepository;
-    private final PendingLimitOrderIndex pendingLimitOrderIndex;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public MarketBuyResponse marketBuy(Long userId, MarketBuyRequest request) {
@@ -179,7 +182,7 @@ public class OrderService {
                         lockedAmount
                 )
         );
-        pendingLimitOrderIndex.updateBuyLimitPrice(order.getMarketCode(), order.getLimitPrice());
+        eventPublisher.publishEvent(new LimitBuyOrderCreatedEvent(order.getMarketCode(), order.getLimitPrice()));
 
         return LimitBuyResponse.from(order);
     }
@@ -212,7 +215,7 @@ public class OrderService {
         if (released == 0) {
             throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
         }
-        pendingLimitOrderIndex.refreshBuyLimitPrice(order.getMarketCode());
+        eventPublisher.publishEvent(new LimitOrderCancelledEvent(order.getMarketCode()));
 
         return CancelLimitOrderResponse.of(
                 order,

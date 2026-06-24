@@ -114,7 +114,7 @@ public class LimitOrderExecutionService {
                 refundAmount
         );
         if (used == 0) {
-            throw new IllegalStateException("Locked balance is not enough. orderId=" + order.getId());
+            throw new IllegalStateException("잠긴 잔액이 부족합니다. orderId=" + order.getId());
         }
 
         Asset targetAsset = assetJpaRepository
@@ -140,7 +140,7 @@ public class LimitOrderExecutionService {
                 executedAmount
         );
         if (filled == 0) {
-            throw new IllegalStateException("Executing order was not filled. orderId=" + order.getId());
+            throw new IllegalStateException("체결 진행 중인 주문을 체결 완료 처리하지 못했습니다. orderId=" + order.getId());
         }
         return true;
     }
