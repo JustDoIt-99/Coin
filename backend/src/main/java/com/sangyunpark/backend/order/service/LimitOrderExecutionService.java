@@ -93,6 +93,61 @@ public class LimitOrderExecutionService {
         return executedCount;
     }
 
+    public int executePendingSellOrders(String marketCode, BigDecimal currentPrice) {
+        if (marketCode == null || marketCode.isBlank()) {
+            return 0;
+        }
+
+        if (currentPrice == null || currentPrice.signum() <= 0) {
+            return 0;
+        }
+
+        if (!pendingLimitOrderIndex.mayHaveExecutableSellOrder(marketCode, currentPrice)) {
+            log.debug("지정가 매도 체결 후보 조회 스킵. marketCode={}, currentPrice={}", marketCode, currentPrice);
+            return 0;
+        }
+
+        List<LimitOrder> executableOrders = limitOrderJpaRepository
+                .findByMarketCodeAndTradeSideAndOrderTypeAndStatusAndLimitPriceLessThanEqualOrderByIdAsc(
+                        marketCode,
+                        TradeSide.SELL,
+                        OrderType.LIMIT,
+                        OrderStatus.PENDING,
+                        currentPrice,
+                        PageRequest.of(0, EXECUTION_BATCH_SIZE)
+                );
+
+        log.debug(
+                "지정가 매도 체결 후보 조회 완료. marketCode={}, currentPrice={}, count={}",
+                marketCode,
+                currentPrice,
+                executableOrders.size()
+        );
+
+        int executedCount = 0;
+        boolean shouldRefreshIndex = executableOrders.isEmpty();
+        for (LimitOrder order : executableOrders) {
+            try {
+                Boolean executed = transactionTemplate.execute(status -> executeSellOrder(order, currentPrice));
+                if (Boolean.TRUE.equals(executed)) {
+                    executedCount++;
+                    shouldRefreshIndex = true;
+                }
+            } catch (Exception e) {
+                log.error("지정가 매도 주문 체결 실패. orderId={}, marketCode={}", order.getId(), order.getMarketCode(), e);
+                if (markOrderExecutionRetryPending(order)) {
+                    shouldRefreshIndex = true;
+                }
+            }
+        }
+
+        if (shouldRefreshIndex) {
+            pendingLimitOrderIndex.refreshSellLimitPrice(marketCode);
+        }
+
+        return executedCount;
+    }
+
     private boolean executeBuyOrder(LimitOrder order, BigDecimal currentPrice) {
         int claimed = limitOrderJpaRepository.updateStatus(
                 order.getId(),
@@ -145,6 +200,57 @@ public class LimitOrderExecutionService {
         return true;
     }
 
+    private boolean executeSellOrder(LimitOrder order, BigDecimal currentPrice) {
+        int claimed = limitOrderJpaRepository.updateStatus(
+                order.getId(),
+                OrderStatus.PENDING,
+                OrderStatus.EXECUTING
+        );
+        if (claimed == 0) {
+            return false;
+        }
+
+        MarketPair marketPair = parseMarketCode(order.getMarketCode());
+        BigDecimal executedAmount = order.getQuantity().multiply(currentPrice);
+
+        Asset baseAsset = assetJpaRepository
+                .findForUpdateByUserAndAssetCode(order.getUser(), marketPair.baseAssetCode())
+                .orElseGet(() -> Asset.create(order.getUser(), marketPair.baseAssetCode()));
+
+        int used = assetJpaRepository.useLockedBalance(
+                order.getUser().getId(),
+                marketPair.targetAssetCode(),
+                order.getLockedAmount(),
+                BigDecimal.ZERO
+        );
+        if (used == 0) {
+            throw new IllegalStateException("잠긴 매도 수량이 부족합니다. orderId=" + order.getId());
+        }
+
+        baseAsset.deposit(executedAmount);
+        assetJpaRepository.save(baseAsset);
+        tradeHistoryJpaRepository.save(
+                TradeHistory.limitSell(
+                        order.getUser(),
+                        order.getMarketCode(),
+                        order.getQuantity(),
+                        currentPrice,
+                        executedAmount
+                )
+        );
+        int filled = limitOrderJpaRepository.fillOrder(
+                order.getId(),
+                OrderStatus.EXECUTING,
+                OrderStatus.FILLED,
+                order.getQuantity(),
+                executedAmount
+        );
+        if (filled == 0) {
+            throw new IllegalStateException("체결 진행 중인 매도 주문을 체결 완료 처리하지 못했습니다. orderId=" + order.getId());
+        }
+        return true;
+    }
+
     private boolean markOrderExecutionRetryPending(LimitOrder order) {
         Boolean markedRetryPending = transactionTemplate.execute(status -> {
             int updated = limitOrderJpaRepository.updateStatus(
@@ -178,7 +284,11 @@ public class LimitOrderExecutionService {
             });
 
             if (Boolean.TRUE.equals(restored)) {
-                pendingLimitOrderIndex.updateBuyLimitPrice(order.getMarketCode(), order.getLimitPrice());
+                if (order.getTradeSide() == TradeSide.BUY) {
+                    pendingLimitOrderIndex.updateBuyLimitPrice(order.getMarketCode(), order.getLimitPrice());
+                } else if (order.getTradeSide() == TradeSide.SELL) {
+                    pendingLimitOrderIndex.updateSellLimitPrice(order.getMarketCode(), order.getLimitPrice());
+                }
             }
         }
     }

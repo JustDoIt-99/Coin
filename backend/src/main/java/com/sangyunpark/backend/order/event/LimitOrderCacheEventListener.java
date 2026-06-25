@@ -18,7 +18,12 @@ public class LimitOrderCacheEventListener {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handle(LimitSellOrderCreatedEvent event) {
+        pendingLimitOrderIndex.updateSellLimitPrice(event.marketCode(), event.limitPrice());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handle(LimitOrderCancelledEvent event) {
-        pendingLimitOrderIndex.refreshBuyLimitPrice(event.marketCode());
+        pendingLimitOrderIndex.refreshLimitPrice(event.marketCode(), event.tradeSide());
     }
 }

@@ -56,7 +56,13 @@ public interface AssetJpaRepository extends JpaRepository<Asset, Long> {
     @Query("""
             update Asset a
             set a.balance = a.balance + :refundAmount,
-                a.lockedBalance = a.lockedBalance - :lockedAmount
+                a.lockedBalance = a.lockedBalance - :lockedAmount,
+                a.averageBuyPrice = case
+                    when a.balance + :refundAmount = 0
+                     and a.lockedBalance - :lockedAmount = 0
+                    then 0
+                    else a.averageBuyPrice
+                end
             where a.user.id = :userId
               and a.assetCode = :assetCode
               and a.lockedBalance >= :lockedAmount

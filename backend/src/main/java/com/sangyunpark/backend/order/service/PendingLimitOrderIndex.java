@@ -29,6 +29,12 @@ public class PendingLimitOrderIndex {
             .recordStats()
             .build();
 
+    private final Cache<String, Optional<BigDecimal>> minSellLimitPriceCache = Caffeine.newBuilder()
+            .maximumSize(MAXIMUM_SIZE)
+            .expireAfterWrite(Duration.ofHours(TTL_HOURS))
+            .recordStats()
+            .build();
+
     public void updateBuyLimitPrice(String marketCode, BigDecimal limitPrice) {
         if (marketCode == null || marketCode.isBlank() || limitPrice == null) {
             return;
@@ -42,6 +48,23 @@ public class PendingLimitOrderIndex {
                     }
 
                     return Optional.of(currentMaxLimitPrice.get().max(limitPrice));
+                }
+        );
+    }
+
+    public void updateSellLimitPrice(String marketCode, BigDecimal limitPrice) {
+        if (marketCode == null || marketCode.isBlank() || limitPrice == null) {
+            return;
+        }
+
+        minSellLimitPriceCache.asMap().compute(
+                marketCode,
+                (key, currentMinLimitPrice) -> {
+                    if (currentMinLimitPrice == null || currentMinLimitPrice.isEmpty()) {
+                        return Optional.of(limitPrice);
+                    }
+
+                    return Optional.of(currentMinLimitPrice.get().min(limitPrice));
                 }
         );
     }
@@ -63,6 +86,23 @@ public class PendingLimitOrderIndex {
         return currentPrice.compareTo(maxBuyLimitPrice.get()) <= 0;
     }
 
+    public boolean mayHaveExecutableSellOrder(String marketCode, BigDecimal currentPrice) {
+        if (marketCode == null || marketCode.isBlank() || currentPrice == null) {
+            return false;
+        }
+
+        Optional<BigDecimal> minSellLimitPrice = minSellLimitPriceCache.getIfPresent(marketCode);
+        if (minSellLimitPrice == null) {
+            return true;
+        }
+
+        if (minSellLimitPrice.isEmpty()) {
+            return false;
+        }
+
+        return currentPrice.compareTo(minSellLimitPrice.get()) >= 0;
+    }
+
     public void refreshBuyLimitPrice(String marketCode) {
         if (marketCode == null || marketCode.isBlank()) {
             return;
@@ -80,7 +120,36 @@ public class PendingLimitOrderIndex {
         maxBuyLimitPriceCache.put(marketCode, maxLimitPrice);
     }
 
+    public void refreshSellLimitPrice(String marketCode) {
+        if (marketCode == null || marketCode.isBlank()) {
+            return;
+        }
+
+        Optional<BigDecimal> minLimitPrice = limitOrderJpaRepository
+                .findFirstByMarketCodeAndTradeSideAndOrderTypeAndStatusOrderByLimitPriceAsc(
+                        marketCode,
+                        TradeSide.SELL,
+                        OrderType.LIMIT,
+                        OrderStatus.PENDING
+                )
+                .map(LimitOrder::getLimitPrice);
+
+        minSellLimitPriceCache.put(marketCode, minLimitPrice);
+    }
+
+    public void refreshLimitPrice(String marketCode, TradeSide tradeSide) {
+        if (tradeSide == TradeSide.BUY) {
+            refreshBuyLimitPrice(marketCode);
+            return;
+        }
+
+        if (tradeSide == TradeSide.SELL) {
+            refreshSellLimitPrice(marketCode);
+        }
+    }
+
     public void clear() {
         maxBuyLimitPriceCache.invalidateAll();
+        minSellLimitPriceCache.invalidateAll();
     }
 }

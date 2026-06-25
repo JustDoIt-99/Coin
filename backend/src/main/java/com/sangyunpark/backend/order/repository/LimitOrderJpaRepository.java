@@ -29,7 +29,23 @@ public interface LimitOrderJpaRepository extends JpaRepository<LimitOrder, Long>
             Pageable pageable
     );
 
+    List<LimitOrder> findByMarketCodeAndTradeSideAndOrderTypeAndStatusAndLimitPriceLessThanEqualOrderByIdAsc(
+            String marketCode,
+            TradeSide tradeSide,
+            OrderType orderType,
+            OrderStatus status,
+            BigDecimal currentPrice,
+            Pageable pageable
+    );
+
     Optional<LimitOrder> findFirstByMarketCodeAndTradeSideAndOrderTypeAndStatusOrderByLimitPriceDesc(
+            String marketCode,
+            TradeSide tradeSide,
+            OrderType orderType,
+            OrderStatus status
+    );
+
+    Optional<LimitOrder> findFirstByMarketCodeAndTradeSideAndOrderTypeAndStatusOrderByLimitPriceAsc(
             String marketCode,
             TradeSide tradeSide,
             OrderType orderType,
@@ -69,6 +85,22 @@ public interface LimitOrderJpaRepository extends JpaRepository<LimitOrder, Long>
             @Param("orderId") Long orderId,
             @Param("userId") Long userId,
             @Param("currentStatus") OrderStatus currentStatus,
+            @Param("nextStatus") OrderStatus nextStatus
+    );
+
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            update LimitOrder o
+            set o.status = :nextStatus,
+                o.updatedAt = CURRENT_TIMESTAMP
+            where o.id = :orderId
+              and o.user.id = :userId
+              and o.status in :currentStatuses
+            """)
+    int updateStatusByUserIdInStatuses(
+            @Param("orderId") Long orderId,
+            @Param("userId") Long userId,
+            @Param("currentStatuses") List<OrderStatus> currentStatuses,
             @Param("nextStatus") OrderStatus nextStatus
     );
 

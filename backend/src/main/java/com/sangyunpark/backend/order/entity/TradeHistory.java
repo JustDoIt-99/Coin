@@ -112,4 +112,22 @@ public class TradeHistory extends BaseEntity {
                 .totalAmount(totalAmount)
                 .build();
     }
+
+    public static TradeHistory limitSell(
+            User user,
+            String marketCode,
+            BigDecimal quantity,
+            BigDecimal price,
+            BigDecimal totalAmount
+    ) {
+        return TradeHistory.builder()
+                .user(user)
+                .marketCode(marketCode)
+                .tradeSide(TradeSide.SELL)
+                .orderType(OrderType.LIMIT)
+                .quantity(quantity)
+                .price(price)
+                .totalAmount(totalAmount)
+                .build();
+    }
 }
