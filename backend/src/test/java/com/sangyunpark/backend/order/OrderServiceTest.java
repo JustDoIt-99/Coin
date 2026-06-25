@@ -327,7 +327,7 @@ class OrderServiceTest {
         ))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
-                .isEqualTo(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
+                .isEqualTo(OrderErrorCode.INVALID_LIMIT_PRICE);
     }
 
     @Test
@@ -421,7 +421,7 @@ class OrderServiceTest {
         ))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
-                .isEqualTo(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
+                .isEqualTo(OrderErrorCode.INVALID_LIMIT_PRICE);
     }
 
     @Test

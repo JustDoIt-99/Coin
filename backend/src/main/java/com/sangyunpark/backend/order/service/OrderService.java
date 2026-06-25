@@ -310,7 +310,7 @@ public class OrderService {
         }
 
         if (limitPrice == null || limitPrice.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
+            throw new BusinessException(OrderErrorCode.INVALID_LIMIT_PRICE);
         }
     }
 
