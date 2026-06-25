@@ -213,6 +213,10 @@ public class LimitOrderExecutionService {
         MarketPair marketPair = parseMarketCode(order.getMarketCode());
         BigDecimal executedAmount = order.getQuantity().multiply(currentPrice);
 
+        Asset baseAsset = assetJpaRepository
+                .findForUpdateByUserAndAssetCode(order.getUser(), marketPair.baseAssetCode())
+                .orElseGet(() -> Asset.create(order.getUser(), marketPair.baseAssetCode()));
+
         int used = assetJpaRepository.useLockedBalance(
                 order.getUser().getId(),
                 marketPair.targetAssetCode(),
@@ -222,10 +226,6 @@ public class LimitOrderExecutionService {
         if (used == 0) {
             throw new IllegalStateException("잠긴 매도 수량이 부족합니다. orderId=" + order.getId());
         }
-
-        Asset baseAsset = assetJpaRepository
-                .findForUpdateByUserAndAssetCode(order.getUser(), marketPair.baseAssetCode())
-                .orElseGet(() -> Asset.create(order.getUser(), marketPair.baseAssetCode()));
 
         baseAsset.deposit(executedAmount);
         assetJpaRepository.save(baseAsset);
