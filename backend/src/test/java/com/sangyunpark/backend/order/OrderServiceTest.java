@@ -318,6 +318,19 @@ class OrderServiceTest {
     }
 
     @Test
+    void 지정가_매수_가격이_0이하면_예외가_발생한다() {
+        AuthTokenResponse signupResponse = signup();
+
+        assertThatThrownBy(() -> orderService.limitBuy(
+                signupResponse.user().id(),
+                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00100000"), BigDecimal.ZERO)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
+    }
+
+    @Test
     void 지정가_매수_주문을_취소하면_잠긴_현금이_해제된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
@@ -390,6 +403,25 @@ class OrderServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(OrderErrorCode.INSUFFICIENT_BALANCE);
+    }
+
+    @Test
+    void 지정가_매도_가격이_0이하면_예외가_발생한다() {
+        AuthTokenResponse signupResponse = signup();
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(new BigDecimal("50000000"));
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        );
+
+        assertThatThrownBy(() -> orderService.limitSell(
+                signupResponse.user().id(),
+                new LimitSellRequest("KRW-BTC", new BigDecimal("0.00100000"), BigDecimal.ZERO)
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
     }
 
     @Test

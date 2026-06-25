@@ -166,11 +166,8 @@ public class OrderService {
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
 
         MarketPair marketPair = parseMarketCode(request.marketCode());
+        validateLimitOrder(request.quantity(), request.limitPrice());
         BigDecimal lockedAmount = request.quantity().multiply(request.limitPrice());
-
-        if (lockedAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
-        }
 
         int locked = assetJpaRepository.lockBalance(user.getId(), marketPair.baseAssetCode(), lockedAmount);
         if (locked == 0) {
@@ -197,11 +194,8 @@ public class OrderService {
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
 
         MarketPair marketPair = parseMarketCode(request.marketCode());
+        validateLimitOrder(request.quantity(), request.limitPrice());
         BigDecimal lockedAmount = request.quantity();
-
-        if (lockedAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
-        }
 
         int locked = assetJpaRepository.lockBalance(user.getId(), marketPair.targetAssetCode(), lockedAmount);
         if (locked == 0) {
@@ -307,6 +301,16 @@ public class OrderService {
     private void validateCurrentPrice(BigDecimal currentPrice) {
         if (currentPrice == null || currentPrice.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(OrderErrorCode.INVALID_MARKET_PRICE);
+        }
+    }
+
+    private void validateLimitOrder(BigDecimal quantity, BigDecimal limitPrice) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
+        }
+
+        if (limitPrice == null || limitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
         }
     }
 
