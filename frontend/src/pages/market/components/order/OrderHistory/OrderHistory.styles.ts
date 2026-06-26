@@ -39,7 +39,7 @@ export const Table = styled.div`
 
 export const Header = styled.div`
     display: grid;
-    grid-template-columns: 82px 82px 1fr 86px;
+    grid-template-columns: 78px 74px 1fr 78px 62px;
     position: sticky;
     top: 0;
     z-index: 1;
@@ -65,7 +65,7 @@ export const HeaderCell = styled.div`
 
 export const Row = styled.div`
     display: grid;
-    grid-template-columns: 82px 82px 1fr 86px;
+    grid-template-columns: 78px 74px 1fr 78px 62px;
     min-height: 58px;
     border-bottom: 1px solid #e5e7eb;
 `;
@@ -114,6 +114,32 @@ export const PriceCell = styled(Cell)`
 export const QuantityCell = styled(Cell)`
     justify-content: flex-end;
     font-size: 11px;
+`;
+
+export const ActionCell = styled(Cell)`
+    padding: 8px 4px;
+`;
+
+export const CancelButton = styled.button`
+    width: 48px;
+    height: 28px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    background: #fff;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: #f9fafb;
+        border-color: #9ca3af;
+    }
+
+    &:disabled {
+        color: #9ca3af;
+        cursor: not-allowed;
+    }
 `;
 
 export const EmptyCell = styled(Cell)`

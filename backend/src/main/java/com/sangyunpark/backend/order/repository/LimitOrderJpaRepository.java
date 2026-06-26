@@ -20,6 +20,12 @@ public interface LimitOrderJpaRepository extends JpaRepository<LimitOrder, Long>
 
     Optional<LimitOrder> findByIdAndUser(Long id, User user);
 
+    List<LimitOrder> findByUserAndOrderTypeAndStatusInOrderByIdDesc(
+            User user,
+            OrderType orderType,
+            List<OrderStatus> statuses
+    );
+
     List<LimitOrder> findByMarketCodeAndTradeSideAndOrderTypeAndStatusAndLimitPriceGreaterThanEqualOrderByIdAsc(
             String marketCode,
             TradeSide tradeSide,

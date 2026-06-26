@@ -15,6 +15,8 @@ export const API = {
     MARKET_SELL: `${SERVER_URL}/orders/market-sell`,
     LIMIT_BUY: `${SERVER_URL}/orders/limit-buy`,
     LIMIT_SELL: `${SERVER_URL}/orders/limit-sell`,
+    PENDING_LIMIT_ORDERS: `${SERVER_URL}/orders/limit/pending`,
+    LIMIT_ORDER: `${SERVER_URL}/orders/limit`,
     TRADE_HISTORIES: `${SERVER_URL}/orders/trade-histories`,
     PORTFOLIO_SUMMARY: `${SERVER_URL}/assets/summary`,
 }

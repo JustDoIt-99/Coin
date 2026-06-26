@@ -18,7 +18,7 @@ import OrderInputRow from "@pages/market/components/common/OrderInputRow/OrderIn
 import useOrderForm from "@hooks/useOrderForm";
 import {useNavigate, useLocation} from "react-router-dom";
 import {removeComma} from "@utils/orderform/numberFormat";
-import {type ComponentProps, useState} from "react";
+import {type ComponentProps, useEffect, useState} from "react";
 
 interface OrderFormProps {
     marketCode: string;
@@ -27,7 +27,13 @@ interface OrderFormProps {
     availableBaseBalance: number;
     availableTargetBalance: number;
     ticker?: Ticker;
+    selectedOrderBookPrice?: OrderBookPriceSelection;
     onOrderCompleted?: () => void;
+}
+
+interface OrderBookPriceSelection {
+    price: number;
+    sequence: number;
 }
 
 const PERCENT = ["10%", "25%", "50%", "100%", "입력"] as const;
@@ -47,6 +53,7 @@ function OrderForm({
     availableBaseBalance,
     availableTargetBalance,
     ticker,
+    selectedOrderBookPrice,
     onOrderCompleted,
 }: OrderFormProps) {
     const {state, flags, display, actions} = useOrderForm({
@@ -60,6 +67,12 @@ function OrderForm({
     const location = useLocation();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitMessage, setSubmitMessage] = useState("");
+
+    useEffect(() => {
+        if (!selectedOrderBookPrice || selectedOrderBookPrice.price <= 0) return;
+
+        actions.handleOrderPriceChange(String(selectedOrderBookPrice.price));
+    }, [marketCode, tradeType, state.orderType, selectedOrderBookPrice?.sequence]);
 
     const percentButtons = (
         <PercentButtons

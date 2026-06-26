@@ -1,15 +1,27 @@
 import styled from "@emotion/styled";
 
-export const Row = styled.div<{ type: "ask" | "bid" }>`
+export const Row = styled.button<{ side: "ask" | "bid" }>`
     display: grid;
     grid-template-columns: 80px 130px 70px;
+    width: 100%;
     height: 46px;
+    padding: 0;
+    border: none;
 
-    background: ${({ type }) =>
-            type === "ask"
+    background: ${({ side }) =>
+            side === "ask"
                     ? "#eef5ff"
                     : "#fff3f3"};
     border-bottom: 1px solid #ffffff;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        filter: brightness(0.98);
+    }
+
+    &:disabled {
+        cursor: default;
+    }
 `;
 
 export const SizeCell = styled.div<{ type: "ask" | "bid" }>`

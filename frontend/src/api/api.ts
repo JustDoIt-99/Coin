@@ -122,6 +122,26 @@ export interface LimitSellResponse {
 export type TradeSide = "BUY" | "SELL";
 export type ApiOrderType = "MARKET" | "LIMIT";
 
+export interface PendingLimitOrderResponse {
+    orderId: number;
+    marketCode: string;
+    tradeSide: TradeSide;
+    orderType: ApiOrderType;
+    status: OrderStatus;
+    quantity: number;
+    limitPrice: number;
+    lockedAmount: number;
+    executedQuantity: number;
+    orderedAt: string;
+}
+
+export interface CancelLimitOrderResponse {
+    orderId: number;
+    marketCode: string;
+    releasedAmount: number;
+    status: OrderStatus;
+}
+
 export interface TradeHistoryResponse {
     id: number;
     marketCode: string;
@@ -363,6 +383,28 @@ export async function limitSell(request: LimitSellRequest): Promise<LimitSellRes
 
     if (!response.ok) {
         throw new Error("지정가 매도 주문에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+export async function fetchPendingLimitOrders(): Promise<PendingLimitOrderResponse[]> {
+    const response = await authFetch(API.PENDING_LIMIT_ORDERS);
+
+    if (!response.ok) {
+        throw new Error("미체결 주문 조회에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+export async function cancelLimitOrder(orderId: number): Promise<CancelLimitOrderResponse> {
+    const response = await authFetch(`${API.LIMIT_ORDER}/${orderId}`, {
+        method: "DELETE",
+    });
+
+    if (!response.ok) {
+        throw new Error("지정가 주문 취소에 실패했습니다.");
     }
 
     return response.json();

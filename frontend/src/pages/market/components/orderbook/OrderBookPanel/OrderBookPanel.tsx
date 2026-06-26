@@ -5,6 +5,7 @@ interface Props {
     type: "ask" | "bid";
     rows: OrderBookRowData[];
     maxSize: number;
+    onSelectPrice?: (price: number) => void;
 }
 
 export interface OrderBookRowData {
@@ -15,7 +16,7 @@ export interface OrderBookRowData {
 
 const ORDERBOOK_DEPTH = 15;
 
-function OrderBookPanel({type, rows, maxSize}: Props) {
+function OrderBookPanel({type, rows, maxSize, onSelectPrice}: Props) {
     const visibleRows = rows.length > 0
         ? rows
         : Array.from({length: ORDERBOOK_DEPTH}, () => undefined);
@@ -35,6 +36,7 @@ function OrderBookPanel({type, rows, maxSize}: Props) {
                             size={row?.size}
                             rate={row?.rate}
                             ratio={ratio}
+                            onSelectPrice={onSelectPrice}
                         />
                     );
                 })}

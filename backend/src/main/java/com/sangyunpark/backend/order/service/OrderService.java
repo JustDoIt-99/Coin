@@ -14,10 +14,12 @@ import com.sangyunpark.backend.order.controller.dto.response.LimitBuyResponse;
 import com.sangyunpark.backend.order.controller.dto.response.LimitSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketBuyResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketSellResponse;
+import com.sangyunpark.backend.order.controller.dto.response.PendingLimitOrderResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryCursorResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryResponse;
 import com.sangyunpark.backend.order.entity.LimitOrder;
 import com.sangyunpark.backend.order.entity.OrderStatus;
+import com.sangyunpark.backend.order.entity.OrderType;
 import com.sangyunpark.backend.order.entity.TradeHistory;
 import com.sangyunpark.backend.order.entity.TradeSide;
 import com.sangyunpark.backend.order.event.LimitBuyOrderCreatedEvent;
@@ -255,6 +257,22 @@ public class OrderService {
                 order.getLockedAmount(),
                 OrderStatus.CANCELLED
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<PendingLimitOrderResponse> getPendingLimitOrders(Long userId) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
+
+        return limitOrderJpaRepository
+                .findByUserAndOrderTypeAndStatusInOrderByIdDesc(
+                        user,
+                        OrderType.LIMIT,
+                        List.of(OrderStatus.PENDING, OrderStatus.EXECUTION_RETRY_PENDING)
+                )
+                .stream()
+                .map(PendingLimitOrderResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)

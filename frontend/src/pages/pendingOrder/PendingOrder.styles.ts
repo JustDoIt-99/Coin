@@ -125,8 +125,14 @@ export const CancelButton = styled.button`
     font-weight: 600;
     cursor: pointer;
 
-    &:hover {
+    &:hover:not(:disabled) {
         background: #f7f8fa;
+    }
+
+    &:disabled {
+        color: #a3acb8;
+        background: #f3f4f6;
+        cursor: not-allowed;
     }
 `;
 

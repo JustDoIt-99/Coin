@@ -16,6 +16,7 @@ interface Props {
     prevClosingPrice?: number;
     ticker?: Ticker;
     active: boolean;
+    onSelectPrice?: (price: number) => void;
 }
 
 export interface OrderBookUnit {
@@ -33,7 +34,7 @@ export interface UpBitOrderBook {
     orderbook_units: OrderBookUnit[];
 }
 
-function OrderBook({marketCode, prevClosingPrice, ticker, active}: Props) {
+function OrderBook({marketCode, prevClosingPrice, ticker, active, onSelectPrice}: Props) {
     const [orderBook, setOrderBook] = useState<OrderbookMessage | null>(null);
 
     useOrderBookSocket(marketCode, setOrderBook);
@@ -70,13 +71,13 @@ function OrderBook({marketCode, prevClosingPrice, ticker, active}: Props) {
                 </ColumnHeader>
             </OrderBookHeader>
             <Section>
-                <OrderBookPanel type={"ask"} rows={askRows} maxSize={maxSize}/>
+                <OrderBookPanel type={"ask"} rows={askRows} maxSize={maxSize} onSelectPrice={onSelectPrice}/>
                 <MarketInfoWrapper>
                     <MarketInfoPanel ticker={ticker}/>
                 </MarketInfoWrapper>
             </Section>
             <Section>
-                <OrderBookPanel type={"bid"} rows={bidRows} maxSize={maxSize}/>
+                <OrderBookPanel type={"bid"} rows={bidRows} maxSize={maxSize} onSelectPrice={onSelectPrice}/>
                 <TradeListPanel marketCode={marketCode} ticker={ticker}/>
             </Section>
         </OrderBookContainer>
