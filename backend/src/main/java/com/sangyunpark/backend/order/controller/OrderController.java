@@ -9,6 +9,7 @@ import com.sangyunpark.backend.order.controller.dto.response.LimitBuyResponse;
 import com.sangyunpark.backend.order.controller.dto.response.LimitSellResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketBuyResponse;
 import com.sangyunpark.backend.order.controller.dto.response.MarketSellResponse;
+import com.sangyunpark.backend.order.controller.dto.response.PendingLimitOrderResponse;
 import com.sangyunpark.backend.order.controller.dto.response.TradeHistoryCursorResponse;
 import com.sangyunpark.backend.order.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -60,6 +63,12 @@ public class OrderController {
     public CancelLimitOrderResponse cancelLimitOrder(HttpServletRequest request, @PathVariable Long orderId) {
         Long userId = (Long) request.getAttribute(USER_ID);
         return orderService.cancelLimitOrder(userId, orderId);
+    }
+
+    @GetMapping("/limit/pending")
+    public List<PendingLimitOrderResponse> getPendingLimitOrders(HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute(USER_ID);
+        return orderService.getPendingLimitOrders(userId);
     }
 
     @GetMapping("/trade-histories")

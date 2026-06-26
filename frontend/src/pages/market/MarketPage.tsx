@@ -34,6 +34,10 @@ import type {CandleInterval} from "@api/api";
 
 export type MarketTab = "KRW" | "BTC" | "USDT";
 type ActivePanel = "chart" | "orderbook" | "order" | null;
+interface OrderBookPriceSelection {
+    price: number;
+    sequence: number;
+}
 
 const candleIntervals: {label: string; value: CandleInterval}[] = [
     {label: "1분", value: {type: "minute", unit: 1}},
@@ -70,6 +74,7 @@ function MarketPage() {
     const [movingAverages, setMovingAverages] = useState<MovingAverageLine[]>(defaultMovingAverages);
     const [movingAverageInput, setMovingAverageInput] = useState("");
     const [isMovingAverageMenuOpen, setIsMovingAverageMenuOpen] = useState(false);
+    const [selectedOrderBookPrice, setSelectedOrderBookPrice] = useState<OrderBookPriceSelection | undefined>();
 
     const marketCode = selectedMarket?.market ?? "KRW-BTC";
     const ticker = tickerMap[marketCode];
@@ -197,8 +202,18 @@ function MarketPage() {
                                 setActivePanel("orderbook");
                             }}
                         >
-                            <OrderBook marketCode={marketCode} prevClosingPrice={ticker?.prev_closing_price}
-                                       ticker={ticker} active={activePanel === "orderbook"}/>
+                            <OrderBook
+                                marketCode={marketCode}
+                                prevClosingPrice={ticker?.prev_closing_price}
+                                ticker={ticker}
+                                active={activePanel === "orderbook"}
+                                onSelectPrice={(price) => {
+                                    setSelectedOrderBookPrice((prev) => ({
+                                        price,
+                                        sequence: (prev?.sequence ?? 0) + 1,
+                                    }));
+                                }}
+                            />
                         </TradingPanel>
                         <OrderPanel
                             onMouseDown={(e) => {
@@ -206,14 +221,21 @@ function MarketPage() {
                                 setActivePanel("order");
                             }}
                         >
-                            <Order marketCode={marketCode} ticker={ticker}/>
+                            <Order
+                                marketCode={marketCode}
+                                ticker={ticker}
+                                selectedOrderBookPrice={selectedOrderBookPrice}
+                            />
                         </OrderPanel>
                     </TradingOrderPanel>
                 </ContentArea>
                 <SidebarArea>
                     <MarketSidebar
                         markets={markets ?? []}
-                        onSelectedMarket={(market) => setSelectedMarket(market)}
+                        onSelectedMarket={(market) => {
+                            setSelectedMarket(market);
+                            setSelectedOrderBookPrice(undefined);
+                        }}
                         tickerMap={tickerMap}
                         setTickerMap={setTickerMap}
                     />

@@ -10,9 +10,15 @@ import {useAuth} from "@auth/useAuth";
 interface Props {
     marketCode: string;
     ticker?: Ticker;
+    selectedOrderBookPrice?: OrderBookPriceSelection;
 }
 
-function Order({marketCode, ticker}: Props) {
+interface OrderBookPriceSelection {
+    price: number;
+    sequence: number;
+}
+
+function Order({marketCode, ticker, selectedOrderBookPrice}: Props) {
 
     const [activeTab, setActiveTab] = useState<"buy" | "sell" | "history">("buy");
     const {isAuthenticated} = useAuth();
@@ -36,10 +42,16 @@ function Order({marketCode, ticker}: Props) {
                     availableBaseBalance={availableBaseBalance}
                     availableTargetBalance={availableTargetBalance}
                     ticker={ticker}
+                    selectedOrderBookPrice={selectedOrderBookPrice}
                     onOrderCompleted={() => void refetchAssets()}
                 />
             )}
-            {activeTab === "history" && (<OrderHistory marketCode={marketCode}/>)}
+            {activeTab === "history" && (
+                <OrderHistory
+                    marketCode={marketCode}
+                    onOrderCancelled={() => void refetchAssets()}
+                />
+            )}
         </Container>
     );
 }
