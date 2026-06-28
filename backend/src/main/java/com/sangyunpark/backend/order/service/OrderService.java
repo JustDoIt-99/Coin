@@ -1,7 +1,10 @@
 package com.sangyunpark.backend.order.service;
 
 import com.sangyunpark.backend.asset.entity.Asset;
+import com.sangyunpark.backend.asset.entity.AssetTransactionReferenceType;
+import com.sangyunpark.backend.asset.entity.AssetTransactionType;
 import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
+import com.sangyunpark.backend.asset.service.AssetTransactionRecorder;
 import com.sangyunpark.backend.auth.exception.AuthErrorCode;
 import com.sangyunpark.backend.common.exception.BusinessException;
 import com.sangyunpark.backend.market.price.UpbitMarketPriceProvider;
@@ -55,6 +58,7 @@ public class OrderService {
     private final TradeHistoryJpaRepository tradeHistoryJpaRepository;
     private final LimitOrderJpaRepository limitOrderJpaRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final AssetTransactionRecorder assetTransactionRecorder;
 
     @Transactional
     public MarketBuyResponse marketBuy(Long userId, MarketBuyRequest request) {
@@ -97,6 +101,20 @@ public class OrderService {
                         currentPrice,
                         executedAmount
                 )
+        );
+        assetTransactionRecorder.record(
+                baseAsset,
+                AssetTransactionType.WITHDRAW,
+                executedAmount,
+                AssetTransactionReferenceType.TRADE,
+                tradeHistory.getId()
+        );
+        assetTransactionRecorder.record(
+                targetAsset,
+                AssetTransactionType.BUY,
+                executedQuantity,
+                AssetTransactionReferenceType.TRADE,
+                tradeHistory.getId()
         );
 
         return new MarketBuyResponse(
@@ -148,6 +166,20 @@ public class OrderService {
                         executedAmount
                 )
         );
+        assetTransactionRecorder.record(
+                targetAsset,
+                AssetTransactionType.SELL,
+                orderQuantity,
+                AssetTransactionReferenceType.TRADE,
+                tradeHistory.getId()
+        );
+        assetTransactionRecorder.record(
+                baseAsset,
+                AssetTransactionType.DEPOSIT,
+                executedAmount,
+                AssetTransactionReferenceType.TRADE,
+                tradeHistory.getId()
+        );
 
         return new MarketSellResponse(
                 tradeHistory.getId(),
@@ -185,6 +217,14 @@ public class OrderService {
                         lockedAmount
                 )
         );
+        assetTransactionRecorder.recordCurrentBalance(
+                user,
+                marketPair.baseAssetCode(),
+                AssetTransactionType.LOCK,
+                lockedAmount,
+                AssetTransactionReferenceType.ORDER,
+                order.getId()
+        );
         eventPublisher.publishEvent(new LimitBuyOrderCreatedEvent(order.getMarketCode(), order.getLimitPrice()));
 
         return LimitBuyResponse.from(order);
@@ -212,6 +252,14 @@ public class OrderService {
                         request.limitPrice(),
                         lockedAmount
                 )
+        );
+        assetTransactionRecorder.recordCurrentBalance(
+                user,
+                marketPair.targetAssetCode(),
+                AssetTransactionType.LOCK,
+                lockedAmount,
+                AssetTransactionReferenceType.ORDER,
+                order.getId()
         );
         eventPublisher.publishEvent(new LimitSellOrderCreatedEvent(order.getMarketCode(), order.getLimitPrice()));
 
@@ -250,6 +298,14 @@ public class OrderService {
         if (released == 0) {
             throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
         }
+        assetTransactionRecorder.recordCurrentBalance(
+                user,
+                lockedAssetCode,
+                AssetTransactionType.RELEASE,
+                order.getLockedAmount(),
+                AssetTransactionReferenceType.ORDER,
+                order.getId()
+        );
         eventPublisher.publishEvent(new LimitOrderCancelledEvent(order.getMarketCode(), order.getTradeSide()));
 
         return CancelLimitOrderResponse.of(

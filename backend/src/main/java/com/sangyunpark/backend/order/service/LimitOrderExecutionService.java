@@ -1,7 +1,10 @@
 package com.sangyunpark.backend.order.service;
 
 import com.sangyunpark.backend.asset.entity.Asset;
+import com.sangyunpark.backend.asset.entity.AssetTransactionReferenceType;
+import com.sangyunpark.backend.asset.entity.AssetTransactionType;
 import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
+import com.sangyunpark.backend.asset.service.AssetTransactionRecorder;
 import com.sangyunpark.backend.order.entity.LimitOrder;
 import com.sangyunpark.backend.order.entity.OrderStatus;
 import com.sangyunpark.backend.order.entity.OrderType;
@@ -37,6 +40,7 @@ public class LimitOrderExecutionService {
     private final TradeHistoryJpaRepository tradeHistoryJpaRepository;
     private final PendingLimitOrderIndex pendingLimitOrderIndex;
     private final TransactionTemplate transactionTemplate;
+    private final AssetTransactionRecorder assetTransactionRecorder;
 
     public int executePendingBuyOrders(String marketCode, BigDecimal currentPrice) {
         if (marketCode == null || marketCode.isBlank()) {
@@ -178,7 +182,7 @@ public class LimitOrderExecutionService {
 
         targetAsset.buy(order.getQuantity(), currentPrice);
         assetJpaRepository.save(targetAsset);
-        tradeHistoryJpaRepository.save(
+        TradeHistory tradeHistory = tradeHistoryJpaRepository.save(
                 TradeHistory.limitBuy(
                         order.getUser(),
                         order.getMarketCode(),
@@ -186,6 +190,29 @@ public class LimitOrderExecutionService {
                         currentPrice,
                         executedAmount
                 )
+        );
+        assetTransactionRecorder.recordCurrentBalance(
+                order.getUser(),
+                marketPair.baseAssetCode(),
+                AssetTransactionType.USE_LOCKED,
+                executedAmount,
+                AssetTransactionReferenceType.TRADE,
+                tradeHistory.getId()
+        );
+        assetTransactionRecorder.recordCurrentBalance(
+                order.getUser(),
+                marketPair.baseAssetCode(),
+                AssetTransactionType.REFUND,
+                refundAmount,
+                AssetTransactionReferenceType.TRADE,
+                tradeHistory.getId()
+        );
+        assetTransactionRecorder.record(
+                targetAsset,
+                AssetTransactionType.BUY,
+                order.getQuantity(),
+                AssetTransactionReferenceType.TRADE,
+                tradeHistory.getId()
         );
         int filled = limitOrderJpaRepository.fillOrder(
                 order.getId(),
@@ -229,7 +256,7 @@ public class LimitOrderExecutionService {
 
         baseAsset.deposit(executedAmount);
         assetJpaRepository.save(baseAsset);
-        tradeHistoryJpaRepository.save(
+        TradeHistory tradeHistory = tradeHistoryJpaRepository.save(
                 TradeHistory.limitSell(
                         order.getUser(),
                         order.getMarketCode(),
@@ -237,6 +264,21 @@ public class LimitOrderExecutionService {
                         currentPrice,
                         executedAmount
                 )
+        );
+        assetTransactionRecorder.recordCurrentBalance(
+                order.getUser(),
+                marketPair.targetAssetCode(),
+                AssetTransactionType.USE_LOCKED,
+                order.getLockedAmount(),
+                AssetTransactionReferenceType.TRADE,
+                tradeHistory.getId()
+        );
+        assetTransactionRecorder.record(
+                baseAsset,
+                AssetTransactionType.DEPOSIT,
+                executedAmount,
+                AssetTransactionReferenceType.TRADE,
+                tradeHistory.getId()
         );
         int filled = limitOrderJpaRepository.fillOrder(
                 order.getId(),
