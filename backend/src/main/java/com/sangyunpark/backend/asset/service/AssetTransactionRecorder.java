@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,8 @@ public class AssetTransactionRecorder {
             AssetTransactionReferenceType referenceType,
             Long referenceId
     ) {
+        Objects.requireNonNull(asset, "asset must not be null");
+
         save(
                 asset.getUser(),
                 asset.getAssetCode(),
