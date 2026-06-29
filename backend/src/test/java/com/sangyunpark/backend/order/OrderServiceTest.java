@@ -1,6 +1,9 @@
 package com.sangyunpark.backend.order;
 
 import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
+import com.sangyunpark.backend.asset.repository.AssetTransactionJpaRepository;
+import com.sangyunpark.backend.asset.entity.AssetTransactionReferenceType;
+import com.sangyunpark.backend.asset.entity.AssetTransactionType;
 import com.sangyunpark.backend.auth.dto.request.SignupRequest;
 import com.sangyunpark.backend.auth.dto.response.AuthTokenResponse;
 import com.sangyunpark.backend.auth.service.AuthService;
@@ -71,6 +74,9 @@ class OrderServiceTest {
     AssetJpaRepository assetJpaRepository;
 
     @Autowired
+    AssetTransactionJpaRepository assetTransactionJpaRepository;
+
+    @Autowired
     TradeHistoryJpaRepository tradeHistoryJpaRepository;
 
     @Autowired
@@ -128,6 +134,37 @@ class OrderServiceTest {
                     assertThat(tradeHistory.getQuantity()).isEqualByComparingTo(new BigDecimal("0.00200000"));
                     assertThat(tradeHistory.getPrice()).isEqualByComparingTo(new BigDecimal("50000000"));
                     assertThat(tradeHistory.getTotalAmount()).isEqualByComparingTo(new BigDecimal("100000"));
+                });
+    }
+
+    @Test
+    void 시장가_매수에_성공하면_자산_변동_이력이_생성된다() {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
+                .thenReturn(new BigDecimal("50000000"));
+
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        );
+
+        assertThat(assetTransactionJpaRepository.findByUserOrderByIdAsc(user))
+                .hasSize(2)
+                .satisfies(transactions -> {
+                    assertThat(transactions.get(0).getAssetCode()).isEqualTo("KRW");
+                    assertThat(transactions.get(0).getType()).isEqualTo(AssetTransactionType.WITHDRAW);
+                    assertThat(transactions.get(0).getAmount()).isEqualByComparingTo(new BigDecimal("100000.00000000"));
+                    assertThat(transactions.get(0).getBalanceAfter()).isEqualByComparingTo(new BigDecimal("900000.00000000"));
+                    assertThat(transactions.get(0).getLockedBalanceAfter()).isEqualByComparingTo(BigDecimal.ZERO);
+                    assertThat(transactions.get(0).getReferenceType()).isEqualTo(AssetTransactionReferenceType.TRADE);
+
+                    assertThat(transactions.get(1).getAssetCode()).isEqualTo("BTC");
+                    assertThat(transactions.get(1).getType()).isEqualTo(AssetTransactionType.BUY);
+                    assertThat(transactions.get(1).getAmount()).isEqualByComparingTo(new BigDecimal("0.00200000"));
+                    assertThat(transactions.get(1).getBalanceAfter()).isEqualByComparingTo(new BigDecimal("0.00200000"));
+                    assertThat(transactions.get(1).getLockedBalanceAfter()).isEqualByComparingTo(BigDecimal.ZERO);
+                    assertThat(transactions.get(1).getReferenceType()).isEqualTo(AssetTransactionReferenceType.TRADE);
                 });
     }
 
@@ -353,6 +390,38 @@ class OrderServiceTest {
                 });
         assertThat(limitOrderJpaRepository.findById(order.orderId()))
                 .hasValueSatisfying(limitOrder -> assertThat(limitOrder.getStatus()).isEqualTo(OrderStatus.CANCELLED));
+    }
+
+    @Test
+    void 지정가_매수_주문을_취소하면_자산_잠금과_해제_이력이_생성된다() {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        LimitBuyResponse order = orderService.limitBuy(
+                signupResponse.user().id(),
+                new LimitBuyRequest("KRW-BTC", new BigDecimal("0.00200000"), new BigDecimal("50000000"))
+        );
+
+        orderService.cancelLimitOrder(signupResponse.user().id(), order.orderId());
+
+        assertThat(assetTransactionJpaRepository.findByUserOrderByIdAsc(user))
+                .hasSize(2)
+                .satisfies(transactions -> {
+                    assertThat(transactions.get(0).getAssetCode()).isEqualTo("KRW");
+                    assertThat(transactions.get(0).getType()).isEqualTo(AssetTransactionType.LOCK);
+                    assertThat(transactions.get(0).getAmount()).isEqualByComparingTo(new BigDecimal("100000.00000000"));
+                    assertThat(transactions.get(0).getBalanceAfter()).isEqualByComparingTo(new BigDecimal("900000.00000000"));
+                    assertThat(transactions.get(0).getLockedBalanceAfter()).isEqualByComparingTo(new BigDecimal("100000.00000000"));
+                    assertThat(transactions.get(0).getReferenceType()).isEqualTo(AssetTransactionReferenceType.ORDER);
+                    assertThat(transactions.get(0).getReferenceId()).isEqualTo(order.orderId());
+
+                    assertThat(transactions.get(1).getAssetCode()).isEqualTo("KRW");
+                    assertThat(transactions.get(1).getType()).isEqualTo(AssetTransactionType.RELEASE);
+                    assertThat(transactions.get(1).getAmount()).isEqualByComparingTo(new BigDecimal("100000.00000000"));
+                    assertThat(transactions.get(1).getBalanceAfter()).isEqualByComparingTo(new BigDecimal("1000000.00000000"));
+                    assertThat(transactions.get(1).getLockedBalanceAfter()).isEqualByComparingTo(BigDecimal.ZERO);
+                    assertThat(transactions.get(1).getReferenceType()).isEqualTo(AssetTransactionReferenceType.ORDER);
+                    assertThat(transactions.get(1).getReferenceId()).isEqualTo(order.orderId());
+                });
     }
 
     @Test
@@ -635,6 +704,56 @@ class OrderServiceTest {
                     assertThat(tradeHistory.getQuantity()).isEqualByComparingTo(new BigDecimal("0.00100000"));
                     assertThat(tradeHistory.getPrice()).isEqualByComparingTo(new BigDecimal("50000000"));
                     assertThat(tradeHistory.getTotalAmount()).isEqualByComparingTo(new BigDecimal("50000.00000000"));
+                });
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 지정가_매수_주문이_체결되면_자산_사용_환불_매수_이력이_생성된다() {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        String marketCode = "KRW-LT7";
+        orderService.limitBuy(
+                signupResponse.user().id(),
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("60000000"))
+        );
+
+        int executedCount = limitOrderExecutionService.executePendingBuyOrders(
+                marketCode,
+                new BigDecimal("50000000")
+        );
+
+        assertThat(executedCount).isEqualTo(1);
+        assertThat(assetTransactionJpaRepository.findByUserOrderByIdAsc(user))
+                .hasSize(4)
+                .satisfies(transactions -> {
+                    assertThat(transactions.get(0).getAssetCode()).isEqualTo("KRW");
+                    assertThat(transactions.get(0).getType()).isEqualTo(AssetTransactionType.LOCK);
+                    assertThat(transactions.get(0).getAmount()).isEqualByComparingTo(new BigDecimal("60000.00000000"));
+                    assertThat(transactions.get(0).getBalanceAfter()).isEqualByComparingTo(new BigDecimal("940000.00000000"));
+                    assertThat(transactions.get(0).getLockedBalanceAfter()).isEqualByComparingTo(new BigDecimal("60000.00000000"));
+                    assertThat(transactions.get(0).getReferenceType()).isEqualTo(AssetTransactionReferenceType.ORDER);
+
+                    assertThat(transactions.get(1).getAssetCode()).isEqualTo("KRW");
+                    assertThat(transactions.get(1).getType()).isEqualTo(AssetTransactionType.USE_LOCKED);
+                    assertThat(transactions.get(1).getAmount()).isEqualByComparingTo(new BigDecimal("50000.00000000"));
+                    assertThat(transactions.get(1).getBalanceAfter()).isEqualByComparingTo(new BigDecimal("950000.00000000"));
+                    assertThat(transactions.get(1).getLockedBalanceAfter()).isEqualByComparingTo(BigDecimal.ZERO);
+                    assertThat(transactions.get(1).getReferenceType()).isEqualTo(AssetTransactionReferenceType.TRADE);
+
+                    assertThat(transactions.get(2).getAssetCode()).isEqualTo("KRW");
+                    assertThat(transactions.get(2).getType()).isEqualTo(AssetTransactionType.REFUND);
+                    assertThat(transactions.get(2).getAmount()).isEqualByComparingTo(new BigDecimal("10000.00000000"));
+                    assertThat(transactions.get(2).getBalanceAfter()).isEqualByComparingTo(new BigDecimal("950000.00000000"));
+                    assertThat(transactions.get(2).getLockedBalanceAfter()).isEqualByComparingTo(BigDecimal.ZERO);
+                    assertThat(transactions.get(2).getReferenceType()).isEqualTo(AssetTransactionReferenceType.TRADE);
+
+                    assertThat(transactions.get(3).getAssetCode()).isEqualTo("LT7");
+                    assertThat(transactions.get(3).getType()).isEqualTo(AssetTransactionType.BUY);
+                    assertThat(transactions.get(3).getAmount()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+                    assertThat(transactions.get(3).getBalanceAfter()).isEqualByComparingTo(new BigDecimal("0.00100000"));
+                    assertThat(transactions.get(3).getLockedBalanceAfter()).isEqualByComparingTo(BigDecimal.ZERO);
+                    assertThat(transactions.get(3).getReferenceType()).isEqualTo(AssetTransactionReferenceType.TRADE);
                 });
     }
 

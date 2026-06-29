@@ -22,6 +22,18 @@ public interface AssetJpaRepository extends JpaRepository<Asset, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Asset> findForUpdateByUserAndAssetCode(User user, String assetCode);
 
+    @Query("""
+            select a.balance as balance,
+                   a.lockedBalance as lockedBalance
+            from Asset a
+            where a.user.id = :userId
+              and a.assetCode = :assetCode
+            """)
+    Optional<AssetBalanceSnapshot> findBalanceSnapshotByUserIdAndAssetCode(
+            @Param("userId") Long userId,
+            @Param("assetCode") String assetCode
+    );
+
     @Modifying(flushAutomatically = true)
     @Query("""
             update Asset a
@@ -73,4 +85,10 @@ public interface AssetJpaRepository extends JpaRepository<Asset, Long> {
             @Param("lockedAmount") BigDecimal lockedAmount,
             @Param("refundAmount") BigDecimal refundAmount
     );
+
+    interface AssetBalanceSnapshot {
+        BigDecimal getBalance();
+
+        BigDecimal getLockedBalance();
+    }
 }
