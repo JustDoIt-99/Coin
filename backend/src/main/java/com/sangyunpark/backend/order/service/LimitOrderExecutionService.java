@@ -191,19 +191,13 @@ public class LimitOrderExecutionService {
                         executedAmount
                 )
         );
-        assetTransactionRecorder.recordCurrentBalance(
+        assetTransactionRecorder.recordCurrentBalanceAll(
                 order.getUser(),
                 marketPair.baseAssetCode(),
-                AssetTransactionType.USE_LOCKED,
-                executedAmount,
-                AssetTransactionReferenceType.TRADE,
-                tradeHistory.getId()
-        );
-        assetTransactionRecorder.recordCurrentBalance(
-                order.getUser(),
-                marketPair.baseAssetCode(),
-                AssetTransactionType.REFUND,
-                refundAmount,
+                List.of(
+                        new AssetTransactionRecorder.Entry(AssetTransactionType.USE_LOCKED, executedAmount),
+                        new AssetTransactionRecorder.Entry(AssetTransactionType.REFUND, refundAmount)
+                ),
                 AssetTransactionReferenceType.TRADE,
                 tradeHistory.getId()
         );

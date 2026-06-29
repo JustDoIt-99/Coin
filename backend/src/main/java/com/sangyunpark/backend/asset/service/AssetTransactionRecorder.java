@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -30,6 +31,7 @@ public class AssetTransactionRecorder {
             Long referenceId
     ) {
         Objects.requireNonNull(asset, "asset must not be null");
+        Objects.requireNonNull(amount, "amount must not be null");
 
         save(
                 asset.getUser(),
@@ -51,6 +53,8 @@ public class AssetTransactionRecorder {
             AssetTransactionReferenceType referenceType,
             Long referenceId
     ) {
+        Objects.requireNonNull(amount, "amount must not be null");
+
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
@@ -71,6 +75,38 @@ public class AssetTransactionRecorder {
         );
     }
 
+    public void recordCurrentBalanceAll(
+            User user,
+            String assetCode,
+            List<Entry> entries,
+            AssetTransactionReferenceType referenceType,
+            Long referenceId
+    ) {
+        List<Entry> positiveEntries = entries.stream()
+                .peek(entry -> Objects.requireNonNull(entry.amount(), "amount must not be null"))
+                .filter(entry -> entry.amount().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
+
+        if (positiveEntries.isEmpty()) {
+            return;
+        }
+
+        AssetJpaRepository.AssetBalanceSnapshot snapshot = assetJpaRepository
+                .findBalanceSnapshotByUserIdAndAssetCode(user.getId(), assetCode)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
+
+        positiveEntries.forEach(entry -> save(
+                user,
+                assetCode,
+                entry.type(),
+                entry.amount(),
+                snapshot.getBalance(),
+                snapshot.getLockedBalance(),
+                referenceType,
+                referenceId
+        ));
+    }
+
     private void save(
             User user,
             String assetCode,
@@ -81,6 +117,8 @@ public class AssetTransactionRecorder {
             AssetTransactionReferenceType referenceType,
             Long referenceId
     ) {
+        Objects.requireNonNull(amount, "amount must not be null");
+
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             return;
         }
@@ -97,5 +135,11 @@ public class AssetTransactionRecorder {
                         referenceId
                 )
         );
+    }
+
+    public record Entry(
+            AssetTransactionType type,
+            BigDecimal amount
+    ) {
     }
 }
