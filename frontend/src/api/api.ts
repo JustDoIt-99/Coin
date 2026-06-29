@@ -183,6 +183,29 @@ export interface PortfolioAssetSummaryResponse {
     assets: PortfolioAssetResponse[];
 }
 
+export type AssetTransferType = "DEPOSIT" | "WITHDRAW";
+export type AssetTransferStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED";
+
+export interface PendingAssetTransferResponse {
+    id: number;
+    assetCode: string;
+    type: AssetTransferType;
+    amount: number;
+    transactionId: string;
+    status: AssetTransferStatus;
+    requestedAt: string;
+}
+
+export interface AdminAssetTransferResponse extends PendingAssetTransferResponse {
+    userId: number;
+    userEmail: string;
+    userNickname: string;
+}
+
+export interface CashDepositRequest {
+    amount: number;
+}
+
 export async function fetchMarkets(): Promise<Market[]> {
     const response = await fetch(API.MARKETS);
 
@@ -434,6 +457,66 @@ export async function getPortfolioAssetSummary(): Promise<PortfolioAssetSummaryR
 
     if (!response.ok) {
         throw new Error("포트폴리오 요약 조회 실패");
+    }
+
+    return response.json();
+}
+
+export async function fetchPendingAssetTransfers(): Promise<PendingAssetTransferResponse[]> {
+    const response = await authFetch(API.PENDING_ASSET_TRANSFERS);
+
+    if (!response.ok) {
+        throw new Error("입출금 대기 내역 조회에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+export async function requestCashDeposit(request: CashDepositRequest): Promise<PendingAssetTransferResponse> {
+    const response = await authFetch(API.CASH_DEPOSITS, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        throw new Error("현금 충전 요청에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+export async function fetchAdminPendingAssetTransfers(): Promise<AdminAssetTransferResponse[]> {
+    const response = await authFetch(API.ADMIN_PENDING_ASSET_TRANSFERS);
+
+    if (!response.ok) {
+        throw new Error("관리자 입출금 대기 내역 조회에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+export async function approveAssetTransfer(transferId: number): Promise<AdminAssetTransferResponse> {
+    const response = await authFetch(`${API.ADMIN_ASSET_TRANSFERS}/${transferId}/approve`, {
+        method: "POST",
+    });
+
+    if (!response.ok) {
+        throw new Error("현금 충전 요청 승인에 실패했습니다.");
+    }
+
+    return response.json();
+}
+
+export async function rejectAssetTransfer(transferId: number): Promise<AdminAssetTransferResponse> {
+    const response = await authFetch(`${API.ADMIN_ASSET_TRANSFERS}/${transferId}/reject`, {
+        method: "POST",
+    });
+
+    if (!response.ok) {
+        throw new Error("현금 충전 요청 거절에 실패했습니다.");
     }
 
     return response.json();

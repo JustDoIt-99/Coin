@@ -1,17 +1,25 @@
 package com.sangyunpark.backend.asset;
 
+import com.sangyunpark.backend.asset.controller.dto.request.CashDepositRequest;
 import com.sangyunpark.backend.asset.controller.dto.response.AssetResponse;
 import com.sangyunpark.backend.asset.controller.dto.response.PortfolioAssetSummaryResponse;
 import com.sangyunpark.backend.asset.entity.Asset;
+import com.sangyunpark.backend.asset.entity.AssetTransferRequest;
+import com.sangyunpark.backend.asset.entity.AssetTransferStatus;
+import com.sangyunpark.backend.asset.entity.AssetTransferType;
 import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
+import com.sangyunpark.backend.asset.repository.AssetTransferRequestJpaRepository;
 import com.sangyunpark.backend.asset.service.AssetService;
 import com.sangyunpark.backend.auth.dto.request.SignupRequest;
 import com.sangyunpark.backend.auth.dto.response.AuthTokenResponse;
+import com.sangyunpark.backend.auth.exception.AuthErrorCode;
 import com.sangyunpark.backend.auth.service.AuthService;
 import com.sangyunpark.backend.common.exception.BusinessException;
 import com.sangyunpark.backend.market.price.UpbitMarketPriceProvider;
 import com.sangyunpark.backend.order.exception.OrderErrorCode;
 import com.sangyunpark.backend.user.repository.UserJpaRepository;
+import com.sangyunpark.backend.user.entity.User;
+import com.sangyunpark.backend.user.entity.UserRole;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,6 +48,9 @@ class AssetServiceTest {
 
     @Autowired
     AssetJpaRepository assetJpaRepository;
+
+    @Autowired
+    AssetTransferRequestJpaRepository assetTransferRequestJpaRepository;
 
     @MockitoBean
     UpbitMarketPriceProvider upbitMarketPriceProvider;
@@ -166,5 +177,157 @@ class AssetServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(OrderErrorCode.INVALID_ASSET_AMOUNT);
+    }
+
+    @Test
+    void 입출금_대기_내역은_PENDING_PROCESSING_상태만_조회한다() {
+        AuthTokenResponse signupResponse = authService.signup(new SignupRequest(
+                "test@test.com",
+                "12345678",
+                "sangyun"
+        ));
+        var user = userJpaRepository.findById(signupResponse.user().id()).orElseThrow();
+        assetTransferRequestJpaRepository.save(AssetTransferRequest.create(
+                user,
+                "KRW",
+                AssetTransferType.DEPOSIT,
+                new BigDecimal("10000"),
+                "REQ-1",
+                AssetTransferStatus.PENDING
+        ));
+        assetTransferRequestJpaRepository.save(AssetTransferRequest.create(
+                user,
+                "BTC",
+                AssetTransferType.WITHDRAW,
+                new BigDecimal("0.00100000"),
+                "REQ-2",
+                AssetTransferStatus.PROCESSING
+        ));
+        assetTransferRequestJpaRepository.save(AssetTransferRequest.create(
+                user,
+                "KRW",
+                AssetTransferType.DEPOSIT,
+                new BigDecimal("5000"),
+                "REQ-3",
+                AssetTransferStatus.COMPLETED
+        ));
+
+        var responses = assetService.getPendingAssetTransfers(signupResponse.user().id());
+
+        assertThat(responses)
+                .hasSize(2)
+                .extracting(response -> response.transactionId())
+                .containsExactly("REQ-2", "REQ-1");
+        assertThat(responses)
+                .allSatisfy(response ->
+                        assertThat(response.status()).isIn(AssetTransferStatus.PENDING, AssetTransferStatus.PROCESSING)
+                );
+    }
+
+    @Test
+    void 현금_충전_요청을_생성하면_PENDING_입금_대기_내역이_생성된다() {
+        AuthTokenResponse signupResponse = authService.signup(new SignupRequest(
+                "test@test.com",
+                "12345678",
+                "sangyun"
+        ));
+
+        var response = assetService.requestCashDeposit(
+                signupResponse.user().id(),
+                new CashDepositRequest(new BigDecimal("100000"))
+        );
+
+        assertThat(response.assetCode()).isEqualTo("KRW");
+        assertThat(response.type()).isEqualTo(AssetTransferType.DEPOSIT);
+        assertThat(response.amount()).isEqualByComparingTo(new BigDecimal("100000"));
+        assertThat(response.status()).isEqualTo(AssetTransferStatus.PENDING);
+        assertThat(response.transactionId()).startsWith("CASH-DEPOSIT-");
+
+        assertThat(assetService.getPendingAssetTransfers(signupResponse.user().id()))
+                .hasSize(1)
+                .first()
+                .satisfies(transfer -> {
+                    assertThat(transfer.id()).isEqualTo(response.id());
+                    assertThat(transfer.amount()).isEqualByComparingTo(new BigDecimal("100000"));
+                    assertThat(transfer.status()).isEqualTo(AssetTransferStatus.PENDING);
+                });
+    }
+
+    @Test
+    void 관리자가_현금_충전_요청을_승인하면_사용자_현금_잔고가_증가한다() {
+        AuthTokenResponse signupResponse = authService.signup(new SignupRequest(
+                "test@test.com",
+                "12345678",
+                "sangyun"
+        ));
+        User admin = userJpaRepository.save(User.builder()
+                .email("admin@test.com")
+                .password("password")
+                .nickname("admin")
+                .role(UserRole.ADMIN)
+                .build());
+        var request = assetService.requestCashDeposit(
+                signupResponse.user().id(),
+                new CashDepositRequest(new BigDecimal("100000"))
+        );
+
+        var response = assetService.approveAssetTransfer(admin.getId(), request.id());
+
+        assertThat(response.status()).isEqualTo(AssetTransferStatus.COMPLETED);
+        assertThat(assetJpaRepository.findByUserAndAssetCode(
+                userJpaRepository.findById(signupResponse.user().id()).orElseThrow(),
+                "KRW"
+        ))
+                .hasValueSatisfying(asset ->
+                        assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("1100000"))
+                );
+    }
+
+    @Test
+    void 관리자가_현금_충전_요청을_거절하면_상태만_REJECTED로_변경된다() {
+        AuthTokenResponse signupResponse = authService.signup(new SignupRequest(
+                "test@test.com",
+                "12345678",
+                "sangyun"
+        ));
+        User admin = userJpaRepository.save(User.builder()
+                .email("admin@test.com")
+                .password("password")
+                .nickname("admin")
+                .role(UserRole.ADMIN)
+                .build());
+        var request = assetService.requestCashDeposit(
+                signupResponse.user().id(),
+                new CashDepositRequest(new BigDecimal("100000"))
+        );
+
+        var response = assetService.rejectAssetTransfer(admin.getId(), request.id());
+
+        assertThat(response.status()).isEqualTo(AssetTransferStatus.REJECTED);
+        assertThat(assetJpaRepository.findByUserAndAssetCode(
+                userJpaRepository.findById(signupResponse.user().id()).orElseThrow(),
+                "KRW"
+        ))
+                .hasValueSatisfying(asset ->
+                        assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("1000000"))
+                );
+    }
+
+    @Test
+    void 일반_사용자는_현금_충전_요청을_승인할_수_없다() {
+        AuthTokenResponse signupResponse = authService.signup(new SignupRequest(
+                "test@test.com",
+                "12345678",
+                "sangyun"
+        ));
+        var request = assetService.requestCashDeposit(
+                signupResponse.user().id(),
+                new CashDepositRequest(new BigDecimal("100000"))
+        );
+
+        assertThatThrownBy(() -> assetService.approveAssetTransfer(signupResponse.user().id(), request.id()))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(AuthErrorCode.ACCESS_DENIED);
     }
 }

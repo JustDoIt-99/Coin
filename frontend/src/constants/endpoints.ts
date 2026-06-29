@@ -19,4 +19,8 @@ export const API = {
     LIMIT_ORDER: `${SERVER_URL}/orders/limit`,
     TRADE_HISTORIES: `${SERVER_URL}/orders/trade-histories`,
     PORTFOLIO_SUMMARY: `${SERVER_URL}/assets/summary`,
+    PENDING_ASSET_TRANSFERS: `${SERVER_URL}/assets/transfers/pending`,
+    CASH_DEPOSITS: `${SERVER_URL}/assets/transfers/cash-deposits`,
+    ADMIN_PENDING_ASSET_TRANSFERS: `${SERVER_URL}/admin/asset-transfers/pending`,
+    ADMIN_ASSET_TRANSFERS: `${SERVER_URL}/admin/asset-transfers`,
 }
