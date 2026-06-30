@@ -6,7 +6,6 @@ import {
     type HistogramData,
     HistogramSeries,
     type IChartApi,
-    type IPriceLine,
     type ISeriesApi,
     type LineData,
     LineStyle,
@@ -58,7 +57,6 @@ function CoinCandleChart({
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
     const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
-    const averageBuyPriceLineRef = useRef<IPriceLine | null>(null);
     const movingAverageSeriesRef = useRef<Record<number, ISeriesApi<"Line">>>({});
     const candleDataRef = useRef<CandlestickData<Time>[]>([]);
     const volumeDataRef = useRef<HistogramData<Time>[]>([]);
@@ -443,7 +441,6 @@ function CoinCandleChart({
         return () => {
             chartContainerRef.current?.removeEventListener("wheel", handlePinchWheel);
             window.removeEventListener("resize", handleResize);
-            averageBuyPriceLineRef.current = null;
             chart.remove();
             chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
             chartRef.current = null;
@@ -483,14 +480,8 @@ function CoinCandleChart({
             title: "평균매수가",
         });
 
-        averageBuyPriceLineRef.current = averageBuyPriceLine;
-
         return () => {
             candleSeries.removePriceLine(averageBuyPriceLine);
-
-            if (averageBuyPriceLineRef.current === averageBuyPriceLine) {
-                averageBuyPriceLineRef.current = null;
-            }
         };
     }, [marketCode, averageBuyPrice]);
 
