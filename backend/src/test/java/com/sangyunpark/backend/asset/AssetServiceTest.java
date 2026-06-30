@@ -7,6 +7,7 @@ import com.sangyunpark.backend.asset.entity.Asset;
 import com.sangyunpark.backend.asset.entity.AssetTransferRequest;
 import com.sangyunpark.backend.asset.entity.AssetTransferStatus;
 import com.sangyunpark.backend.asset.entity.AssetTransferType;
+import com.sangyunpark.backend.asset.exception.AssetErrorCode;
 import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
 import com.sangyunpark.backend.asset.repository.AssetTransferRequestJpaRepository;
 import com.sangyunpark.backend.asset.service.AssetService;
@@ -251,6 +252,23 @@ class AssetServiceTest {
                     assertThat(transfer.amount()).isEqualByComparingTo(new BigDecimal("100000"));
                     assertThat(transfer.status()).isEqualTo(AssetTransferStatus.PENDING);
                 });
+    }
+
+    @Test
+    void 현금_충전_요청_금액이_최대_금액보다_크면_예외가_발생한다() {
+        AuthTokenResponse signupResponse = authService.signup(new SignupRequest(
+                "test@test.com",
+                "12345678",
+                "sangyun"
+        ));
+
+        assertThatThrownBy(() -> assetService.requestCashDeposit(
+                signupResponse.user().id(),
+                new CashDepositRequest(new BigDecimal("1000000000.00000001"))
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(AssetErrorCode.INVALID_CASH_DEPOSIT_AMOUNT);
     }
 
     @Test

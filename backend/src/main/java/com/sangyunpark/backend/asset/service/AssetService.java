@@ -36,6 +36,7 @@ public class AssetService {
 
     private static final String CASH_ASSET_CODE = "KRW";
     private static final String CASH_DEPOSIT_TRANSACTION_PREFIX = "CASH-DEPOSIT-";
+    private static final BigDecimal MAX_CASH_DEPOSIT_AMOUNT = new BigDecimal("1000000000");
     private static final BigDecimal ONE_HUNDRED = new BigDecimal("100");
     private static final int RATE_SCALE = 4;
 
@@ -109,6 +110,8 @@ public class AssetService {
 
     @Transactional
     public PendingAssetTransferResponse requestCashDeposit(Long userId, CashDepositRequest request) {
+        validateCashDepositAmount(request.amount());
+
         User user = userJpaRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
 
@@ -124,6 +127,14 @@ public class AssetService {
         );
 
         return PendingAssetTransferResponse.from(transferRequest);
+    }
+
+    private void validateCashDepositAmount(BigDecimal amount) {
+        if (amount == null
+                || amount.compareTo(BigDecimal.ZERO) <= 0
+                || amount.compareTo(MAX_CASH_DEPOSIT_AMOUNT) > 0) {
+            throw new BusinessException(AssetErrorCode.INVALID_CASH_DEPOSIT_AMOUNT);
+        }
     }
 
     @Transactional(readOnly = true)
