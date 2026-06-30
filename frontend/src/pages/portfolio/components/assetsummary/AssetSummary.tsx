@@ -4,7 +4,24 @@ import {
     SummaryRight,
     SummaryGrid,
     SummaryRow,
-    SummaryValue, CoinWeight, CoinName, LegendItem, ColorDot, LegendList, ChartBox, DonutBox,
+    SummaryValue,
+    CoinWeight,
+    CoinName,
+    LegendItem,
+    ColorDot,
+    LegendList,
+    ChartBox,
+    DonutBox,
+    DetailSection,
+    DetailHeader,
+    DetailTitle,
+    DetailCount,
+    AssetTable,
+    AssetCodeCell,
+    AssetCode,
+    AssetMarket,
+    TrendText,
+    EmptyDetail,
 } from "./AssetSummary.styles";
 import {useAuth} from "@auth/useAuth.ts";
 import {useQuery} from "@tanstack/react-query";
@@ -114,6 +131,38 @@ function AssetSummary() {
         return chartData.reduce((sum, item) => sum + item.value, 0);
     }, [chartData]);
 
+    const assetRows = useMemo(() => {
+        if (!summary || !data) return [];
+
+        return data.assets
+            .filter((asset) => asset.assetCode !== "KRW" && asset.balance > 0)
+            .map((asset) => {
+                const marketCode = `KRW-${asset.assetCode}`;
+                const currentPrice = tickerMap[marketCode] ?? asset.currentPrice;
+                const averageBuyPrice = asset.averageBuyPrice ?? 0;
+                const valuationAmount = asset.balance * currentPrice;
+                const buyAmount = asset.balance * averageBuyPrice;
+                const profitAmount = valuationAmount - buyAmount;
+                const profitRate = buyAmount === 0 ? 0 : (profitAmount / buyAmount) * 100;
+                const weight = summary.totalAssetAmount === 0
+                    ? 0
+                    : (valuationAmount / summary.totalAssetAmount) * 100;
+
+                return {
+                    assetCode: asset.assetCode,
+                    marketCode,
+                    balance: asset.balance,
+                    averageBuyPrice,
+                    currentPrice,
+                    valuationAmount,
+                    profitAmount,
+                    profitRate,
+                    weight,
+                };
+            })
+            .sort((a, b) => b.valuationAmount - a.valuationAmount);
+    }, [data, summary, tickerMap]);
+
     if (isLoading) return <div>불러오는 중...</div>;
     if (error) return <div>보유자산 조회 실패</div>;
 
@@ -164,59 +213,127 @@ function AssetSummary() {
     ];
 
     return (
-        <SummarySection>
-            <SummaryLeft>
-                <SummaryGrid>
-                    {summaryItems.map((item) => (
-                        <SummaryRow key={item.label}>
-                            <span>{item.label}</span>
-                            <SummaryValue $trend={item.trend}>
-                                {(item.label === "총 평가손익" || item.label === "총 평가수익률")
-                                    ? formatSignedValue(Number(item.value), item.unit)
-                                    : formatCurrency(Number(item.value))}
-                                <small>{item.unit}</small>
-                            </SummaryValue>
-                        </SummaryRow>
-                    ))}
-                </SummaryGrid>
-            </SummaryLeft>
-            <SummaryRight>
-                {chartData.length > 0 ? (
-                    <ChartBox>
-                        <DonutBox>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={chartData}
-                                        dataKey="value"
-                                        nameKey="name"
-                                        innerRadius={55}
-                                        outerRadius={85}
-                                        paddingAngle={chartData.length > 1 ? 1 : 0}
-                                    />
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </DonutBox>
+        <>
+            <SummarySection>
+                <SummaryLeft>
+                    <SummaryGrid>
+                        {summaryItems.map((item) => (
+                            <SummaryRow key={item.label}>
+                                <span>{item.label}</span>
+                                <SummaryValue $trend={item.trend}>
+                                    {(item.label === "총 평가손익" || item.label === "총 평가수익률")
+                                        ? formatSignedValue(Number(item.value), item.unit)
+                                        : formatCurrency(Number(item.value))}
+                                    <small>{item.unit}</small>
+                                </SummaryValue>
+                            </SummaryRow>
+                        ))}
+                    </SummaryGrid>
+                </SummaryLeft>
+                <SummaryRight>
+                    {chartData.length > 0 ? (
+                        <ChartBox>
+                            <DonutBox>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={chartData}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            innerRadius={55}
+                                            outerRadius={85}
+                                            paddingAngle={chartData.length > 1 ? 1 : 0}
+                                        />
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </DonutBox>
 
-                        <LegendList>
-                            {chartData.map((item) => (
-                                <LegendItem key={item.name}>
-                                    <ColorDot $color={item.fill} />
-                                    <CoinName>{item.name}</CoinName>
-                                    <CoinWeight>
-                                        {((item.value / totalCoinValuationAmount) * 100).toFixed(2)}%
-                                    </CoinWeight>
-                                </LegendItem>
-                            ))}
-                        </LegendList>
-                    </ChartBox>
+                            <LegendList>
+                                {chartData.map((item) => (
+                                    <LegendItem key={item.name}>
+                                        <ColorDot $color={item.fill} />
+                                        <CoinName>{item.name}</CoinName>
+                                        <CoinWeight>
+                                            {((item.value / totalCoinValuationAmount) * 100).toFixed(2)}%
+                                        </CoinWeight>
+                                    </LegendItem>
+                                ))}
+                            </LegendList>
+                        </ChartBox>
+                    ) : (
+                        "보유자산 비중 그래프가 제공됩니다."
+                    )}
+                </SummaryRight>
+            </SummarySection>
+
+            <DetailSection>
+                <DetailHeader>
+                    <DetailTitle>보유 코인 상세</DetailTitle>
+                    <DetailCount>{assetRows.length}개 자산</DetailCount>
+                </DetailHeader>
+                {assetRows.length > 0 ? (
+                    <AssetTable>
+                        <thead>
+                        <tr>
+                            <th>코인</th>
+                            <th>보유수량</th>
+                            <th>평균매수가</th>
+                            <th>현재가</th>
+                            <th>평가금액</th>
+                            <th>평가손익</th>
+                            <th>수익률</th>
+                            <th>비중</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {assetRows.map((asset) => {
+                            const trend = asset.profitAmount > 0
+                                ? "up"
+                                : asset.profitAmount < 0
+                                    ? "down"
+                                    : undefined;
+
+                            return (
+                                <tr key={asset.assetCode}>
+                                    <td>
+                                        <AssetCodeCell>
+                                            <AssetCode>{asset.assetCode}</AssetCode>
+                                            <AssetMarket>{asset.marketCode}</AssetMarket>
+                                        </AssetCodeCell>
+                                    </td>
+                                    <td>{formatQuantity(asset.balance)}</td>
+                                    <td>{formatCurrency(asset.averageBuyPrice)}</td>
+                                    <td>{formatCurrency(asset.currentPrice)}</td>
+                                    <td>{formatCurrency(asset.valuationAmount)}</td>
+                                    <td>
+                                        <TrendText $trend={trend}>
+                                            {formatSignedValue(asset.profitAmount, "KRW")}
+                                        </TrendText>
+                                    </td>
+                                    <td>
+                                        <TrendText $trend={trend}>
+                                            {formatSignedValue(asset.profitRate, "%")}%
+                                        </TrendText>
+                                    </td>
+                                    <td>{asset.weight.toFixed(2)}%</td>
+                                </tr>
+                            );
+                        })}
+                        </tbody>
+                    </AssetTable>
                 ) : (
-                    "보유자산 비중 그래프가 제공됩니다."
+                    <EmptyDetail>보유 중인 코인이 없습니다.</EmptyDetail>
                 )}
-            </SummaryRight>
-        </SummarySection>
+            </DetailSection>
+        </>
     );
+}
+
+function formatQuantity(value: number) {
+    return value.toLocaleString(undefined, {
+        maximumFractionDigits: 8,
+    });
 }
 
 export default AssetSummary;

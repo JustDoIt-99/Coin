@@ -1,4 +1,4 @@
-import {useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import OrderBookPanel from "@pages/market/components/orderbook/OrderBookPanel";
 import MarketInfoPanel from "@pages/market/components/orderbook/MarketInfoPanel";
 import {
@@ -10,6 +10,9 @@ import {
 import TradeListPanel from "@pages/market/components/orderbook/TradeListPanel";
 import type {Ticker} from "@api/api";
 import useOrderBookSocket, {type OrderbookMessage} from "@hooks/useOrderBookSocket";
+
+const ORDER_BOOK_ROW_HEIGHT = 46;
+const INITIAL_VISIBLE_ASK_ROW_COUNT = 7;
 
 interface Props {
     marketCode: string;
@@ -36,6 +39,8 @@ export interface UpBitOrderBook {
 
 function OrderBook({marketCode, prevClosingPrice, ticker, active, onSelectPrice}: Props) {
     const [orderBook, setOrderBook] = useState<OrderbookMessage | null>(null);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const hasInitializedScrollRef = useRef(false);
 
     useOrderBookSocket(marketCode, setOrderBook);
 
@@ -60,8 +65,32 @@ function OrderBook({marketCode, prevClosingPrice, ticker, active, onSelectPrice}
         ...bidRows.map((row) => row.size)
     );
 
+    useEffect(() => {
+        hasInitializedScrollRef.current = false;
+        setOrderBook(null);
+    }, [marketCode]);
+
+    useEffect(() => {
+        if (hasInitializedScrollRef.current || askRows.length === 0) {
+            return;
+        }
+
+        hasInitializedScrollRef.current = true;
+
+        requestAnimationFrame(() => {
+            if (!containerRef.current) {
+                return;
+            }
+
+            containerRef.current.scrollTop = Math.max(
+                0,
+                (askRows.length - INITIAL_VISIBLE_ASK_ROW_COUNT) * ORDER_BOOK_ROW_HEIGHT
+            );
+        });
+    }, [marketCode, askRows.length]);
+
     return (
-        <OrderBookContainer active={active}>
+        <OrderBookContainer ref={containerRef} active={active}>
             <OrderBookHeader>
                 <ColumnHeader>
                     <span>수량</span>

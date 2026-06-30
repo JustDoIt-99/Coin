@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {ChevronDown, Plus, X} from "lucide-react";
 
-import { fetchMarkets, type Market, type Ticker } from "@api/api";
+import {fetchAssets, fetchMarkets, type Market, type Ticker} from "@api/api";
 import Loading from "@pages/layout/Loading";
 import MarketSidebar from "@pages/market/components/sidebar/MarketSidebar";
 import CoinDetail from "@pages/market/components/coindetail";
@@ -31,6 +31,7 @@ import CoinCandleChart, {type MovingAverageLine} from "@pages/market/components/
 import OrderBook from "@pages/market/components/orderbook/OrderBook/OrderBook";
 import Order from "@pages/market/components/order/Order";
 import type {CandleInterval} from "@api/api";
+import {useAuth} from "@auth/useAuth";
 
 export type MarketTab = "KRW" | "BTC" | "USDT";
 type ActivePanel = "chart" | "orderbook" | "order" | null;
@@ -61,10 +62,18 @@ const defaultMovingAverages: MovingAverageLine[] = [
 ];
 
 function MarketPage() {
+    const {isAuthenticated} = useAuth();
 
     const {isLoading, data: markets, isError,} = useQuery({
         queryKey: ["markets"],
         queryFn: fetchMarkets,
+    });
+
+    const {data: assets = []} = useQuery({
+        queryKey: ["assets"],
+        queryFn: fetchAssets,
+        enabled: isAuthenticated,
+        refetchInterval: isAuthenticated ? 1000 : false,
     });
 
     const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
@@ -78,6 +87,11 @@ function MarketPage() {
 
     const marketCode = selectedMarket?.market ?? "KRW-BTC";
     const ticker = tickerMap[marketCode];
+    const targetAssetCode = marketCode.split("-")[1];
+    const targetAsset = assets.find((asset) => asset.assetCode === targetAssetCode);
+    const averageBuyPrice = targetAsset && targetAsset.balance > 0
+        ? targetAsset.averageBuyPrice
+        : undefined;
 
     if (isLoading) return <Loading/>;
     if (isError) return <div>데이터를 불러오지 못했습니다.</div>;
@@ -192,6 +206,7 @@ function MarketPage() {
                             movingAverages={movingAverages}
                             currentPrice={ticker?.trade_price}
                             currentPriceTimestamp={ticker?.timestamp}
+                            averageBuyPrice={averageBuyPrice}
                             active={activePanel === "chart"}
                         />
                     </ChartArea>

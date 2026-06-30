@@ -92,51 +92,6 @@ export const LoginButton = styled.button`
     }
 `;
 
-export const Divider = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 14px;
-
-    margin: 28px 0 18px;
-
-    color: #8b95a1;
-    font-size: 13px;
-
-    &::before,
-    &::after {
-        content: "";
-        flex: 1;
-        height: 1px;
-        background: #e5e8ef;
-    }
-`;
-
-export const SocialButton = styled.button<{
-    $provider: "kakao" | "google";
-}>`
-    width: 100%;
-    height: 46px;
-    margin-top: 10px;
-
-    border: ${({ $provider }) =>
-    $provider === "google" ? "1px solid #d2d7df" : "none"};
-    border-radius: 4px;
-
-    background: ${({ $provider }) =>
-    $provider === "kakao" ? "#fee500" : "#fff"};
-    color: ${({ $provider }) =>
-    $provider === "kakao" ? "#191919" : "#344054"};
-
-    font-size: 15px;
-    font-weight: 800;
-
-    cursor: pointer;
-
-    &:hover {
-        filter: brightness(0.98);
-    }
-`;
-
 export const LinkRow = styled.div`
     display: flex;
     align-items: center;
