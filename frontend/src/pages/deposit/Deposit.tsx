@@ -27,6 +27,9 @@ const headers = [
     "상태",
 ];
 
+const MAX_CASH_DEPOSIT_AMOUNT = 1_000_000_000;
+const MAX_CASH_DEPOSIT_AMOUNT_LENGTH = String(MAX_CASH_DEPOSIT_AMOUNT).length;
+
 function Deposit() {
     const [transfers, setTransfers] = useState<PendingAssetTransferResponse[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -72,6 +75,11 @@ function Deposit() {
         const amount = Number(removeComma(amountInput));
         if (!Number.isFinite(amount) || amount <= 0) {
             setFormMessage("요청 금액을 입력해주세요.");
+            return;
+        }
+
+        if (amount > MAX_CASH_DEPOSIT_AMOUNT) {
+            setFormMessage("현금 충전 요청 금액은 10억 원 이하로 입력해주세요.");
             return;
         }
 
@@ -167,7 +175,9 @@ function formatAmount(value: number) {
 }
 
 function formatInputAmount(value: string) {
-    const numericValue = removeComma(value).replace(/[^\d]/g, "");
+    const numericValue = removeComma(value)
+        .replace(/[^\d]/g, "")
+        .slice(0, MAX_CASH_DEPOSIT_AMOUNT_LENGTH);
     if (!numericValue) {
         return "";
     }
