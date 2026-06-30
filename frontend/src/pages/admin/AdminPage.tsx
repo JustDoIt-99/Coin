@@ -121,14 +121,14 @@ function AdminPage() {
                                     <ActionGroup>
                                         <ApproveButton
                                             type="button"
-                                            disabled={processingId === transfer.id}
+                                            disabled={processingId !== null}
                                             onClick={() => void handleApprove(transfer.id)}
                                         >
                                             승인
                                         </ApproveButton>
                                         <RejectButton
                                             type="button"
-                                            disabled={processingId === transfer.id}
+                                            disabled={processingId !== null}
                                             onClick={() => void handleReject(transfer.id)}
                                         >
                                             거절
