@@ -35,7 +35,7 @@ export const Label = styled.div`
 export const OrderTypeTabs = styled.div`
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     height: 36px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
