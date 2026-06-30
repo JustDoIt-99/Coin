@@ -46,6 +46,10 @@ function useOrderForm({
 
         setTotalAmount(Math.floor(total).toLocaleString());
 
+        if (isMarket) {
+            return;
+        }
+
         const price = Number(removeComma(orderPrice));
         if (!price) {
             setTotalAmount("");
