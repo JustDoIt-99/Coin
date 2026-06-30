@@ -19,6 +19,9 @@ function Header() {
                 <Nav>
                     <NavItem to="/">거래소</NavItem>
                     <NavItem to="/portfolio">투자내역</NavItem>
+                    {user?.role === "ADMIN" && (
+                        <NavItem to="/admin">관리자</NavItem>
+                    )}
                 </Nav>
             </LeftArea>
 

@@ -25,14 +25,27 @@ public class User {
     @Column(nullable = false, length = 20)
     private String nickname;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserRole role;
+
     @Builder
     private User(
             String email,
             String password,
-            String nickname
+            String nickname,
+            UserRole role
     ) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
+        this.role = role == null ? UserRole.USER : role;
+    }
+
+    @PrePersist
+    private void prePersist() {
+        if (role == null) {
+            role = UserRole.USER;
+        }
     }
 }

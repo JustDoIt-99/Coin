@@ -5,6 +5,8 @@ import LoginPage from "@pages/auth/login/LoginPage";
 import SignupPage from "@pages/auth/signup/SignupPage";
 import PortfolioPage from "@pages/portfolio/PortfolioPage";
 import ProtectedRoute from "@auth/ProtectedRoute";
+import AdminRoute from "@auth/AdminRoute";
+import AdminPage from "@pages/admin";
 
 export const router = createBrowserRouter([
     {
@@ -29,6 +31,15 @@ export const router = createBrowserRouter([
                     {
                         path: "portfolio",
                         element: <PortfolioPage/>
+                    }
+                ]
+            },
+            {
+                element: <AdminRoute/>,
+                children: [
+                    {
+                        path: "admin",
+                        element: <AdminPage/>
                     }
                 ]
             }
