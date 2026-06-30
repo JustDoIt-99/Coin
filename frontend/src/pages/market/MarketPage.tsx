@@ -73,7 +73,6 @@ function MarketPage() {
         queryKey: ["assets"],
         queryFn: fetchAssets,
         enabled: isAuthenticated,
-        refetchInterval: isAuthenticated ? 1000 : false,
     });
 
     const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);

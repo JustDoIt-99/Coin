@@ -25,10 +25,11 @@ import {
 } from "./AssetSummary.styles";
 import {useAuth} from "@auth/useAuth.ts";
 import {useQuery} from "@tanstack/react-query";
-import {getPortfolioAssetSummary} from "@api/api.ts";
-import {useCallback, useMemo, useState} from "react";
+import {fetchTickers, getPortfolioAssetSummary} from "@api/api.ts";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {PieChart, Pie, ResponsiveContainer, Tooltip} from "recharts";
 import useTickerSocket from "@hooks/useTickerSocket";
+import {ASSET_UPDATED_EVENT} from "@hooks/useAssetSyncSocket";
 import type {TickerMessage} from "@pages/market/components/sidebar/MarketSidebar/MarketSidebar";
 
 type Trend = "up" | "down";
@@ -41,17 +42,31 @@ type SummaryItem = {
 };
 
 const COIN_COLORS = ["#f7931a", "#627eea", "#3c3c3d", "#00c6ff", "#e84142", "#9c27b0"];
+const PRICE_RENDER_INTERVAL_MS = 1000;
 
 function AssetSummary() {
     const {accessToken} = useAuth();
 
     const [tickerMap, setTickerMap] = useState<Record<string, number>>({});
+    const lastTickerUpdateAtRef = useRef<Record<string, number>>({});
 
-    const {data, isLoading, error} = useQuery({
+    const {data, isLoading, error, refetch} = useQuery({
         queryKey: ["portfolio-summary"],
         queryFn: getPortfolioAssetSummary,
         enabled: !!accessToken,
     });
+
+    useEffect(() => {
+        const handleAssetUpdated = () => {
+            void refetch();
+        };
+
+        window.addEventListener(ASSET_UPDATED_EVENT, handleAssetUpdated);
+
+        return () => {
+            window.removeEventListener(ASSET_UPDATED_EVENT, handleAssetUpdated);
+        };
+    }, [refetch]);
 
     const holdingMarketCodes = useMemo(() => {
         return new Set(
@@ -61,8 +76,38 @@ function AssetSummary() {
         );
     }, [data]);
 
+    const holdingMarketCodeList = useMemo(() => {
+        return Array.from(holdingMarketCodes).sort();
+    }, [holdingMarketCodes]);
+
+    const {data: tickers} = useQuery({
+        queryKey: ["portfolio-tickers", holdingMarketCodeList],
+        queryFn: () => fetchTickers(holdingMarketCodeList),
+        enabled: holdingMarketCodeList.length > 0,
+    });
+
+    useEffect(() => {
+        if (!tickers) return;
+
+        setTickerMap((prev) => {
+            const next = {...prev};
+
+            tickers.forEach((ticker) => {
+                next[ticker.market] = ticker.trade_price;
+            });
+
+            return next;
+        });
+    }, [tickers]);
+
     const handleTickerMessage = useCallback((ticker: TickerMessage) => {
         if (!holdingMarketCodes.has(ticker.code)) return;
+
+        const now = Date.now();
+        const lastUpdatedAt = lastTickerUpdateAtRef.current[ticker.code] ?? 0;
+        if (now - lastUpdatedAt < PRICE_RENDER_INTERVAL_MS) return;
+
+        lastTickerUpdateAtRef.current[ticker.code] = now;
 
         setTickerMap((prev) => {
             if (prev[ticker.code] === ticker.trade_price) return prev;
@@ -243,6 +288,7 @@ function AssetSummary() {
                                             innerRadius={55}
                                             outerRadius={85}
                                             paddingAngle={chartData.length > 1 ? 1 : 0}
+                                            isAnimationActive={false}
                                         />
                                         <Tooltip />
                                     </PieChart>
