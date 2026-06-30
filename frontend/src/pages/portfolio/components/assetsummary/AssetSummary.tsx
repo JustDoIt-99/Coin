@@ -49,6 +49,8 @@ function AssetSummary() {
 
     const [tickerMap, setTickerMap] = useState<Record<string, number>>({});
     const lastTickerUpdateAtRef = useRef<Record<string, number>>({});
+    const pendingTickerRef = useRef<Record<string, TickerMessage>>({});
+    const timeoutRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
     const {data, isLoading, error, refetch} = useQuery({
         queryKey: ["portfolio-summary"],
@@ -100,15 +102,7 @@ function AssetSummary() {
         });
     }, [tickers]);
 
-    const handleTickerMessage = useCallback((ticker: TickerMessage) => {
-        if (!holdingMarketCodes.has(ticker.code)) return;
-
-        const now = Date.now();
-        const lastUpdatedAt = lastTickerUpdateAtRef.current[ticker.code] ?? 0;
-        if (now - lastUpdatedAt < PRICE_RENDER_INTERVAL_MS) return;
-
-        lastTickerUpdateAtRef.current[ticker.code] = now;
-
+    const applyTickerPrice = useCallback((ticker: TickerMessage) => {
         setTickerMap((prev) => {
             if (prev[ticker.code] === ticker.trade_price) return prev;
 
@@ -117,7 +111,53 @@ function AssetSummary() {
                 [ticker.code]: ticker.trade_price,
             };
         });
-    }, [holdingMarketCodes]);
+    }, []);
+
+    const handleTickerMessage = useCallback((ticker: TickerMessage) => {
+        if (!holdingMarketCodes.has(ticker.code)) return;
+
+        const now = Date.now();
+        const lastUpdatedAt = lastTickerUpdateAtRef.current[ticker.code] ?? 0;
+        const elapsed = now - lastUpdatedAt;
+
+        if (elapsed >= PRICE_RENDER_INTERVAL_MS) {
+            if (timeoutRefs.current[ticker.code]) {
+                clearTimeout(timeoutRefs.current[ticker.code]);
+                delete timeoutRefs.current[ticker.code];
+                delete pendingTickerRef.current[ticker.code];
+            }
+
+            lastTickerUpdateAtRef.current[ticker.code] = now;
+            applyTickerPrice(ticker);
+            return;
+        }
+
+        pendingTickerRef.current[ticker.code] = ticker;
+
+        if (timeoutRefs.current[ticker.code]) return;
+
+        timeoutRefs.current[ticker.code] = setTimeout(() => {
+            const pendingTicker = pendingTickerRef.current[ticker.code];
+
+            delete timeoutRefs.current[ticker.code];
+            delete pendingTickerRef.current[ticker.code];
+
+            if (!pendingTicker) return;
+
+            lastTickerUpdateAtRef.current[ticker.code] = Date.now();
+            applyTickerPrice(pendingTicker);
+        }, PRICE_RENDER_INTERVAL_MS - elapsed);
+    }, [applyTickerPrice, holdingMarketCodes]);
+
+    useEffect(() => {
+        return () => {
+            Object.values(timeoutRefs.current).forEach((timeoutId) => {
+                clearTimeout(timeoutId);
+            });
+            timeoutRefs.current = {};
+            pendingTickerRef.current = {};
+        };
+    }, []);
 
     useTickerSocket(handleTickerMessage);
 
