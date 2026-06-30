@@ -8,8 +8,6 @@ import {
     Label,
     Input,
     LoginButton,
-    Divider,
-    SocialButton,
     LinkRow, SignupLink,
 } from "@pages/auth/AuthPage.styles";
 import {useState} from "react";
@@ -87,18 +85,6 @@ function LoginPage() {
                         로그인
                     </LoginButton>
                 </Form>
-
-                <Divider>
-                    <span>또는</span>
-                </Divider>
-
-                <SocialButton type="button" $provider="kakao">
-                    카카오로 로그인
-                </SocialButton>
-
-                <SocialButton type="button" $provider="google">
-                    Google로 로그인
-                </SocialButton>
 
                 <LinkRow>
                     <span>아직 회원이 아니신가요?</span>

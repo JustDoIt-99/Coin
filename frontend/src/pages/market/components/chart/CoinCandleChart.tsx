@@ -6,8 +6,10 @@ import {
     type HistogramData,
     HistogramSeries,
     type IChartApi,
+    type IPriceLine,
     type ISeriesApi,
     type LineData,
+    LineStyle,
     LineSeries,
     type LogicalRange,
     type Time,
@@ -23,6 +25,7 @@ interface Props {
     movingAverages: MovingAverageLine[];
     currentPrice?: number,
     currentPriceTimestamp?: number,
+    averageBuyPrice?: number,
     active?: boolean
 }
 
@@ -38,6 +41,7 @@ const RISE_COLOR = "#d64348";
 const FALL_COLOR = "#126ee2";
 const RISE_VOLUME_COLOR = RISE_COLOR;
 const FALL_VOLUME_COLOR = FALL_COLOR;
+const AVERAGE_BUY_PRICE_LINE_COLOR = "#f59f00";
 const PINCH_ZOOM_SENSITIVITY = 0.004;
 const MIN_VISIBLE_BARS = 8;
 
@@ -47,12 +51,14 @@ function CoinCandleChart({
     movingAverages,
     currentPrice,
     currentPriceTimestamp,
+    averageBuyPrice,
     active
 }: Props) {
     const chartContainerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
     const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+    const averageBuyPriceLineRef = useRef<IPriceLine | null>(null);
     const movingAverageSeriesRef = useRef<Record<number, ISeriesApi<"Line">>>({});
     const candleDataRef = useRef<CandlestickData<Time>[]>([]);
     const volumeDataRef = useRef<HistogramData<Time>[]>([]);
@@ -458,6 +464,29 @@ function CoinCandleChart({
 
         setMovingAverageSeriesData(candleDataRef.current);
     }, [movingAverages]);
+
+    useEffect(() => {
+        const candleSeries = candleSeriesRef.current;
+        if (!candleSeries) return;
+
+        if (averageBuyPriceLineRef.current) {
+            candleSeries.removePriceLine(averageBuyPriceLineRef.current);
+            averageBuyPriceLineRef.current = null;
+        }
+
+        if (!averageBuyPrice || averageBuyPrice <= 0) {
+            return;
+        }
+
+        averageBuyPriceLineRef.current = candleSeries.createPriceLine({
+            price: averageBuyPrice,
+            color: AVERAGE_BUY_PRICE_LINE_COLOR,
+            lineWidth: 1,
+            lineStyle: LineStyle.Dashed,
+            axisLabelVisible: true,
+            title: "평균매수가",
+        });
+    }, [averageBuyPrice]);
 
     useEffect(() => {
         if (!candles || !candleSeriesRef.current || !volumeSeriesRef.current || !chartRef.current) return;

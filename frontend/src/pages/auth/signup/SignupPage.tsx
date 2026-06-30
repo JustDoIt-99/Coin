@@ -10,8 +10,6 @@ import {
     Label,
     Input,
     LoginButton,
-    Divider,
-    SocialButton,
     LinkRow,
 } from "@pages/auth/AuthPage.styles";
 import {API} from "@constants/endpoints.ts";
@@ -112,18 +110,6 @@ function SignupPage() {
                         회원가입
                     </LoginButton>
                 </Form>
-
-                <Divider>
-                    <span>또는</span>
-                </Divider>
-
-                <SocialButton type="button" $provider="kakao">
-                    카카오로 회원가입
-                </SocialButton>
-
-                <SocialButton type="button" $provider="google">
-                    Google로 회원가입
-                </SocialButton>
 
                 <LinkRow>
                     <span>이미 계정이 있으신가요?</span>

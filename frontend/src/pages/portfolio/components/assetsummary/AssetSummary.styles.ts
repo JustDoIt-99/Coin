@@ -98,3 +98,106 @@ export const CoinWeight = styled.span`
     font-weight: 700;
     color: #111827;
 `;
+
+export const DetailSection = styled.section`
+    margin-top: 18px;
+    min-height: 360px;
+    background: #fff;
+    border: 1px solid #dfe3ea;
+`;
+
+export const DetailHeader = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    padding: 0 24px;
+    border-bottom: 1px solid #edf0f4;
+`;
+
+export const DetailTitle = styled.h3`
+    margin: 0;
+    color: #111827;
+    font-size: 16px;
+    font-weight: 800;
+`;
+
+export const DetailCount = styled.span`
+    color: #8b95a1;
+    font-size: 13px;
+    font-weight: 700;
+`;
+
+export const AssetTable = styled.table`
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+
+    th,
+    td {
+        height: 48px;
+        padding: 0 14px;
+        border-bottom: 1px solid #edf0f4;
+        text-align: right;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    th {
+        color: #6b7280;
+        background: #fafbfc;
+        font-weight: 800;
+    }
+
+    td {
+        color: #1f2937;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+
+    th:first-of-type,
+    td:first-of-type {
+        text-align: left;
+        padding-left: 24px;
+    }
+
+    tr:last-of-type td {
+        border-bottom: none;
+    }
+`;
+
+export const AssetCodeCell = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+`;
+
+export const AssetCode = styled.strong`
+    color: #111827;
+    font-size: 14px;
+    font-weight: 800;
+`;
+
+export const AssetMarket = styled.span`
+    color: #8b95a1;
+    font-size: 12px;
+    font-weight: 700;
+`;
+
+export const TrendText = styled.span<{ $trend?: "up" | "down" }>`
+    color: ${({$trend}) => {
+        if ($trend === "up") return "#e53946";
+        if ($trend === "down") return "#126ee2";
+        return "#1f2937";
+    }};
+`;
+
+export const EmptyDetail = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 307px;
+    color: #8b95a1;
+    font-size: 14px;
+    font-weight: 700;
+`;

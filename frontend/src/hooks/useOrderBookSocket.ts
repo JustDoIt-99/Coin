@@ -33,6 +33,8 @@ function useServerOrderBookSocket(
     const onMessageRef = useRef(onMessage);
     const marketCodeRef = useRef(marketCode);
     const requestIdRef = useRef(0);
+    const latestMessageRef = useRef<OrderbookMessage | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
 
     useEffect(() => {
         onMessageRef.current = onMessage;
@@ -41,6 +43,27 @@ function useServerOrderBookSocket(
     useEffect(() => {
         marketCodeRef.current = marketCode;
     }, [marketCode]);
+
+    const publishLatestMessage = () => {
+        animationFrameRef.current = null;
+
+        const latestMessage = latestMessageRef.current;
+        latestMessageRef.current = null;
+
+        if (latestMessage) {
+            onMessageRef.current(latestMessage);
+        }
+    };
+
+    const enqueueMessage = (data: OrderbookMessage) => {
+        latestMessageRef.current = data;
+
+        if (animationFrameRef.current !== null) {
+            return;
+        }
+
+        animationFrameRef.current = requestAnimationFrame(publishLatestMessage);
+    };
 
     const subscribeToMarket = async (code: string) => {
         const client = clientRef.current;
@@ -69,7 +92,7 @@ function useServerOrderBookSocket(
                 (message: IMessage) => {
                     try {
                         const data = JSON.parse(message.body) as OrderbookMessage;
-                        onMessageRef.current(data);
+                        enqueueMessage(data);
                     } catch (error) {
                         console.error("Spring orderbook message parse error", error);
                     }
@@ -118,6 +141,11 @@ function useServerOrderBookSocket(
 
         return () => {
             requestIdRef.current += 1;
+            latestMessageRef.current = null;
+            if (animationFrameRef.current !== null) {
+                cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = null;
+            }
             subscriptionRef.current?.unsubscribe();
             subscriptionRef.current = null;
             client.deactivate();
@@ -130,6 +158,11 @@ function useServerOrderBookSocket(
 
         return () => {
             requestIdRef.current += 1;
+            latestMessageRef.current = null;
+            if (animationFrameRef.current !== null) {
+                cancelAnimationFrame(animationFrameRef.current);
+                animationFrameRef.current = null;
+            }
             subscriptionRef.current?.unsubscribe();
             subscriptionRef.current = null;
         };

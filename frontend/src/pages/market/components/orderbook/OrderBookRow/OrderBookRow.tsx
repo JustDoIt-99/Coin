@@ -5,6 +5,7 @@ import {
     PriceCell,
     RateCell,
 } from "./OrderBookRow.styles";
+import {memo} from "react";
 
 interface Props {
     type: "ask" | "bid";
@@ -53,4 +54,4 @@ function OrderBookRow({ type, price, size, rate, ratio, onSelectPrice }: Props) 
     );
 }
 
-export default OrderBookRow;
+export default memo(OrderBookRow);
