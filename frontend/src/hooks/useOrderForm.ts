@@ -170,7 +170,7 @@ function useOrderForm({
         if (!orderTotalNumber && !(isMarket && !isBuy)) {
             return "주문총액을 입력해주세요.";
         }
-        if (orderTotalNumber < MIN_ORDER_KRW) {
+        if (orderTotalNumber && orderTotalNumber < MIN_ORDER_KRW) {
             return "최소 주문금액은 5,000 KRW입니다.";
         }
         if (isAuthenticated && isBuy && orderTotalNumber > availableBaseBalance) {
