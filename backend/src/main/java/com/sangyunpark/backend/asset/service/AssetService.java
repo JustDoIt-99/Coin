@@ -247,7 +247,7 @@ public class AssetService {
     }
 
     private AssetTransferRequest findProcessableTransferRequest(Long transferId) {
-        AssetTransferRequest transferRequest = assetTransferRequestJpaRepository.findById(transferId)
+        AssetTransferRequest transferRequest = assetTransferRequestJpaRepository.findForUpdateById(transferId)
                 .orElseThrow(() -> new BusinessException(AssetErrorCode.ASSET_TRANSFER_REQUEST_NOT_FOUND));
 
         if (!transferRequest.isPendingApproval()) {
