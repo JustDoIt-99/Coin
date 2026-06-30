@@ -67,6 +67,7 @@ function OrderBook({marketCode, prevClosingPrice, ticker, active, onSelectPrice}
 
     useEffect(() => {
         hasInitializedScrollRef.current = false;
+        setOrderBook(null);
     }, [marketCode]);
 
     useEffect(() => {
@@ -86,7 +87,7 @@ function OrderBook({marketCode, prevClosingPrice, ticker, active, onSelectPrice}
                 (askRows.length - INITIAL_VISIBLE_ASK_ROW_COUNT) * ORDER_BOOK_ROW_HEIGHT
             );
         });
-    }, [askRows.length]);
+    }, [marketCode, askRows.length]);
 
     return (
         <OrderBookContainer ref={containerRef} active={active}>

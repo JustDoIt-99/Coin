@@ -443,6 +443,7 @@ function CoinCandleChart({
         return () => {
             chartContainerRef.current?.removeEventListener("wheel", handlePinchWheel);
             window.removeEventListener("resize", handleResize);
+            averageBuyPriceLineRef.current = null;
             chart.remove();
             chart.timeScale().unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
             chartRef.current = null;
@@ -469,16 +470,11 @@ function CoinCandleChart({
         const candleSeries = candleSeriesRef.current;
         if (!candleSeries) return;
 
-        if (averageBuyPriceLineRef.current) {
-            candleSeries.removePriceLine(averageBuyPriceLineRef.current);
-            averageBuyPriceLineRef.current = null;
-        }
-
         if (!averageBuyPrice || averageBuyPrice <= 0) {
             return;
         }
 
-        averageBuyPriceLineRef.current = candleSeries.createPriceLine({
+        const averageBuyPriceLine = candleSeries.createPriceLine({
             price: averageBuyPrice,
             color: AVERAGE_BUY_PRICE_LINE_COLOR,
             lineWidth: 1,
@@ -486,7 +482,17 @@ function CoinCandleChart({
             axisLabelVisible: true,
             title: "평균매수가",
         });
-    }, [averageBuyPrice]);
+
+        averageBuyPriceLineRef.current = averageBuyPriceLine;
+
+        return () => {
+            candleSeries.removePriceLine(averageBuyPriceLine);
+
+            if (averageBuyPriceLineRef.current === averageBuyPriceLine) {
+                averageBuyPriceLineRef.current = null;
+            }
+        };
+    }, [marketCode, averageBuyPrice]);
 
     useEffect(() => {
         if (!candles || !candleSeriesRef.current || !volumeSeriesRef.current || !chartRef.current) return;
