@@ -29,7 +29,6 @@ import {fetchTickers, getPortfolioAssetSummary} from "@api/api.ts";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {PieChart, Pie, ResponsiveContainer, Tooltip} from "recharts";
 import useTickerSocket from "@hooks/useTickerSocket";
-import {ASSET_UPDATED_EVENT} from "@hooks/useAssetSyncSocket";
 import type {TickerMessage} from "@pages/market/components/sidebar/MarketSidebar/MarketSidebar";
 
 type Trend = "up" | "down";
@@ -52,23 +51,11 @@ function AssetSummary() {
     const pendingTickerRef = useRef<Record<string, TickerMessage>>({});
     const timeoutRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-    const {data, isLoading, error, refetch} = useQuery({
+    const {data, isLoading, error} = useQuery({
         queryKey: ["portfolio-summary"],
         queryFn: getPortfolioAssetSummary,
         enabled: !!accessToken,
     });
-
-    useEffect(() => {
-        const handleAssetUpdated = () => {
-            void refetch();
-        };
-
-        window.addEventListener(ASSET_UPDATED_EVENT, handleAssetUpdated);
-
-        return () => {
-            window.removeEventListener(ASSET_UPDATED_EVENT, handleAssetUpdated);
-        };
-    }, [refetch]);
 
     const holdingMarketCodes = useMemo(() => {
         return new Set(

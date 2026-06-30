@@ -12,8 +12,6 @@ export interface AssetUpdatedMessage {
     reason: string;
 }
 
-export const ASSET_UPDATED_EVENT = "asset-updated";
-
 function useAssetSyncSocket() {
     const {isAuthenticated, user} = useAuth();
     const queryClient = useQueryClient();
@@ -40,9 +38,6 @@ function useAssetSyncSocket() {
                         void queryClient.invalidateQueries({queryKey: ["portfolio-summary"]});
                         void queryClient.refetchQueries({queryKey: ["assets"], type: "active"});
                         void queryClient.refetchQueries({queryKey: ["portfolio-summary"], type: "active"});
-                        window.dispatchEvent(new CustomEvent<AssetUpdatedMessage>(ASSET_UPDATED_EVENT, {
-                            detail: data,
-                        }));
                     } catch (error) {
                         console.error("asset sync message parse error", error);
                     }
