@@ -41,7 +41,6 @@ const PERCENT = ["10%", "25%", "50%", "100%", "입력"] as const;
 const ORDER_TYPES = [
     {key: "limit", label: "지정가"},
     {key: "market", label: "시장가"},
-    {key: "reserve", label: "예약-지정가"},
 ] as const;
 
 const DEFAULT_NOTICE = "최소주문: 5,000 KRW · 수수료(부가세 포함): 0.05%";
@@ -88,11 +87,6 @@ function OrderForm({
         if (!isAuthenticated) {
             alert("로그인이 필요한 서비스 입니다.");
             navigate("/login", {state: {from: location}});
-            return;
-        }
-
-        if (flags.isReserve) {
-            setSubmitMessage("현재는 예약 주문을 지원하지 않습니다.");
             return;
         }
 
@@ -249,15 +243,6 @@ function OrderForm({
                     <OrderInputRow label="주문수량" unit={targetAssetCode} value={state.quantity} onChange={actions.handleQuantityChange}/>
                     {percentButtons}
                     <OrderInputRow label="예상금액" unit={baseAssetCode} value={state.totalAmount}/>
-                </>
-            )}
-            {flags.isReserve && (
-                <>
-                    <OrderInputRow label={"감시가격"} unit={baseAssetCode} value={state.triggerPrice} onChange={actions.handleTriggerPriceChange}/>
-                    <OrderInputRow label={priceLabel} unit={baseAssetCode} value={state.orderPrice} onChange={actions.handleOrderPriceChange}/>
-                    <OrderInputRow label={"주문수량"} unit={targetAssetCode} value={state.quantity} onChange={actions.handleQuantityChange}/>
-                    {percentButtons}
-                    <OrderInputRow label={"주문총액"} unit={baseAssetCode} value={state.totalAmount} onChange={actions.handleTotalAmountChange}/>
                 </>
             )}
             <Divider/>

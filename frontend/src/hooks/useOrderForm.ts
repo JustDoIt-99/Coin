@@ -5,7 +5,7 @@ import type {Ticker} from "@api/api";
 
 const MIN_ORDER_KRW = 5000;
 
-export type OrderType = "limit" | "market" | "reserve";
+export type OrderType = "limit" | "market";
 
 interface Props {
     tradeType: TradeType,
@@ -27,12 +27,10 @@ function useOrderForm({
     const [selectedPercent, setSelectedPercent] = useState<string | undefined>();
     const [quantity, setQuantity] = useState("");
     const [totalAmount, setTotalAmount] = useState("");
-    const [triggerPrice, setTriggerPrice] = useState("");
 
     const isBuy = tradeType === "buy";
     const isLimit = orderType === "limit";
     const isMarket = orderType === "market";
-    const isReserve = orderType === "reserve";
 
     const coinSymbol = ticker?.market?.split("-")[1] ?? "";
     const availableAsset = !isAuthenticated
@@ -41,14 +39,16 @@ function useOrderForm({
             ? `${formatKrw(availableBaseBalance)} KRW`
             : `${formatCoin(availableTargetBalance)} ${coinSymbol}`;
 
-    const submitLabel = isReserve
-        ? isBuy ? "예약 매수" : "예약 매도"
-        : isBuy ? "매수" : "매도";
+    const submitLabel = isBuy ? "매수" : "매도";
 
     const applyBuyPercent = (percent: number) => {
         const total = availableBaseBalance * (percent / 100);
 
         setTotalAmount(Math.floor(total).toLocaleString());
+
+        if (isMarket) {
+            return;
+        }
 
         const price = Number(removeComma(orderPrice));
         if (!price) {
@@ -133,13 +133,11 @@ function useOrderForm({
 
         if (!ticker?.trade_price) {
             setOrderPrice("");
-            setTriggerPrice("");
             return;
         }
 
         const price = ticker.trade_price.toLocaleString();
         setOrderPrice(price);
-        setTriggerPrice(price);
     };
 
     const handlePercentClick = (value: string) => {
@@ -162,10 +160,6 @@ function useOrderForm({
         }
     };
 
-    const handleTriggerPriceChange = (value: string) => {
-        setTriggerPrice(formatIntegerWithComma(value));
-    };
-
     const orderTotalNumber = Number(removeComma(totalAmount));
     const quantityNumber = Number(removeComma(quantity));
 
@@ -176,7 +170,7 @@ function useOrderForm({
         if (!orderTotalNumber && !(isMarket && !isBuy)) {
             return "주문총액을 입력해주세요.";
         }
-        if (orderTotalNumber < MIN_ORDER_KRW) {
+        if (orderTotalNumber && orderTotalNumber < MIN_ORDER_KRW) {
             return "최소 주문금액은 5,000 KRW입니다.";
         }
         if (isAuthenticated && isBuy && orderTotalNumber > availableBaseBalance) {
@@ -184,9 +178,6 @@ function useOrderForm({
         }
         if (isAuthenticated && !isBuy && quantityNumber > availableTargetBalance) {
             return "보유 수량을 초과했습니다.";
-        }
-        if (isReserve && !Number(removeComma(triggerPrice))) {
-            return "감시가격을 입력해주세요.";
         }
         return "";
     };
@@ -197,7 +188,6 @@ function useOrderForm({
         if (!ticker?.trade_price) return;
         const price = ticker.trade_price.toLocaleString();
         setOrderPrice(price);
-        setTriggerPrice(price);
     },[ticker?.market, orderType]);
 
     return {
@@ -207,13 +197,11 @@ function useOrderForm({
             orderPrice,
             quantity,
             totalAmount,
-            triggerPrice,
         },
         flags: {
             isBuy,
             isLimit,
             isMarket,
-            isReserve,
         },
         display: {
             availableAsset,
@@ -225,7 +213,6 @@ function useOrderForm({
             handleOrderPriceChange,
             handleQuantityChange,
             handleTotalAmountChange,
-            handleTriggerPriceChange,
             handleReset,
             handlePercentClick,
         }
