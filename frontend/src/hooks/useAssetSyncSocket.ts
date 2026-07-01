@@ -36,8 +36,10 @@ function useAssetSyncSocket() {
 
                         void queryClient.invalidateQueries({queryKey: ["assets"]});
                         void queryClient.invalidateQueries({queryKey: ["portfolio-summary"]});
+                        void queryClient.invalidateQueries({queryKey: ["portfolio-tickers"]});
                         void queryClient.refetchQueries({queryKey: ["assets"], type: "active"});
                         void queryClient.refetchQueries({queryKey: ["portfolio-summary"], type: "active"});
+                        void queryClient.refetchQueries({queryKey: ["portfolio-tickers"], type: "active"});
                     } catch (error) {
                         console.error("asset sync message parse error", error);
                     }
