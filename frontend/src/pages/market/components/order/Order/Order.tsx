@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react";
+import {useState} from "react";
 import {useQuery, useQueryClient} from "@tanstack/react-query";
 import OrderTab from "@pages/market/components/order/OrderTab";
 import OrderForm from "@pages/market/components/order/OrderForm";
@@ -31,7 +31,7 @@ interface OrderBookPriceSelection {
 function Order({marketCode, ticker, selectedOrderBookPrice}: Props) {
 
     const [activeTab, setActiveTab] = useState<"buy" | "sell" | "history">("buy");
-    const [realtimePrice, setRealtimePrice] = useState<number | undefined>(ticker?.trade_price);
+    const [realtimePrice, setRealtimePrice] = useState<{marketCode: string; price: number} | null>(null);
     const {isAuthenticated} = useAuth();
     const queryClient = useQueryClient();
     const {data: assets = []} = useQuery({
@@ -44,7 +44,9 @@ function Order({marketCode, ticker, selectedOrderBookPrice}: Props) {
     const targetAsset = assets.find((asset) => asset.assetCode === targetAssetCode);
     const availableTargetBalance = targetAsset?.balance ?? 0;
     const averageBuyPrice = targetAsset?.averageBuyPrice ?? 0;
-    const currentPrice = realtimePrice ?? ticker?.trade_price ?? 0;
+    const currentPrice = realtimePrice?.marketCode === marketCode
+        ? realtimePrice.price
+        : ticker?.trade_price ?? 0;
     const valuationAmount = availableTargetBalance * currentPrice;
     const buyAmount = availableTargetBalance * averageBuyPrice;
     const profitAmount = valuationAmount - buyAmount;
@@ -53,12 +55,11 @@ function Order({marketCode, ticker, selectedOrderBookPrice}: Props) {
     const hasPosition = availableTargetBalance > 0;
 
     useTradeSocket(marketCode, (trade) => {
-        setRealtimePrice(trade.trade_price);
+        setRealtimePrice({
+            marketCode,
+            price: trade.trade_price,
+        });
     });
-
-    useEffect(() => {
-        setRealtimePrice(ticker?.trade_price);
-    }, [marketCode, ticker?.trade_price]);
 
     const invalidateAssetQueries = () => {
         void queryClient.invalidateQueries({queryKey: ["assets"]});

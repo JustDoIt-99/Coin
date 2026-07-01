@@ -54,7 +54,7 @@ function SignupPage() {
             login(data.accessToken, data.user);
             navigate("/");
             alert("회원가입이 완료되었습니다.");
-        } catch (e) {
+        } catch {
             alert("회원가입 중 오류가 발생했습니다.");
         }
     };

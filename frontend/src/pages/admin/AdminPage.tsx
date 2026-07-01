@@ -53,7 +53,13 @@ function AdminPage() {
     };
 
     useEffect(() => {
-        void loadTransfers();
+        const timerId = setTimeout(() => {
+            void loadTransfers();
+        }, 0);
+
+        return () => {
+            clearTimeout(timerId);
+        };
     }, []);
 
     const handleApprove = async (transferId: number) => {

@@ -186,9 +186,14 @@ function useOrderForm({
 
     useEffect(() => {
         if (!ticker?.trade_price) return;
-        const price = ticker.trade_price.toLocaleString();
-        setOrderPrice(price);
-    },[ticker?.market, orderType]);
+        const timerId = setTimeout(() => {
+            setOrderPrice(ticker.trade_price.toLocaleString());
+        }, 0);
+
+        return () => {
+            clearTimeout(timerId);
+        };
+    },[ticker?.market, ticker?.trade_price, orderType]);
 
     return {
         state: {

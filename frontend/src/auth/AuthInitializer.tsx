@@ -25,7 +25,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
                 const data = await response.json();
                 login(data.accessToken, data.user);
             } catch {
-
+                // 인증 복구 실패 시 비로그인 상태로 초기화를 완료합니다.
             } finally {
                 setIsLoading(false);
             }

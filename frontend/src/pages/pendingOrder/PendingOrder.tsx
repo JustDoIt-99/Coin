@@ -50,7 +50,13 @@ function PendingOrder() {
     };
 
     useEffect(() => {
-        void loadPendingOrders();
+        const timerId = setTimeout(() => {
+            void loadPendingOrders();
+        }, 0);
+
+        return () => {
+            clearTimeout(timerId);
+        };
     }, []);
 
     const filteredOrders = useMemo(() => {

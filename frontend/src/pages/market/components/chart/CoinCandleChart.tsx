@@ -74,23 +74,6 @@ function CoinCandleChart({
         refetchInterval: getRefetchInterval(interval)
     });
 
-    useTradeSocket(marketCode, (trade) => {
-        updateRealtimeCandle(trade.trade_price, trade.trade_timestamp, trade.trade_volume);
-    });
-
-    useEffect(() => {
-        isFirstLoadingChartRef.current = true;
-        candleDataRef.current = [];
-        volumeDataRef.current = [];
-        oldestCandleRef.current = "";
-        lastCandleRef.current = null;
-        requestedOlderRef.current = false;
-        isLoadingOlderRef.current = false;
-        candleSeriesRef.current?.setData([]);
-        volumeSeriesRef.current?.setData([]);
-        setMovingAverageSeriesData([]);
-    }, [marketCode, interval.type, interval.unit]);
-
     const toChartData = (candles: MinuteCandle[]): CandlestickData<Time>[] => {
         return [...candles].reverse().map((candle) => ({
             time: toChartTime(candle.timestamp, interval),
@@ -256,6 +239,23 @@ function CoinCandleChart({
             });
         });
     };
+
+    useTradeSocket(marketCode, (trade) => {
+        updateRealtimeCandle(trade.trade_price, trade.trade_timestamp, trade.trade_volume);
+    });
+
+    useEffect(() => {
+        isFirstLoadingChartRef.current = true;
+        candleDataRef.current = [];
+        volumeDataRef.current = [];
+        oldestCandleRef.current = "";
+        lastCandleRef.current = null;
+        requestedOlderRef.current = false;
+        isLoadingOlderRef.current = false;
+        candleSeriesRef.current?.setData([]);
+        volumeSeriesRef.current?.setData([]);
+        setMovingAverageSeriesData([]);
+    }, [marketCode, interval.type, interval.unit]);
 
     const normalizeChartData = <T extends { time: Time }>(data: T[]): T[] => {
         const map = new Map<string, T>();
@@ -483,7 +483,7 @@ function CoinCandleChart({
         return () => {
             candleSeries.removePriceLine(averageBuyPriceLine);
         };
-    }, [marketCode, averageBuyPrice]);
+    }, [marketCode, interval.type, interval.unit, averageBuyPrice]);
 
     useEffect(() => {
         if (!candles || !candleSeriesRef.current || !volumeSeriesRef.current || !chartRef.current) return;
