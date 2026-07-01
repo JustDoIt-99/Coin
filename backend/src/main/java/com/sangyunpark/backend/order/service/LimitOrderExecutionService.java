@@ -3,6 +3,7 @@ package com.sangyunpark.backend.order.service;
 import com.sangyunpark.backend.asset.entity.Asset;
 import com.sangyunpark.backend.asset.entity.AssetTransactionReferenceType;
 import com.sangyunpark.backend.asset.entity.AssetTransactionType;
+import com.sangyunpark.backend.asset.event.AssetUpdatedEvent;
 import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
 import com.sangyunpark.backend.asset.service.AssetTransactionRecorder;
 import com.sangyunpark.backend.order.entity.LimitOrder;
@@ -15,6 +16,7 @@ import com.sangyunpark.backend.order.repository.TradeHistoryJpaRepository;
 import com.sangyunpark.backend.order.service.dto.MarketPair;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,7 @@ public class LimitOrderExecutionService {
     private final PendingLimitOrderIndex pendingLimitOrderIndex;
     private final TransactionTemplate transactionTemplate;
     private final AssetTransactionRecorder assetTransactionRecorder;
+    private final ApplicationEventPublisher eventPublisher;
 
     public int executePendingBuyOrders(String marketCode, BigDecimal currentPrice) {
         if (marketCode == null || marketCode.isBlank()) {
@@ -218,6 +221,7 @@ public class LimitOrderExecutionService {
         if (filled == 0) {
             throw new IllegalStateException("체결 진행 중인 주문을 체결 완료 처리하지 못했습니다. orderId=" + order.getId());
         }
+        publishAssetUpdated(order, List.of(marketPair.baseAssetCode(), marketPair.targetAssetCode()), "LIMIT_BUY_FILLED");
         return true;
     }
 
@@ -284,6 +288,7 @@ public class LimitOrderExecutionService {
         if (filled == 0) {
             throw new IllegalStateException("체결 진행 중인 매도 주문을 체결 완료 처리하지 못했습니다. orderId=" + order.getId());
         }
+        publishAssetUpdated(order, List.of(marketPair.baseAssetCode(), marketPair.targetAssetCode()), "LIMIT_SELL_FILLED");
         return true;
     }
 
@@ -332,6 +337,10 @@ public class LimitOrderExecutionService {
     private MarketPair parseMarketCode(String marketCode) {
         String[] parts = marketCode.split("-");
         return new MarketPair(parts[0], parts[1]);
+    }
+
+    private void publishAssetUpdated(LimitOrder order, List<String> assetCodes, String reason) {
+        eventPublisher.publishEvent(new AssetUpdatedEvent(order.getUser().getId(), assetCodes, reason));
     }
 
 }

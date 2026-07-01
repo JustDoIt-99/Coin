@@ -3,6 +3,7 @@ package com.sangyunpark.backend.order.service;
 import com.sangyunpark.backend.asset.entity.Asset;
 import com.sangyunpark.backend.asset.entity.AssetTransactionReferenceType;
 import com.sangyunpark.backend.asset.entity.AssetTransactionType;
+import com.sangyunpark.backend.asset.event.AssetUpdatedEvent;
 import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
 import com.sangyunpark.backend.asset.service.AssetTransactionRecorder;
 import com.sangyunpark.backend.auth.exception.AuthErrorCode;
@@ -116,6 +117,7 @@ public class OrderService {
                 AssetTransactionReferenceType.TRADE,
                 tradeHistory.getId()
         );
+        publishAssetUpdated(user, List.of(marketPair.baseAssetCode(), marketPair.targetAssetCode()), "MARKET_BUY");
 
         return new MarketBuyResponse(
                 tradeHistory.getId(),
@@ -180,6 +182,7 @@ public class OrderService {
                 AssetTransactionReferenceType.TRADE,
                 tradeHistory.getId()
         );
+        publishAssetUpdated(user, List.of(marketPair.baseAssetCode(), marketPair.targetAssetCode()), "MARKET_SELL");
 
         return new MarketSellResponse(
                 tradeHistory.getId(),
@@ -226,6 +229,7 @@ public class OrderService {
                 order.getId()
         );
         eventPublisher.publishEvent(new LimitBuyOrderCreatedEvent(order.getMarketCode(), order.getLimitPrice()));
+        publishAssetUpdated(user, List.of(marketPair.baseAssetCode()), "LIMIT_BUY_CREATED");
 
         return LimitBuyResponse.from(order);
     }
@@ -262,6 +266,7 @@ public class OrderService {
                 order.getId()
         );
         eventPublisher.publishEvent(new LimitSellOrderCreatedEvent(order.getMarketCode(), order.getLimitPrice()));
+        publishAssetUpdated(user, List.of(marketPair.targetAssetCode()), "LIMIT_SELL_CREATED");
 
         return LimitSellResponse.from(order);
     }
@@ -307,6 +312,7 @@ public class OrderService {
                 order.getId()
         );
         eventPublisher.publishEvent(new LimitOrderCancelledEvent(order.getMarketCode(), order.getTradeSide()));
+        publishAssetUpdated(user, List.of(lockedAssetCode), "LIMIT_ORDER_CANCELLED");
 
         return CancelLimitOrderResponse.of(
                 order,
@@ -356,6 +362,10 @@ public class OrderService {
         }
 
         return tradeHistoryJpaRepository.findByUserAndIdLessThanOrderByIdDesc(user, cursorId, pageRequest);
+    }
+
+    private void publishAssetUpdated(User user, List<String> assetCodes, String reason) {
+        eventPublisher.publishEvent(new AssetUpdatedEvent(user.getId(), assetCodes, reason));
     }
 
     private MarketPair parseMarketCode(String marketCode) {

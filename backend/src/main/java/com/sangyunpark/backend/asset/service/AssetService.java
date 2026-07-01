@@ -12,6 +12,7 @@ import com.sangyunpark.backend.asset.entity.AssetTransactionType;
 import com.sangyunpark.backend.asset.entity.AssetTransferRequest;
 import com.sangyunpark.backend.asset.entity.AssetTransferStatus;
 import com.sangyunpark.backend.asset.entity.AssetTransferType;
+import com.sangyunpark.backend.asset.event.AssetUpdatedEvent;
 import com.sangyunpark.backend.asset.exception.AssetErrorCode;
 import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
 import com.sangyunpark.backend.asset.repository.AssetTransferRequestJpaRepository;
@@ -22,6 +23,7 @@ import com.sangyunpark.backend.user.entity.User;
 import com.sangyunpark.backend.user.entity.UserRole;
 import com.sangyunpark.backend.user.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +47,7 @@ public class AssetService {
     private final AssetTransferRequestJpaRepository assetTransferRequestJpaRepository;
     private final AssetTransactionRecorder assetTransactionRecorder;
     private final UpbitMarketPriceProvider upbitMarketPriceProvider;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public List<AssetResponse> getAssets(Long userId) {
@@ -167,6 +170,11 @@ public class AssetService {
                 AssetTransactionReferenceType.TRANSFER,
                 transferRequest.getId()
         );
+        eventPublisher.publishEvent(new AssetUpdatedEvent(
+                transferRequest.getUser().getId(),
+                List.of(transferRequest.getAssetCode()),
+                "ASSET_TRANSFER_APPROVED"
+        ));
 
         return AdminAssetTransferResponse.from(transferRequest);
     }

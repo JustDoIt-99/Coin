@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import {useQuery} from "@tanstack/react-query";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
 import OrderTab from "@pages/market/components/order/OrderTab";
 import OrderForm from "@pages/market/components/order/OrderForm";
 import OrderHistory from "@pages/market/components/order/OrderHistory";
@@ -33,11 +33,11 @@ function Order({marketCode, ticker, selectedOrderBookPrice}: Props) {
     const [activeTab, setActiveTab] = useState<"buy" | "sell" | "history">("buy");
     const [realtimePrice, setRealtimePrice] = useState<number | undefined>(ticker?.trade_price);
     const {isAuthenticated} = useAuth();
-    const {data: assets = [], refetch: refetchAssets} = useQuery({
+    const queryClient = useQueryClient();
+    const {data: assets = []} = useQuery({
         queryKey: ["assets"],
         queryFn: fetchAssets,
         enabled: isAuthenticated,
-        refetchInterval: isAuthenticated ? 1000 : false,
     });
     const [baseAssetCode = "KRW", targetAssetCode = "BTC"] = marketCode.split("-");
     const availableBaseBalance = assets.find((asset) => asset.assetCode === baseAssetCode)?.balance ?? 0;
@@ -60,6 +60,11 @@ function Order({marketCode, ticker, selectedOrderBookPrice}: Props) {
         setRealtimePrice(ticker?.trade_price);
     }, [marketCode, ticker?.trade_price]);
 
+    const invalidateAssetQueries = () => {
+        void queryClient.invalidateQueries({queryKey: ["assets"]});
+        void queryClient.invalidateQueries({queryKey: ["portfolio-summary"]});
+    };
+
     return (
         <Container>
             <OrderTab activeTab={activeTab} setActiveTab={setActiveTab}/>
@@ -72,13 +77,13 @@ function Order({marketCode, ticker, selectedOrderBookPrice}: Props) {
                     availableTargetBalance={availableTargetBalance}
                     ticker={ticker}
                     selectedOrderBookPrice={selectedOrderBookPrice}
-                    onOrderCompleted={() => void refetchAssets()}
+                    onOrderCompleted={invalidateAssetQueries}
                 />
             )}
             {activeTab === "history" && (
                 <OrderHistory
                     marketCode={marketCode}
-                    onOrderCancelled={() => void refetchAssets()}
+                    onOrderCancelled={invalidateAssetQueries}
                 />
             )}
             <PositionSummary>

@@ -1,6 +1,7 @@
 import {useEffect, useRef} from "react";
 import { useAuth } from "@auth/useAuth";
 import {API} from "@constants/endpoints.ts";
+import AssetSyncSocket from "@auth/AssetSyncSocket";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
     const { login, setIsLoading } = useAuth();
@@ -33,7 +34,12 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
         void initializeAuth();
     }, [login,  setIsLoading]);
 
-    return <>{children}</>;
+    return (
+        <>
+            <AssetSyncSocket />
+            {children}
+        </>
+    );
 }
 
 export default AuthInitializer;

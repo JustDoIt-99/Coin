@@ -25,8 +25,8 @@ import {
 } from "./AssetSummary.styles";
 import {useAuth} from "@auth/useAuth.ts";
 import {useQuery} from "@tanstack/react-query";
-import {getPortfolioAssetSummary} from "@api/api.ts";
-import {useCallback, useMemo, useState} from "react";
+import {fetchTickers, getPortfolioAssetSummary} from "@api/api.ts";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {PieChart, Pie, ResponsiveContainer, Tooltip} from "recharts";
 import useTickerSocket from "@hooks/useTickerSocket";
 import type {TickerMessage} from "@pages/market/components/sidebar/MarketSidebar/MarketSidebar";
@@ -41,11 +41,15 @@ type SummaryItem = {
 };
 
 const COIN_COLORS = ["#f7931a", "#627eea", "#3c3c3d", "#00c6ff", "#e84142", "#9c27b0"];
+const PRICE_RENDER_INTERVAL_MS = 1000;
 
 function AssetSummary() {
     const {accessToken} = useAuth();
 
     const [tickerMap, setTickerMap] = useState<Record<string, number>>({});
+    const lastTickerUpdateAtRef = useRef<Record<string, number>>({});
+    const pendingTickerRef = useRef<Record<string, TickerMessage>>({});
+    const timeoutRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
     const {data, isLoading, error} = useQuery({
         queryKey: ["portfolio-summary"],
@@ -61,9 +65,31 @@ function AssetSummary() {
         );
     }, [data]);
 
-    const handleTickerMessage = useCallback((ticker: TickerMessage) => {
-        if (!holdingMarketCodes.has(ticker.code)) return;
+    const holdingMarketCodeList = useMemo(() => {
+        return Array.from(holdingMarketCodes).sort();
+    }, [holdingMarketCodes]);
 
+    const {data: tickers} = useQuery({
+        queryKey: ["portfolio-tickers", holdingMarketCodeList],
+        queryFn: () => fetchTickers(holdingMarketCodeList),
+        enabled: holdingMarketCodeList.length > 0,
+    });
+
+    useEffect(() => {
+        if (!tickers) return;
+
+        setTickerMap((prev) => {
+            const next = {...prev};
+
+            tickers.forEach((ticker) => {
+                next[ticker.market] = ticker.trade_price;
+            });
+
+            return next;
+        });
+    }, [tickers]);
+
+    const applyTickerPrice = useCallback((ticker: TickerMessage) => {
         setTickerMap((prev) => {
             if (prev[ticker.code] === ticker.trade_price) return prev;
 
@@ -72,7 +98,53 @@ function AssetSummary() {
                 [ticker.code]: ticker.trade_price,
             };
         });
-    }, [holdingMarketCodes]);
+    }, []);
+
+    const handleTickerMessage = useCallback((ticker: TickerMessage) => {
+        if (!holdingMarketCodes.has(ticker.code)) return;
+
+        const now = Date.now();
+        const lastUpdatedAt = lastTickerUpdateAtRef.current[ticker.code] ?? 0;
+        const elapsed = now - lastUpdatedAt;
+
+        if (elapsed >= PRICE_RENDER_INTERVAL_MS) {
+            if (timeoutRefs.current[ticker.code]) {
+                clearTimeout(timeoutRefs.current[ticker.code]);
+                delete timeoutRefs.current[ticker.code];
+                delete pendingTickerRef.current[ticker.code];
+            }
+
+            lastTickerUpdateAtRef.current[ticker.code] = now;
+            applyTickerPrice(ticker);
+            return;
+        }
+
+        pendingTickerRef.current[ticker.code] = ticker;
+
+        if (timeoutRefs.current[ticker.code]) return;
+
+        timeoutRefs.current[ticker.code] = setTimeout(() => {
+            const pendingTicker = pendingTickerRef.current[ticker.code];
+
+            delete timeoutRefs.current[ticker.code];
+            delete pendingTickerRef.current[ticker.code];
+
+            if (!pendingTicker) return;
+
+            lastTickerUpdateAtRef.current[ticker.code] = Date.now();
+            applyTickerPrice(pendingTicker);
+        }, PRICE_RENDER_INTERVAL_MS - elapsed);
+    }, [applyTickerPrice, holdingMarketCodes]);
+
+    useEffect(() => {
+        return () => {
+            Object.values(timeoutRefs.current).forEach((timeoutId) => {
+                clearTimeout(timeoutId);
+            });
+            timeoutRefs.current = {};
+            pendingTickerRef.current = {};
+        };
+    }, []);
 
     useTickerSocket(handleTickerMessage);
 
@@ -243,6 +315,7 @@ function AssetSummary() {
                                             innerRadius={55}
                                             outerRadius={85}
                                             paddingAngle={chartData.length > 1 ? 1 : 0}
+                                            isAnimationActive={false}
                                         />
                                         <Tooltip />
                                     </PieChart>
