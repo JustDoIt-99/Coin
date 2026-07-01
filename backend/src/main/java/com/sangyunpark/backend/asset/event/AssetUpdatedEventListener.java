@@ -15,7 +15,7 @@ public class AssetUpdatedEventListener {
     private final SimpMessagingTemplate messagingTemplate;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void sendAssetUpdatedMessage(AssetUpdatedEvent event) {
+    public void sendAssetUpdatedMessageAfterCommit(AssetUpdatedEvent event) {
         messagingTemplate.convertAndSend(
                 ASSET_TOPIC_PREFIX + event.userId(),
                 AssetUpdatedMessage.from(event)
