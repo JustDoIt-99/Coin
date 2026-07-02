@@ -69,6 +69,17 @@ function AssetSummary() {
         return Array.from(holdingMarketCodes).sort();
     }, [holdingMarketCodes]);
 
+    useEffect(() => {
+        Object.keys(timeoutRefs.current).forEach((marketCode) => {
+            if (holdingMarketCodes.has(marketCode)) return;
+
+            clearTimeout(timeoutRefs.current[marketCode]);
+            delete timeoutRefs.current[marketCode];
+            delete pendingTickerRef.current[marketCode];
+            delete lastTickerUpdateAtRef.current[marketCode];
+        });
+    }, [holdingMarketCodes]);
+
     const {data: tickers} = useQuery({
         queryKey: ["portfolio-tickers", holdingMarketCodeList],
         queryFn: () => fetchTickers(holdingMarketCodeList),
@@ -82,11 +93,14 @@ function AssetSummary() {
             next[ticker.market] = ticker.trade_price;
         });
 
-        return {
-            ...next,
-            ...realtimeTickerMap,
-        };
-    }, [realtimeTickerMap, tickers]);
+        Object.entries(realtimeTickerMap).forEach(([marketCode, price]) => {
+            if (!holdingMarketCodes.has(marketCode)) return;
+
+            next[marketCode] = price;
+        });
+
+        return next;
+    }, [holdingMarketCodes, realtimeTickerMap, tickers]);
 
     const applyTickerPrice = useCallback((ticker: TickerMessage) => {
         setRealtimeTickerMap((prev) => {
