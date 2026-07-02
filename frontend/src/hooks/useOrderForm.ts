@@ -193,7 +193,9 @@ function useOrderForm({
         return () => {
             clearTimeout(timerId);
         };
-    },[ticker?.market, ticker?.trade_price, orderType]);
+        // 주문 가격은 실시간 시세 틱마다 덮어쓰지 않고 마켓/주문 타입 변경 시에만 초기화합니다.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    },[ticker?.market, orderType]);
 
     return {
         state: {
