@@ -46,7 +46,7 @@ const PRICE_RENDER_INTERVAL_MS = 1000;
 function AssetSummary() {
     const {accessToken} = useAuth();
 
-    const [tickerMap, setTickerMap] = useState<Record<string, number>>({});
+    const [realtimeTickerMap, setRealtimeTickerMap] = useState<Record<string, number>>({});
     const lastTickerUpdateAtRef = useRef<Record<string, number>>({});
     const pendingTickerRef = useRef<Record<string, TickerMessage>>({});
     const timeoutRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -69,28 +69,41 @@ function AssetSummary() {
         return Array.from(holdingMarketCodes).sort();
     }, [holdingMarketCodes]);
 
+    useEffect(() => {
+        Object.keys(timeoutRefs.current).forEach((marketCode) => {
+            if (holdingMarketCodes.has(marketCode)) return;
+
+            clearTimeout(timeoutRefs.current[marketCode]);
+            delete timeoutRefs.current[marketCode];
+            delete pendingTickerRef.current[marketCode];
+            delete lastTickerUpdateAtRef.current[marketCode];
+        });
+    }, [holdingMarketCodes]);
+
     const {data: tickers} = useQuery({
         queryKey: ["portfolio-tickers", holdingMarketCodeList],
         queryFn: () => fetchTickers(holdingMarketCodeList),
         enabled: holdingMarketCodeList.length > 0,
     });
 
-    useEffect(() => {
-        if (!tickers) return;
+    const tickerMap = useMemo(() => {
+        const next: Record<string, number> = {};
 
-        setTickerMap((prev) => {
-            const next = {...prev};
-
-            tickers.forEach((ticker) => {
-                next[ticker.market] = ticker.trade_price;
-            });
-
-            return next;
+        tickers?.forEach((ticker) => {
+            next[ticker.market] = ticker.trade_price;
         });
-    }, [tickers]);
+
+        Object.entries(realtimeTickerMap).forEach(([marketCode, price]) => {
+            if (!holdingMarketCodes.has(marketCode)) return;
+
+            next[marketCode] = price;
+        });
+
+        return next;
+    }, [holdingMarketCodes, realtimeTickerMap, tickers]);
 
     const applyTickerPrice = useCallback((ticker: TickerMessage) => {
-        setTickerMap((prev) => {
+        setRealtimeTickerMap((prev) => {
             if (prev[ticker.code] === ticker.trade_price) return prev;
 
             return {

@@ -299,7 +299,7 @@ export async function fetchCandlesPage(
     pageCount = 3,
     to?: string
 ): Promise<MinuteCandle[]> {
-    let result: MinuteCandle[] = [];
+    const result: MinuteCandle[] = [];
     let nextTo = to;
 
     for (let i = 0; i < pageCount; i++) {

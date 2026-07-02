@@ -186,8 +186,15 @@ function useOrderForm({
 
     useEffect(() => {
         if (!ticker?.trade_price) return;
-        const price = ticker.trade_price.toLocaleString();
-        setOrderPrice(price);
+        const timerId = setTimeout(() => {
+            setOrderPrice(ticker.trade_price.toLocaleString());
+        }, 0);
+
+        return () => {
+            clearTimeout(timerId);
+        };
+        // 주문 가격은 실시간 시세 틱마다 덮어쓰지 않고 마켓/주문 타입 변경 시에만 초기화합니다.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     },[ticker?.market, orderType]);
 
     return {

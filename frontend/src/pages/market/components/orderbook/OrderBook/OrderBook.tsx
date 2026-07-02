@@ -44,7 +44,9 @@ function OrderBook({marketCode, prevClosingPrice, ticker, active, onSelectPrice}
 
     useOrderBookSocket(marketCode, setOrderBook);
 
-    const units = orderBook?.orderbook_units ?? [];
+    const units = orderBook?.code === marketCode
+        ? orderBook.orderbook_units
+        : [];
 
     const askRows = units.map((unit: OrderBookUnit ) => ({
         price: unit.ask_price,
@@ -67,7 +69,6 @@ function OrderBook({marketCode, prevClosingPrice, ticker, active, onSelectPrice}
 
     useEffect(() => {
         hasInitializedScrollRef.current = false;
-        setOrderBook(null);
     }, [marketCode]);
 
     useEffect(() => {
