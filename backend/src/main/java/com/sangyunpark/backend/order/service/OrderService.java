@@ -41,6 +41,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -62,12 +63,9 @@ public class OrderService {
     private final LimitOrderJpaRepository limitOrderJpaRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final AssetTransactionRecorder assetTransactionRecorder;
+    private final TransactionTemplate transactionTemplate;
 
-    @Transactional
     public MarketBuyResponse marketBuy(Long userId, MarketBuyRequest request) {
-        User user = userJpaRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
-
         BigDecimal orderAmount = request.amount();
         MarketPair marketPair = parseMarketCode(request.marketCode());
 
@@ -75,12 +73,7 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
         }
 
-        Asset baseAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.baseAssetCode())
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
-
-        if (baseAsset.getBalance().compareTo(orderAmount) < 0) {
-            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
-        }
+        validateMarketBuyBalance(userId, marketPair.baseAssetCode(), orderAmount);
 
         MarketOrderExecution execution = calculateMarketBuyExecution(request.marketCode(), orderAmount);
         BigDecimal executedQuantity = execution.executedQuantity();
@@ -89,6 +82,45 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
         }
 
+        return transactionTemplate.execute(status -> executeMarketBuy(
+                userId,
+                request,
+                orderAmount,
+                marketPair,
+                execution
+        ));
+    }
+
+    private void validateMarketBuyBalance(Long userId, String baseAssetCode, BigDecimal orderAmount) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
+
+        Asset baseAsset = assetJpaRepository.findByUserAndAssetCode(user, baseAssetCode)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
+
+        if (baseAsset.getBalance().compareTo(orderAmount) < 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
+        }
+    }
+
+    private MarketBuyResponse executeMarketBuy(
+            Long userId,
+            MarketBuyRequest request,
+            BigDecimal orderAmount,
+            MarketPair marketPair,
+            MarketOrderExecution execution
+    ) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
+
+        Asset baseAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.baseAssetCode())
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
+
+        if (baseAsset.getBalance().compareTo(orderAmount) < 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
+        }
+
+        BigDecimal executedQuantity = execution.executedQuantity();
         BigDecimal executedAmount = execution.executedAmount();
         BigDecimal executedPrice = execution.averageExecutedPrice();
 
