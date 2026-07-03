@@ -8,7 +8,8 @@ import com.sangyunpark.backend.auth.dto.request.SignupRequest;
 import com.sangyunpark.backend.auth.dto.response.AuthTokenResponse;
 import com.sangyunpark.backend.auth.service.AuthService;
 import com.sangyunpark.backend.common.exception.BusinessException;
-import com.sangyunpark.backend.market.price.UpbitMarketPriceProvider;
+import com.sangyunpark.backend.market.dto.response.OrderbookResponse;
+import com.sangyunpark.backend.market.restClient.UpbitOrderbookClient;
 import com.sangyunpark.backend.order.controller.dto.request.LimitBuyRequest;
 import com.sangyunpark.backend.order.controller.dto.request.LimitSellRequest;
 import com.sangyunpark.backend.order.controller.dto.request.MarketBuyRequest;
@@ -89,7 +90,7 @@ class OrderServiceTest {
     TransactionTemplate transactionTemplate;
 
     @MockitoBean
-    UpbitMarketPriceProvider upbitMarketPriceProvider;
+    UpbitOrderbookClient upbitOrderbookClient;
 
     @AfterEach
     void tearDown() {
@@ -100,8 +101,8 @@ class OrderServiceTest {
     void 시장가_매수에_성공하면_현금이_차감되고_코인_자산과_거래내역이_생성된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
 
         MarketBuyResponse response = orderService.marketBuy(
                 signupResponse.user().id(),
@@ -138,11 +139,49 @@ class OrderServiceTest {
     }
 
     @Test
+    void 시장가_매수는_낮은_매도호가부터_순차적으로_체결된다() {
+        AuthTokenResponse signupResponse = signup();
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(List.of(
+                        unit(new BigDecimal("100000"), new BigDecimal("1"), new BigDecimal("99000"), new BigDecimal("1")),
+                        unit(new BigDecimal("200000"), new BigDecimal("1"), new BigDecimal("98000"), new BigDecimal("1"))
+                )));
+
+        MarketBuyResponse response = orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("250000"))
+        );
+
+        assertThat(response.executedAmount()).isEqualByComparingTo(new BigDecimal("250000"));
+        assertThat(response.executedQuantity()).isEqualByComparingTo(new BigDecimal("1.75000000"));
+        assertThat(response.executedPrice()).isEqualByComparingTo(new BigDecimal("142857.14285714"));
+        assertThat(response.averageBuyPrice()).isEqualByComparingTo(new BigDecimal("142857.14285714"));
+    }
+
+    @Test
+    void 시장가_매수는_수량_절삭으로_남은_잔액을_물량_부족으로_처리하지_않는다() {
+        AuthTokenResponse signupResponse = signup();
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("92670000")));
+
+        MarketBuyResponse response = orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("50000"))
+        );
+
+        assertThat(response.executedAmount()).isPositive();
+        assertThat(response.executedAmount()).isLessThanOrEqualTo(new BigDecimal("50000"));
+        assertThat(response.executedQuantity()).isGreaterThan(BigDecimal.ZERO);
+        assertThat(response.remainingCashBalance())
+                .isEqualByComparingTo(new BigDecimal("1000000").subtract(response.executedAmount()));
+    }
+
+    @Test
     void 시장가_매수에_성공하면_자산_변동_이력이_생성된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
 
         orderService.marketBuy(
                 signupResponse.user().id(),
@@ -172,8 +211,8 @@ class OrderServiceTest {
     void 시장가_매도에_성공하면_코인이_차감되고_현금과_거래내역이_증가한다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
 
         orderService.marketBuy(
                 signupResponse.user().id(),
@@ -215,11 +254,37 @@ class OrderServiceTest {
     }
 
     @Test
+    void 시장가_매도는_높은_매수호가부터_순차적으로_체결된다() {
+        AuthTokenResponse signupResponse = signup();
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(
+                        orderbook(new BigDecimal("100000")),
+                        orderbook(List.of(
+                                unit(new BigDecimal("101000"), new BigDecimal("1"), new BigDecimal("100000"), new BigDecimal("1")),
+                                unit(new BigDecimal("102000"), new BigDecimal("1"), new BigDecimal("90000"), new BigDecimal("2"))
+                        ))
+                );
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("300000"))
+        );
+
+        MarketSellResponse response = orderService.marketSell(
+                signupResponse.user().id(),
+                new MarketSellRequest("KRW-BTC", new BigDecimal("2.5"))
+        );
+
+        assertThat(response.executedQuantity()).isEqualByComparingTo(new BigDecimal("2.5"));
+        assertThat(response.executedAmount()).isEqualByComparingTo(new BigDecimal("235000.0"));
+        assertThat(response.executedPrice()).isEqualByComparingTo(new BigDecimal("94000.00000000"));
+    }
+
+    @Test
     void 시장가_전량_매도에_성공하면_코인_평균_매수가가_초기화된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
 
         orderService.marketBuy(
                 signupResponse.user().id(),
@@ -267,14 +332,27 @@ class OrderServiceTest {
     }
 
     @Test
-    void 시장가_매수_수량이_최소_체결_수량보다_작으면_예외가_발생한다() {
+    void 시장가_매수_금액이_최소_주문금액보다_작으면_예외가_발생한다() {
         AuthTokenResponse signupResponse = signup();
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("100000000"));
 
         assertThatThrownBy(() -> orderService.marketBuy(
                 signupResponse.user().id(),
-                new MarketBuyRequest("KRW-BTC", new BigDecimal("0.5"))
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("4999"))
+        ))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
+    }
+
+    @Test
+    void 시장가_매수_수량이_최소_체결_수량보다_작으면_예외가_발생한다() {
+        AuthTokenResponse signupResponse = signup();
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("1000000000000")));
+
+        assertThatThrownBy(() -> orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("5000"))
         ))
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
@@ -284,8 +362,8 @@ class OrderServiceTest {
     @Test
     void 시장가_매수_현재가가_null이면_예외가_발생한다() {
         AuthTokenResponse signupResponse = signup();
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(null);
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook((BigDecimal) null));
 
         assertThatThrownBy(() -> orderService.marketBuy(
                 signupResponse.user().id(),
@@ -299,8 +377,8 @@ class OrderServiceTest {
     @Test
     void 시장가_매수_현재가가_0이하면_예외가_발생한다() {
         AuthTokenResponse signupResponse = signup();
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(BigDecimal.ZERO);
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(BigDecimal.ZERO));
 
         assertThatThrownBy(() -> orderService.marketBuy(
                 signupResponse.user().id(),
@@ -428,8 +506,8 @@ class OrderServiceTest {
     void 지정가_매도_주문을_생성하면_코인이_잠기고_PENDING_주문이_생성된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
         orderService.marketBuy(
                 signupResponse.user().id(),
                 new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
@@ -477,8 +555,8 @@ class OrderServiceTest {
     @Test
     void 지정가_매도_가격이_0이하면_예외가_발생한다() {
         AuthTokenResponse signupResponse = signup();
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
         orderService.marketBuy(
                 signupResponse.user().id(),
                 new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
@@ -497,8 +575,8 @@ class OrderServiceTest {
     void 지정가_매도_주문을_취소하면_잠긴_코인이_해제된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
         orderService.marketBuy(
                 signupResponse.user().id(),
                 new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
@@ -530,8 +608,8 @@ class OrderServiceTest {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
         String marketCode = "KRW-LS3";
-        when(upbitMarketPriceProvider.getCurrentPrice(marketCode))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook(marketCode))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
         orderService.marketBuy(
                 signupResponse.user().id(),
                 new MarketBuyRequest(marketCode, new BigDecimal("100000"))
@@ -797,8 +875,8 @@ class OrderServiceTest {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
         String marketCode = "KRW-LS1";
-        when(upbitMarketPriceProvider.getCurrentPrice(marketCode))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook(marketCode))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
         orderService.marketBuy(
                 signupResponse.user().id(),
                 new MarketBuyRequest(marketCode, new BigDecimal("100000"))
@@ -851,8 +929,8 @@ class OrderServiceTest {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
         String marketCode = "KRW-LS2";
-        when(upbitMarketPriceProvider.getCurrentPrice(marketCode))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook(marketCode))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
         orderService.marketBuy(
                 signupResponse.user().id(),
                 new MarketBuyRequest(marketCode, new BigDecimal("100000"))
@@ -909,14 +987,14 @@ class OrderServiceTest {
     @Test
     void 시장가_매도_현재가가_0이하면_예외가_발생한다() {
         AuthTokenResponse signupResponse = signup();
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
         orderService.marketBuy(
                 signupResponse.user().id(),
                 new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
         );
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(BigDecimal.ZERO);
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(BigDecimal.ZERO));
 
         assertThatThrownBy(() -> orderService.marketSell(
                 signupResponse.user().id(),
@@ -930,8 +1008,8 @@ class OrderServiceTest {
     @Test
     void 거래내역을_최신순으로_조회한다() {
         AuthTokenResponse signupResponse = signup();
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
 
         orderService.marketBuy(
                 signupResponse.user().id(),
@@ -956,8 +1034,8 @@ class OrderServiceTest {
     @Test
     void 거래내역은_커서_기반으로_조회한다() {
         AuthTokenResponse signupResponse = signup();
-        when(upbitMarketPriceProvider.getCurrentPrice("KRW-BTC"))
-                .thenReturn(new BigDecimal("50000000"));
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
 
         orderService.marketBuy(
                 signupResponse.user().id(),
@@ -990,6 +1068,36 @@ class OrderServiceTest {
 
     private User findUser(Long userId) {
         return userJpaRepository.findById(userId).orElseThrow();
+    }
+
+    private OrderbookResponse orderbook(BigDecimal price) {
+        BigDecimal size = new BigDecimal("1000000");
+
+        return orderbook(List.of(unit(price, size, price, size)));
+    }
+
+    private OrderbookResponse orderbook(List<OrderbookResponse.OrderBookUnitResponse> units) {
+        return new OrderbookResponse(
+                "KRW-BTC",
+                System.currentTimeMillis(),
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                units
+        );
+    }
+
+    private OrderbookResponse.OrderBookUnitResponse unit(
+            BigDecimal askPrice,
+            BigDecimal askSize,
+            BigDecimal bidPrice,
+            BigDecimal bidSize
+    ) {
+        return new OrderbookResponse.OrderBookUnitResponse(
+                askPrice,
+                bidPrice,
+                askSize,
+                bidSize
+        );
     }
 
     private void flushAndClear() {
