@@ -15,6 +15,7 @@ public enum OrderErrorCode implements ErrorCode {
     INVALID_MARKET_PRICE(HttpStatus.BAD_REQUEST, "유효하지 않은 시장 가격입니다."),
     INVALID_LIMIT_PRICE(HttpStatus.BAD_REQUEST, "지정가는 0보다 커야 합니다."),
     INVALID_ASSET_AMOUNT(HttpStatus.BAD_REQUEST, "자산 금액은 0보다 커야 합니다."),
+    INSUFFICIENT_MARKET_LIQUIDITY(HttpStatus.BAD_REQUEST, "시장가 주문을 체결할 수 있는 호가 물량이 부족합니다."),
     ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "주문을 찾을 수 없습니다."),
     ORDER_NOT_CANCELABLE(HttpStatus.BAD_REQUEST, "취소할 수 없는 주문입니다.");
 

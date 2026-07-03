@@ -8,7 +8,8 @@ import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
 import com.sangyunpark.backend.asset.service.AssetTransactionRecorder;
 import com.sangyunpark.backend.auth.exception.AuthErrorCode;
 import com.sangyunpark.backend.common.exception.BusinessException;
-import com.sangyunpark.backend.market.price.UpbitMarketPriceProvider;
+import com.sangyunpark.backend.market.dto.response.OrderbookResponse;
+import com.sangyunpark.backend.market.restClient.UpbitOrderbookClient;
 import com.sangyunpark.backend.order.controller.dto.request.LimitBuyRequest;
 import com.sangyunpark.backend.order.controller.dto.request.LimitSellRequest;
 import com.sangyunpark.backend.order.controller.dto.request.MarketBuyRequest;
@@ -40,6 +41,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -51,23 +53,65 @@ public class OrderService {
 
     private static final int QUANTITY_SCALE = 8;
     private static final int MAX_TRADE_HISTORY_SIZE = 100;
+    private static final BigDecimal MIN_MARKET_BUY_AMOUNT = new BigDecimal("5000");
     private static final BigDecimal MIN_EXECUTED_QUANTITY = new BigDecimal("0.00000001");
 
     private final UserJpaRepository userJpaRepository;
     private final AssetJpaRepository assetJpaRepository;
-    private final UpbitMarketPriceProvider upbitMarketPriceProvider;
+    private final UpbitOrderbookClient upbitOrderbookClient;
     private final TradeHistoryJpaRepository tradeHistoryJpaRepository;
     private final LimitOrderJpaRepository limitOrderJpaRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final AssetTransactionRecorder assetTransactionRecorder;
+    private final TransactionTemplate transactionTemplate;
 
-    @Transactional
     public MarketBuyResponse marketBuy(Long userId, MarketBuyRequest request) {
+        BigDecimal orderAmount = request.amount();
+        MarketPair marketPair = parseMarketCode(request.marketCode());
+
+        if (orderAmount.compareTo(MIN_MARKET_BUY_AMOUNT) < 0) {
+            throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
+        }
+
+        validateMarketBuyBalance(userId, marketPair.baseAssetCode(), orderAmount);
+
+        MarketOrderExecution execution = calculateMarketBuyExecution(request.marketCode(), orderAmount);
+        BigDecimal executedQuantity = execution.executedQuantity();
+
+        if (executedQuantity.compareTo(MIN_EXECUTED_QUANTITY) < 0) {
+            throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
+        }
+
+        return transactionTemplate.execute(status -> executeMarketBuy(
+                userId,
+                request,
+                orderAmount,
+                marketPair,
+                execution
+        ));
+    }
+
+    private void validateMarketBuyBalance(Long userId, String baseAssetCode, BigDecimal orderAmount) {
         User user = userJpaRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
 
-        BigDecimal orderAmount = request.amount();
-        MarketPair marketPair = parseMarketCode(request.marketCode());
+        Asset baseAsset = assetJpaRepository.findByUserAndAssetCode(user, baseAssetCode)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
+
+        if (baseAsset.getBalance().compareTo(orderAmount) < 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
+        }
+    }
+
+    private MarketBuyResponse executeMarketBuy(
+            Long userId,
+            MarketBuyRequest request,
+            BigDecimal orderAmount,
+            MarketPair marketPair,
+            MarketOrderExecution execution
+    ) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
 
         Asset baseAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.baseAssetCode())
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
@@ -76,22 +120,15 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
         }
 
-        BigDecimal currentPrice = upbitMarketPriceProvider.getCurrentPrice(request.marketCode());
-        validateCurrentPrice(currentPrice);
-
-        BigDecimal executedQuantity = calculateExecutedQuantity(orderAmount, currentPrice);
-
-        if (executedQuantity.compareTo(MIN_EXECUTED_QUANTITY) < 0) {
-            throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
-        }
-
-        BigDecimal executedAmount = executedQuantity.multiply(currentPrice);
+        BigDecimal executedQuantity = execution.executedQuantity();
+        BigDecimal executedAmount = execution.executedAmount();
+        BigDecimal executedPrice = execution.averageExecutedPrice();
 
         Asset targetAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.targetAssetCode())
                 .orElseGet(() -> Asset.create(user, marketPair.targetAssetCode()));
 
         baseAsset.withdraw(executedAmount);
-        targetAsset.buy(executedQuantity, currentPrice);
+        targetAsset.buy(executedQuantity, executedPrice);
         assetJpaRepository.save(targetAsset);
 
         TradeHistory tradeHistory = tradeHistoryJpaRepository.save(
@@ -99,7 +136,7 @@ public class OrderService {
                         user,
                         request.marketCode(),
                         executedQuantity,
-                        currentPrice,
+                        executedPrice,
                         executedAmount
                 )
         );
@@ -124,7 +161,7 @@ public class OrderService {
                 request.marketCode(),
                 orderAmount,
                 executedAmount,
-                currentPrice,
+                executedPrice,
                 executedQuantity,
                 baseAsset.getBalance(),
                 targetAsset.getBalance(),
@@ -150,10 +187,9 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
         }
 
-        BigDecimal currentPrice = upbitMarketPriceProvider.getCurrentPrice(request.marketCode());
-        validateCurrentPrice(currentPrice);
-
-        BigDecimal executedAmount = orderQuantity.multiply(currentPrice);
+        MarketOrderExecution execution = calculateMarketSellExecution(request.marketCode(), orderQuantity);
+        BigDecimal executedAmount = execution.executedAmount();
+        BigDecimal executedPrice = execution.averageExecutedPrice();
 
         targetAsset.sell(orderQuantity);
         baseAsset.deposit(executedAmount);
@@ -164,7 +200,7 @@ public class OrderService {
                         user,
                         request.marketCode(),
                         orderQuantity,
-                        currentPrice,
+                        executedPrice,
                         executedAmount
                 )
         );
@@ -189,7 +225,7 @@ public class OrderService {
                 request.marketCode(),
                 orderQuantity,
                 executedAmount,
-                currentPrice,
+                executedPrice,
                 orderQuantity,
                 baseAsset.getBalance(),
                 targetAsset.getBalance(),
@@ -378,8 +414,94 @@ public class OrderService {
         return new MarketPair(parts[0], parts[1]);
     }
 
-    private BigDecimal calculateExecutedQuantity(BigDecimal orderAmount, BigDecimal currentPrice) {
-        return orderAmount.divide(currentPrice, QUANTITY_SCALE, RoundingMode.DOWN);
+    private MarketOrderExecution calculateMarketBuyExecution(String marketCode, BigDecimal orderAmount) {
+        OrderbookResponse orderbook = upbitOrderbookClient.fetchOrderbook(marketCode);
+        if (orderbook.orderbookUnits() == null || orderbook.orderbookUnits().isEmpty()) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_MARKET_LIQUIDITY);
+        }
+
+        BigDecimal remainingAmount = orderAmount;
+        BigDecimal executedAmount = BigDecimal.ZERO;
+        BigDecimal executedQuantity = BigDecimal.ZERO;
+
+        for (OrderbookResponse.OrderBookUnitResponse unit : orderbook.orderbookUnits()) {
+            BigDecimal askPrice = unit.askPrice();
+            BigDecimal askSize = unit.askSize();
+            validateCurrentPrice(askPrice);
+
+            if (askSize == null || askSize.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            BigDecimal levelAmount = askPrice.multiply(askSize);
+            if (remainingAmount.compareTo(levelAmount) >= 0) {
+                executedAmount = executedAmount.add(levelAmount);
+                executedQuantity = executedQuantity.add(askSize);
+                remainingAmount = remainingAmount.subtract(levelAmount);
+                continue;
+            }
+
+            BigDecimal partialQuantity = remainingAmount.divide(askPrice, QUANTITY_SCALE, RoundingMode.DOWN);
+            if (partialQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                if (executedQuantity.compareTo(BigDecimal.ZERO) > 0) {
+                    remainingAmount = BigDecimal.ZERO;
+                }
+                break;
+            }
+
+            BigDecimal partialAmount = partialQuantity.multiply(askPrice);
+            executedAmount = executedAmount.add(partialAmount);
+            executedQuantity = executedQuantity.add(partialQuantity);
+            remainingAmount = BigDecimal.ZERO;
+            break;
+        }
+
+        if (executedQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+            return MarketOrderExecution.of(executedAmount, executedQuantity);
+        }
+
+        if (remainingAmount.compareTo(BigDecimal.ZERO) > 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_MARKET_LIQUIDITY);
+        }
+
+        return MarketOrderExecution.of(executedAmount, executedQuantity);
+    }
+
+    private MarketOrderExecution calculateMarketSellExecution(String marketCode, BigDecimal orderQuantity) {
+        OrderbookResponse orderbook = upbitOrderbookClient.fetchOrderbook(marketCode);
+        if (orderbook.orderbookUnits() == null || orderbook.orderbookUnits().isEmpty()) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_MARKET_LIQUIDITY);
+        }
+
+        BigDecimal remainingQuantity = orderQuantity;
+        BigDecimal executedAmount = BigDecimal.ZERO;
+        BigDecimal executedQuantity = BigDecimal.ZERO;
+
+        for (OrderbookResponse.OrderBookUnitResponse unit : orderbook.orderbookUnits()) {
+            BigDecimal bidPrice = unit.bidPrice();
+            BigDecimal bidSize = unit.bidSize();
+            validateCurrentPrice(bidPrice);
+
+            if (bidSize == null || bidSize.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+
+            BigDecimal quantity = remainingQuantity.min(bidSize);
+            BigDecimal amount = quantity.multiply(bidPrice);
+            executedAmount = executedAmount.add(amount);
+            executedQuantity = executedQuantity.add(quantity);
+            remainingQuantity = remainingQuantity.subtract(quantity);
+
+            if (remainingQuantity.compareTo(BigDecimal.ZERO) == 0) {
+                break;
+            }
+        }
+
+        if (remainingQuantity.compareTo(BigDecimal.ZERO) > 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_MARKET_LIQUIDITY);
+        }
+
+        return MarketOrderExecution.of(executedAmount, executedQuantity);
     }
 
     private void validateCurrentPrice(BigDecimal currentPrice) {
@@ -395,6 +517,25 @@ public class OrderService {
 
         if (limitPrice == null || limitPrice.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException(OrderErrorCode.INVALID_LIMIT_PRICE);
+        }
+    }
+
+    private record MarketOrderExecution(
+            BigDecimal executedAmount,
+            BigDecimal executedQuantity,
+            BigDecimal averageExecutedPrice
+    ) {
+
+        private static MarketOrderExecution of(BigDecimal executedAmount, BigDecimal executedQuantity) {
+            if (executedQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
+            }
+
+            return new MarketOrderExecution(
+                    executedAmount,
+                    executedQuantity,
+                    executedAmount.divide(executedQuantity, QUANTITY_SCALE, RoundingMode.HALF_UP)
+            );
         }
     }
 

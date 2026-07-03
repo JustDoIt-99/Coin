@@ -13,7 +13,7 @@ public record MarketBuyRequest(
         String marketCode,
 
         @NotNull
-        @DecimalMin(value = "0.0", inclusive = false)
+        @DecimalMin(value = "5000.0")
         BigDecimal amount
 ) {
 }
