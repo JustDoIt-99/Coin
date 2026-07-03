@@ -534,7 +534,7 @@ public class OrderService {
             return new MarketOrderExecution(
                     executedAmount,
                     executedQuantity,
-                    executedAmount.divide(executedQuantity, 8, RoundingMode.HALF_UP)
+                    executedAmount.divide(executedQuantity, QUANTITY_SCALE, RoundingMode.HALF_UP)
             );
         }
     }
