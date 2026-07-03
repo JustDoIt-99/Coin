@@ -443,6 +443,9 @@ public class OrderService {
 
             BigDecimal partialQuantity = remainingAmount.divide(askPrice, QUANTITY_SCALE, RoundingMode.DOWN);
             if (partialQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+                if (executedQuantity.compareTo(BigDecimal.ZERO) > 0) {
+                    remainingAmount = BigDecimal.ZERO;
+                }
                 break;
             }
 

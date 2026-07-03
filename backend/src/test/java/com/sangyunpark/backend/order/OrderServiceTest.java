@@ -177,6 +177,25 @@ class OrderServiceTest {
     }
 
     @Test
+    void 시장가_매수는_호가_소진_후_미세_잔액이_남아도_물량_부족으로_처리하지_않는다() {
+        AuthTokenResponse signupResponse = signup();
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(List.of(
+                        unit(new BigDecimal("100000"), new BigDecimal("1"), new BigDecimal("99000"), new BigDecimal("1")),
+                        unit(new BigDecimal("100000000"), new BigDecimal("1"), new BigDecimal("98000"), new BigDecimal("1"))
+                )));
+
+        MarketBuyResponse response = orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000.1"))
+        );
+
+        assertThat(response.executedAmount()).isEqualByComparingTo(new BigDecimal("100000"));
+        assertThat(response.executedQuantity()).isEqualByComparingTo(new BigDecimal("1"));
+        assertThat(response.remainingCashBalance()).isEqualByComparingTo(new BigDecimal("900000"));
+    }
+
+    @Test
     void 시장가_매수에_성공하면_자산_변동_이력이_생성된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
