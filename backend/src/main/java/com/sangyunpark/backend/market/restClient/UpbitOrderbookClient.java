@@ -19,8 +19,10 @@ public class UpbitOrderbookClient {
             .build();
 
     public OrderbookResponse fetchOrderbook(String marketCode) {
+        OrderbookResponse[] response;
+
         try {
-            OrderbookResponse[] response = restClient.get()
+            response = restClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/orderbook")
                             .queryParam("markets", marketCode)
@@ -28,16 +30,14 @@ public class UpbitOrderbookClient {
                     )
                     .retrieve()
                     .body(OrderbookResponse[].class);
-
-            return Arrays.stream(response == null ? new OrderbookResponse[0] : response)
-                    .findFirst()
-                    .orElseThrow(() -> new BusinessException(MarketErrorCode.MARKET_NOT_FOUND));
         } catch (HttpClientErrorException.TooManyRequests e) {
             throw new BusinessException(MarketErrorCode.UPBIT_RATE_LIMIT);
-        } catch (BusinessException e) {
-            throw e;
         } catch (Exception e) {
             throw new BusinessException(MarketErrorCode.UPBIT_API_ERROR);
         }
+
+        return Arrays.stream(response == null ? new OrderbookResponse[0] : response)
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(MarketErrorCode.MARKET_NOT_FOUND));
     }
 }
