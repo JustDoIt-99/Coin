@@ -30,12 +30,14 @@ function TradeNotificationSocket() {
     const {isAuthenticated, user} = useAuth();
     const queryClient = useQueryClient();
     const clientRef = useRef<Client | null>(null);
+    const timeoutsRef = useRef<number[]>([]);
     const [toasts, setToasts] = useState<TradeToast[]>([]);
 
     useEffect(() => {
         if (!isAuthenticated || !user?.id) {
             clientRef.current?.deactivate();
             clientRef.current = null;
+            clearToastTimeouts();
             setToasts([]);
             return;
         }
@@ -79,14 +81,23 @@ function TradeNotificationSocket() {
             if (clientRef.current === client) {
                 clientRef.current = null;
             }
+            clearToastTimeouts();
         };
     }, [isAuthenticated, queryClient, user?.id]);
 
     const showToast = (toast: TradeToast) => {
         setToasts((prev) => [...prev, toast]);
-        window.setTimeout(() => {
+        const timeoutId = window.setTimeout(() => {
             setToasts((prev) => prev.filter((item) => item.id !== toast.id));
+            timeoutsRef.current = timeoutsRef.current.filter((id) => id !== timeoutId);
         }, TOAST_DURATION_MS);
+
+        timeoutsRef.current.push(timeoutId);
+    };
+
+    const clearToastTimeouts = () => {
+        timeoutsRef.current.forEach(window.clearTimeout);
+        timeoutsRef.current = [];
     };
 
     if (toasts.length === 0) {
