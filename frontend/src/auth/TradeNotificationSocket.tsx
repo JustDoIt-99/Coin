@@ -42,6 +42,9 @@ function TradeNotificationSocket() {
             return;
         }
 
+        clearToastTimeouts();
+        setToasts([]);
+
         const client = new Client({
             brokerURL: WS_URL,
             reconnectDelay: 3000,
