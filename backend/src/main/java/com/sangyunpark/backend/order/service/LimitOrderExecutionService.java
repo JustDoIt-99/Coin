@@ -81,7 +81,7 @@ public class LimitOrderExecutionService {
         boolean shouldRefreshIndex = executableOrders.isEmpty();
         for (LimitOrder order : executableOrders) {
             try {
-                Boolean executed = transactionTemplate.execute(status -> executeBuyOrder(order, currentPrice));
+                Boolean executed = transactionTemplate.execute(status -> executeBuyOrder(order.getId(), currentPrice));
                 if (Boolean.TRUE.equals(executed)) {
                     executedCount++;
                     shouldRefreshIndex = true;
@@ -136,7 +136,7 @@ public class LimitOrderExecutionService {
         boolean shouldRefreshIndex = executableOrders.isEmpty();
         for (LimitOrder order : executableOrders) {
             try {
-                Boolean executed = transactionTemplate.execute(status -> executeSellOrder(order, currentPrice));
+                Boolean executed = transactionTemplate.execute(status -> executeSellOrder(order.getId(), currentPrice));
                 if (Boolean.TRUE.equals(executed)) {
                     executedCount++;
                     shouldRefreshIndex = true;
@@ -156,9 +156,9 @@ public class LimitOrderExecutionService {
         return executedCount;
     }
 
-    private boolean executeBuyOrder(LimitOrder order, BigDecimal currentPrice) {
+    private boolean executeBuyOrder(Long orderId, BigDecimal currentPrice) {
         int claimed = limitOrderJpaRepository.updateStatus(
-                order.getId(),
+                orderId,
                 OrderStatus.PENDING,
                 OrderStatus.EXECUTING
         );
@@ -166,6 +166,7 @@ public class LimitOrderExecutionService {
             return false;
         }
 
+        LimitOrder order = getOrder(orderId);
         MarketPair marketPair = parseMarketCode(order.getMarketCode());
         BigDecimal executedAmount = order.getQuantity().multiply(currentPrice);
         BigDecimal refundAmount = order.getLockedAmount().subtract(executedAmount);
@@ -227,9 +228,9 @@ public class LimitOrderExecutionService {
         return true;
     }
 
-    private boolean executeSellOrder(LimitOrder order, BigDecimal currentPrice) {
+    private boolean executeSellOrder(Long orderId, BigDecimal currentPrice) {
         int claimed = limitOrderJpaRepository.updateStatus(
-                order.getId(),
+                orderId,
                 OrderStatus.PENDING,
                 OrderStatus.EXECUTING
         );
@@ -237,6 +238,7 @@ public class LimitOrderExecutionService {
             return false;
         }
 
+        LimitOrder order = getOrder(orderId);
         MarketPair marketPair = parseMarketCode(order.getMarketCode());
         BigDecimal executedAmount = order.getQuantity().multiply(currentPrice);
 
@@ -340,6 +342,11 @@ public class LimitOrderExecutionService {
     private MarketPair parseMarketCode(String marketCode) {
         String[] parts = marketCode.split("-");
         return new MarketPair(parts[0], parts[1]);
+    }
+
+    private LimitOrder getOrder(Long orderId) {
+        return limitOrderJpaRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalStateException("주문을 찾을 수 없습니다. orderId=" + orderId));
     }
 
     private void publishAssetUpdated(LimitOrder order, List<String> assetCodes, String reason) {
