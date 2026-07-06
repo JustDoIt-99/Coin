@@ -11,6 +11,7 @@ import com.sangyunpark.backend.order.entity.OrderStatus;
 import com.sangyunpark.backend.order.entity.OrderType;
 import com.sangyunpark.backend.order.entity.TradeHistory;
 import com.sangyunpark.backend.order.entity.TradeSide;
+import com.sangyunpark.backend.order.event.TradeExecutedEvent;
 import com.sangyunpark.backend.order.repository.LimitOrderJpaRepository;
 import com.sangyunpark.backend.order.repository.TradeHistoryJpaRepository;
 import com.sangyunpark.backend.order.service.dto.MarketPair;
@@ -80,7 +81,7 @@ public class LimitOrderExecutionService {
         boolean shouldRefreshIndex = executableOrders.isEmpty();
         for (LimitOrder order : executableOrders) {
             try {
-                Boolean executed = transactionTemplate.execute(status -> executeBuyOrder(order, currentPrice));
+                Boolean executed = transactionTemplate.execute(status -> executeBuyOrder(order.getId(), currentPrice));
                 if (Boolean.TRUE.equals(executed)) {
                     executedCount++;
                     shouldRefreshIndex = true;
@@ -135,7 +136,7 @@ public class LimitOrderExecutionService {
         boolean shouldRefreshIndex = executableOrders.isEmpty();
         for (LimitOrder order : executableOrders) {
             try {
-                Boolean executed = transactionTemplate.execute(status -> executeSellOrder(order, currentPrice));
+                Boolean executed = transactionTemplate.execute(status -> executeSellOrder(order.getId(), currentPrice));
                 if (Boolean.TRUE.equals(executed)) {
                     executedCount++;
                     shouldRefreshIndex = true;
@@ -155,9 +156,9 @@ public class LimitOrderExecutionService {
         return executedCount;
     }
 
-    private boolean executeBuyOrder(LimitOrder order, BigDecimal currentPrice) {
+    private boolean executeBuyOrder(Long orderId, BigDecimal currentPrice) {
         int claimed = limitOrderJpaRepository.updateStatus(
-                order.getId(),
+                orderId,
                 OrderStatus.PENDING,
                 OrderStatus.EXECUTING
         );
@@ -165,6 +166,7 @@ public class LimitOrderExecutionService {
             return false;
         }
 
+        LimitOrder order = getOrder(orderId);
         MarketPair marketPair = parseMarketCode(order.getMarketCode());
         BigDecimal executedAmount = order.getQuantity().multiply(currentPrice);
         BigDecimal refundAmount = order.getLockedAmount().subtract(executedAmount);
@@ -222,12 +224,13 @@ public class LimitOrderExecutionService {
             throw new IllegalStateException("체결 진행 중인 주문을 체결 완료 처리하지 못했습니다. orderId=" + order.getId());
         }
         publishAssetUpdated(order, List.of(marketPair.baseAssetCode(), marketPair.targetAssetCode()), "LIMIT_BUY_FILLED");
+        publishTradeExecuted(tradeHistory);
         return true;
     }
 
-    private boolean executeSellOrder(LimitOrder order, BigDecimal currentPrice) {
+    private boolean executeSellOrder(Long orderId, BigDecimal currentPrice) {
         int claimed = limitOrderJpaRepository.updateStatus(
-                order.getId(),
+                orderId,
                 OrderStatus.PENDING,
                 OrderStatus.EXECUTING
         );
@@ -235,6 +238,7 @@ public class LimitOrderExecutionService {
             return false;
         }
 
+        LimitOrder order = getOrder(orderId);
         MarketPair marketPair = parseMarketCode(order.getMarketCode());
         BigDecimal executedAmount = order.getQuantity().multiply(currentPrice);
 
@@ -289,6 +293,7 @@ public class LimitOrderExecutionService {
             throw new IllegalStateException("체결 진행 중인 매도 주문을 체결 완료 처리하지 못했습니다. orderId=" + order.getId());
         }
         publishAssetUpdated(order, List.of(marketPair.baseAssetCode(), marketPair.targetAssetCode()), "LIMIT_SELL_FILLED");
+        publishTradeExecuted(tradeHistory);
         return true;
     }
 
@@ -339,8 +344,17 @@ public class LimitOrderExecutionService {
         return new MarketPair(parts[0], parts[1]);
     }
 
+    private LimitOrder getOrder(Long orderId) {
+        return limitOrderJpaRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalStateException("주문을 찾을 수 없습니다. orderId=" + orderId));
+    }
+
     private void publishAssetUpdated(LimitOrder order, List<String> assetCodes, String reason) {
         eventPublisher.publishEvent(new AssetUpdatedEvent(order.getUser().getId(), assetCodes, reason));
+    }
+
+    private void publishTradeExecuted(TradeHistory tradeHistory) {
+        eventPublisher.publishEvent(TradeExecutedEvent.from(tradeHistory));
     }
 
 }

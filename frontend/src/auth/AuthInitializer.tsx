@@ -2,6 +2,7 @@ import {useEffect, useRef} from "react";
 import { useAuth } from "@auth/useAuth";
 import {API} from "@constants/endpoints.ts";
 import AssetSyncSocket from "@auth/AssetSyncSocket";
+import TradeNotificationSocket from "@auth/TradeNotificationSocket";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
     const { login, setIsLoading } = useAuth();
@@ -37,6 +38,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
     return (
         <>
             <AssetSyncSocket />
+            <TradeNotificationSocket />
             {children}
         </>
     );

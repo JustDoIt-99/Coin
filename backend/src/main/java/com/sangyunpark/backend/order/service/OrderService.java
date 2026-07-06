@@ -30,6 +30,7 @@ import com.sangyunpark.backend.order.entity.TradeSide;
 import com.sangyunpark.backend.order.event.LimitBuyOrderCreatedEvent;
 import com.sangyunpark.backend.order.event.LimitOrderCancelledEvent;
 import com.sangyunpark.backend.order.event.LimitSellOrderCreatedEvent;
+import com.sangyunpark.backend.order.event.TradeExecutedEvent;
 import com.sangyunpark.backend.order.exception.OrderErrorCode;
 import com.sangyunpark.backend.order.repository.LimitOrderJpaRepository;
 import com.sangyunpark.backend.order.repository.TradeHistoryJpaRepository;
@@ -155,6 +156,7 @@ public class OrderService {
                 tradeHistory.getId()
         );
         publishAssetUpdated(user, List.of(marketPair.baseAssetCode(), marketPair.targetAssetCode()), "MARKET_BUY");
+        publishTradeExecuted(tradeHistory);
 
         return new MarketBuyResponse(
                 tradeHistory.getId(),
@@ -219,6 +221,7 @@ public class OrderService {
                 tradeHistory.getId()
         );
         publishAssetUpdated(user, List.of(marketPair.baseAssetCode(), marketPair.targetAssetCode()), "MARKET_SELL");
+        publishTradeExecuted(tradeHistory);
 
         return new MarketSellResponse(
                 tradeHistory.getId(),
@@ -402,6 +405,10 @@ public class OrderService {
 
     private void publishAssetUpdated(User user, List<String> assetCodes, String reason) {
         eventPublisher.publishEvent(new AssetUpdatedEvent(user.getId(), assetCodes, reason));
+    }
+
+    private void publishTradeExecuted(TradeHistory tradeHistory) {
+        eventPublisher.publishEvent(TradeExecutedEvent.from(tradeHistory));
     }
 
     private MarketPair parseMarketCode(String marketCode) {
