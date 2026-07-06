@@ -11,6 +11,7 @@ import com.sangyunpark.backend.order.entity.OrderStatus;
 import com.sangyunpark.backend.order.entity.OrderType;
 import com.sangyunpark.backend.order.entity.TradeHistory;
 import com.sangyunpark.backend.order.entity.TradeSide;
+import com.sangyunpark.backend.order.event.TradeExecutedEvent;
 import com.sangyunpark.backend.order.repository.LimitOrderJpaRepository;
 import com.sangyunpark.backend.order.repository.TradeHistoryJpaRepository;
 import com.sangyunpark.backend.order.service.dto.MarketPair;
@@ -222,6 +223,7 @@ public class LimitOrderExecutionService {
             throw new IllegalStateException("체결 진행 중인 주문을 체결 완료 처리하지 못했습니다. orderId=" + order.getId());
         }
         publishAssetUpdated(order, List.of(marketPair.baseAssetCode(), marketPair.targetAssetCode()), "LIMIT_BUY_FILLED");
+        publishTradeExecuted(tradeHistory);
         return true;
     }
 
@@ -289,6 +291,7 @@ public class LimitOrderExecutionService {
             throw new IllegalStateException("체결 진행 중인 매도 주문을 체결 완료 처리하지 못했습니다. orderId=" + order.getId());
         }
         publishAssetUpdated(order, List.of(marketPair.baseAssetCode(), marketPair.targetAssetCode()), "LIMIT_SELL_FILLED");
+        publishTradeExecuted(tradeHistory);
         return true;
     }
 
@@ -341,6 +344,10 @@ public class LimitOrderExecutionService {
 
     private void publishAssetUpdated(LimitOrder order, List<String> assetCodes, String reason) {
         eventPublisher.publishEvent(new AssetUpdatedEvent(order.getUser().getId(), assetCodes, reason));
+    }
+
+    private void publishTradeExecuted(TradeHistory tradeHistory) {
+        eventPublisher.publishEvent(TradeExecutedEvent.from(tradeHistory));
     }
 
 }
