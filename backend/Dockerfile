@@ -13,7 +13,12 @@ RUN ./gradlew bootJar --no-daemon
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
+RUN addgroup --system coinco && adduser --system --ingroup coinco coinco
+
 COPY --from=builder /app/build/libs/*.jar app.jar
+RUN chown coinco:coinco /app/app.jar
+
+USER coinco
 
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
