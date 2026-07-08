@@ -16,7 +16,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/coinco-backend
 
 jobs:
   deploy:
@@ -25,6 +24,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Prepare image name
+        id: prep
+        run: echo "image_name=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/coinco-backend" >> "$GITHUB_OUTPUT"
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -51,7 +54,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.prep.outputs.image_name }}
           tags: |
             type=raw,value=latest
             type=sha
@@ -86,7 +89,7 @@ jobs:
             mkdir -p "${{ secrets.EC2_DEPLOY_PATH }}"
 
             cat > "${{ secrets.EC2_DEPLOY_PATH }}/.env" <<EOF
-            BACKEND_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            BACKEND_IMAGE=${{ env.REGISTRY }}/${{ steps.prep.outputs.image_name }}:latest
             SPRING_PROFILES_ACTIVE=prod
             SERVER_PORT=8080
             SPRING_DATASOURCE_URL=${{ secrets.PROD_DB_URL }}
