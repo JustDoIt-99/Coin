@@ -1,5 +1,5 @@
 spring:
   profiles:
-    active: local
+    active: ${SPRING_PROFILES_ACTIVE:local}
   application:
-    name:  backend
+    name: backend

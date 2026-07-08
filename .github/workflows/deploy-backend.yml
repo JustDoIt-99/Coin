@@ -1,0 +1,104 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "deploy/app-compose.prod.yml"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/coinco-backend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Make Gradle executable
+        run: chmod +x gradlew
+        working-directory: backend
+
+      - name: Run backend tests
+        run: ./gradlew test --no-daemon
+        working-directory: backend
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Copy compose file to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: deploy/app-compose.prod.yml
+          target: ${{ secrets.EC2_DEPLOY_PATH }}
+          strip_components: 1
+
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -eu
+            mkdir -p "${{ secrets.EC2_DEPLOY_PATH }}"
+
+            cat > "${{ secrets.EC2_DEPLOY_PATH }}/.env" <<EOF
+            BACKEND_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            SPRING_PROFILES_ACTIVE=prod
+            SERVER_PORT=8080
+            SPRING_DATASOURCE_URL=${{ secrets.PROD_DB_URL }}
+            SPRING_DATASOURCE_USERNAME=${{ secrets.PROD_DB_USERNAME }}
+            SPRING_DATASOURCE_PASSWORD=${{ secrets.PROD_DB_PASSWORD }}
+            JWT_SECRET=${{ secrets.PROD_JWT_SECRET }}
+            JWT_ACCESS_TOKEN_EXPIRATION=${{ secrets.PROD_JWT_ACCESS_TOKEN_EXPIRATION }}
+            JWT_REFRESH_TOKEN_EXPIRATION=${{ secrets.PROD_JWT_REFRESH_TOKEN_EXPIRATION }}
+            CORS_ALLOWED_ORIGIN=${{ secrets.PROD_CORS_ALLOWED_ORIGIN }}
+            EOF
+
+            echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ github.repository_owner }}" --password-stdin
+            docker compose -f "${{ secrets.EC2_DEPLOY_PATH }}/app-compose.prod.yml" pull
+            docker compose -f "${{ secrets.EC2_DEPLOY_PATH }}/app-compose.prod.yml" up -d --remove-orphans
+            docker image prune -f
