@@ -1,0 +1,30 @@
+name: Backend Test
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 17 설치
+        uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: 17
+
+      - name: Gradle 권한 부여
+        run: chmod +x gradlew
+
+      - name: 테스트 실행
+        run: ./gradlew test

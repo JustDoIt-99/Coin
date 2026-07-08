@@ -1,0 +1,53 @@
+package com.sangyunpark.backend.market.controller;
+
+import com.sangyunpark.backend.market.dto.response.CandleResponse;
+import com.sangyunpark.backend.market.service.CandleService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/candles")
+@RequiredArgsConstructor
+public class CandleController {
+
+    private final CandleService candleService;
+
+    @GetMapping("/minutes/{unit}")
+    public List<CandleResponse> getMinuteCandles(
+            @PathVariable int unit,
+            @RequestParam String market,
+            @RequestParam(defaultValue = "200") int count,
+            @RequestParam(required = false) String to
+    ) {
+        return candleService.getMinuteCandles(market, unit, count, to);
+    }
+
+    @GetMapping("/days")
+    public List<CandleResponse> getDayCandles(
+            @RequestParam String market,
+            @RequestParam(defaultValue = "200") int count,
+            @RequestParam(required = false) String to
+    ) {
+        return candleService.getDayCandles(market, count, to);
+    }
+
+    @GetMapping("/weeks")
+    public List<CandleResponse> getWeekCandles(
+            @RequestParam String market,
+            @RequestParam(defaultValue = "200") int count,
+            @RequestParam(required = false) String to
+    ) {
+        return candleService.getWeekCandles(market, count, to);
+    }
+
+    @GetMapping("/months")
+    public List<CandleResponse> getMonthCandles(
+            @RequestParam String market,
+            @RequestParam(defaultValue = "200") int count,
+            @RequestParam(required = false) String to
+    ) {
+        return candleService.getMonthCandles(market, count, to);
+    }
+}
