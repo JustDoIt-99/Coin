@@ -99,6 +99,6 @@ jobs:
             EOF
 
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ github.repository_owner }}" --password-stdin
-            docker compose -f "${{ secrets.EC2_DEPLOY_PATH }}/app-compose.prod.yml" pull
-            docker compose -f "${{ secrets.EC2_DEPLOY_PATH }}/app-compose.prod.yml" up -d --remove-orphans
+            docker-compose -f "${{ secrets.EC2_DEPLOY_PATH }}/app-compose.prod.yml" pull
+            docker-compose -f "${{ secrets.EC2_DEPLOY_PATH }}/app-compose.prod.yml" up -d --remove-orphans
             docker image prune -f
