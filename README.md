@@ -7,12 +7,13 @@
 <img width="718" height="408" alt="image" src="https://github.com/user-attachments/assets/a7e15353-e273-41aa-91de-592d306bbd63" />
 
 
-## 📌 기술 스택
+## 📌 주문/체결 흐름
+
+### 시장가 흐름
 
 
 
-## 📌 주문/체결 핵심 흐름
-
+### 지정가 흐름
 
 ## 📌 배포 구조
 
