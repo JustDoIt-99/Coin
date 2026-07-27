@@ -9,11 +9,13 @@
 
 ## 📌 주문/체결 흐름
 
-### 시장가 흐름
+### 시장가 매수 주문 플로우
+<img width="520" height="736" alt="image" src="https://github.com/user-attachments/assets/2c2be1a4-ee52-42af-9077-5a382df998e2" />
 
 
 
-### 지정가 흐름
+
+### 시장가 매도 주문 플로우
 
 ## 📌 배포 구조
 
