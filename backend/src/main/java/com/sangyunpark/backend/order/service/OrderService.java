@@ -171,13 +171,44 @@ public class OrderService {
         );
     }
 
-    @Transactional
     public MarketSellResponse marketSell(Long userId, MarketSellRequest request) {
+        BigDecimal orderQuantity = request.quantity();
+        MarketPair marketPair = parseMarketCode(request.marketCode());
+
+        validateMarketSellBalance(userId, marketPair.targetAssetCode(), orderQuantity);
+
+        MarketOrderExecution execution = calculateMarketSellExecution(request.marketCode(), orderQuantity);
+
+        return transactionTemplate.execute(status -> executeMarketSell(
+                userId,
+                request,
+                orderQuantity,
+                marketPair,
+                execution
+        ));
+    }
+
+    private void validateMarketSellBalance(Long userId, String targetAssetCode, BigDecimal orderQuantity) {
         User user = userJpaRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
 
-        BigDecimal orderQuantity = request.quantity();
-        MarketPair marketPair = parseMarketCode(request.marketCode());
+        Asset targetAsset = assetJpaRepository.findByUserAndAssetCode(user, targetAssetCode)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
+
+        if (targetAsset.getBalance().compareTo(orderQuantity) < 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
+        }
+    }
+
+    private MarketSellResponse executeMarketSell(
+            Long userId,
+            MarketSellRequest request,
+            BigDecimal orderQuantity,
+            MarketPair marketPair,
+            MarketOrderExecution execution
+    ) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
 
         Asset baseAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.baseAssetCode())
                 .orElseGet(() -> Asset.create(user, marketPair.baseAssetCode()));
@@ -189,7 +220,6 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
         }
 
-        MarketOrderExecution execution = calculateMarketSellExecution(request.marketCode(), orderQuantity);
         BigDecimal executedAmount = execution.executedAmount();
         BigDecimal executedPrice = execution.averageExecutedPrice();
 
