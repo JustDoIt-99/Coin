@@ -46,6 +46,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -196,6 +201,55 @@ class OrderServiceTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 동일한_KRW_잔고로_동시에_시장가_매수를_요청하면_하나만_성공한다() throws Exception {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        try {
+            Future<Boolean> first = executorService.submit(() -> submitConcurrentMarketBuy(
+                    signupResponse.user().id(),
+                    readyLatch,
+                    startLatch
+            ));
+            Future<Boolean> second = executorService.submit(() -> submitConcurrentMarketBuy(
+                    signupResponse.user().id(),
+                    readyLatch,
+                    startLatch
+            ));
+
+            assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+            startLatch.countDown();
+
+            boolean firstSucceeded = first.get(5, TimeUnit.SECONDS);
+            boolean secondSucceeded = second.get(5, TimeUnit.SECONDS);
+
+            assertThat(firstSucceeded).isNotEqualTo(secondSucceeded);
+
+            flushAndClear();
+
+            assertThat(assetJpaRepository.findByUserAndAssetCode(user, "KRW"))
+                    .hasValueSatisfying(asset ->
+                            assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("400000.00000000"))
+                    );
+            assertThat(assetJpaRepository.findByUserAndAssetCode(user, "BTC"))
+                    .hasValueSatisfying(asset ->
+                            assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.01200000"))
+                    );
+            assertThat(tradeHistoryJpaRepository.findByUserOrderByIdDesc(user, PageRequest.of(0, 10)))
+                    .hasSize(1);
+        } finally {
+            executorService.shutdownNow();
+        }
+    }
+
+    @Test
     void 시장가_매수에_성공하면_자산_변동_이력이_생성된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
@@ -296,6 +350,60 @@ class OrderServiceTest {
         assertThat(response.executedQuantity()).isEqualByComparingTo(new BigDecimal("2.5"));
         assertThat(response.executedAmount()).isEqualByComparingTo(new BigDecimal("235000.0"));
         assertThat(response.executedPrice()).isEqualByComparingTo(new BigDecimal("94000.00000000"));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 동일한_코인_잔고로_동시에_시장가_매도를_요청하면_하나만_성공한다() throws Exception {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        when(upbitOrderbookClient.fetchOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
+
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest("KRW-BTC", new BigDecimal("100000"))
+        );
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        try {
+            Future<Boolean> first = executorService.submit(() -> submitConcurrentMarketSell(
+                    signupResponse.user().id(),
+                    readyLatch,
+                    startLatch
+            ));
+            Future<Boolean> second = executorService.submit(() -> submitConcurrentMarketSell(
+                    signupResponse.user().id(),
+                    readyLatch,
+                    startLatch
+            ));
+
+            assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+            startLatch.countDown();
+
+            boolean firstSucceeded = first.get(5, TimeUnit.SECONDS);
+            boolean secondSucceeded = second.get(5, TimeUnit.SECONDS);
+
+            assertThat(firstSucceeded).isNotEqualTo(secondSucceeded);
+
+            flushAndClear();
+
+            assertThat(assetJpaRepository.findByUserAndAssetCode(user, "KRW"))
+                    .hasValueSatisfying(asset ->
+                            assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("975000.00000000"))
+                    );
+            assertThat(assetJpaRepository.findByUserAndAssetCode(user, "BTC"))
+                    .hasValueSatisfying(asset ->
+                            assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00050000"))
+                    );
+            assertThat(tradeHistoryJpaRepository.findByUserOrderByIdDesc(user, PageRequest.of(0, 10)))
+                    .hasSize(2);
+        } finally {
+            executorService.shutdownNow();
+        }
     }
 
     @Test
@@ -465,6 +573,56 @@ class OrderServiceTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 동일한_KRW_잔고로_동시에_지정가_매수를_요청하면_하나만_성공한다() throws Exception {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        String marketCode = "KRW-LCB1";
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        try {
+            Future<Boolean> first = executorService.submit(() -> submitConcurrentLimitBuy(
+                    signupResponse.user().id(),
+                    marketCode,
+                    readyLatch,
+                    startLatch
+            ));
+            Future<Boolean> second = executorService.submit(() -> submitConcurrentLimitBuy(
+                    signupResponse.user().id(),
+                    marketCode,
+                    readyLatch,
+                    startLatch
+            ));
+
+            assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+            startLatch.countDown();
+
+            boolean firstSucceeded = first.get(5, TimeUnit.SECONDS);
+            boolean secondSucceeded = second.get(5, TimeUnit.SECONDS);
+
+            assertThat(firstSucceeded).isNotEqualTo(secondSucceeded);
+
+            flushAndClear();
+
+            assertThat(assetJpaRepository.findByUserAndAssetCode(user, "KRW"))
+                    .hasValueSatisfying(asset -> {
+                        assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("400000.00000000"));
+                        assertThat(asset.getLockedBalance()).isEqualByComparingTo(new BigDecimal("600000.00000000"));
+                    });
+            assertThat(limitOrderJpaRepository.findByUserAndOrderTypeAndStatusInOrderByIdDesc(
+                    user,
+                    OrderType.LIMIT,
+                    List.of(OrderStatus.PENDING)
+            )).hasSize(1);
+        } finally {
+            executorService.shutdownNow();
+        }
+    }
+
+    @Test
     void 지정가_매수_주문을_취소하면_잠긴_현금이_해제된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
@@ -588,6 +746,62 @@ class OrderServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting("errorCode")
                 .isEqualTo(OrderErrorCode.INVALID_LIMIT_PRICE);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 동일한_코인_잔고로_동시에_지정가_매도를_요청하면_하나만_성공한다() throws Exception {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        String marketCode = "KRW-LCS1";
+        when(upbitOrderbookClient.fetchOrderbook(marketCode))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest(marketCode, new BigDecimal("100000"))
+        );
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        try {
+            Future<Boolean> first = executorService.submit(() -> submitConcurrentLimitSell(
+                    signupResponse.user().id(),
+                    marketCode,
+                    readyLatch,
+                    startLatch
+            ));
+            Future<Boolean> second = executorService.submit(() -> submitConcurrentLimitSell(
+                    signupResponse.user().id(),
+                    marketCode,
+                    readyLatch,
+                    startLatch
+            ));
+
+            assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+            startLatch.countDown();
+
+            boolean firstSucceeded = first.get(5, TimeUnit.SECONDS);
+            boolean secondSucceeded = second.get(5, TimeUnit.SECONDS);
+
+            assertThat(firstSucceeded).isNotEqualTo(secondSucceeded);
+
+            flushAndClear();
+
+            assertThat(assetJpaRepository.findByUserAndAssetCode(user, "LCS1"))
+                    .hasValueSatisfying(asset -> {
+                        assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00050000"));
+                        assertThat(asset.getLockedBalance()).isEqualByComparingTo(new BigDecimal("0.00150000"));
+                    });
+            assertThat(limitOrderJpaRepository.findByUserAndOrderTypeAndStatusInOrderByIdDesc(
+                    user,
+                    OrderType.LIMIT,
+                    List.of(OrderStatus.PENDING)
+            )).hasSize(1);
+        } finally {
+            executorService.shutdownNow();
+        }
     }
 
     @Test
@@ -806,6 +1020,57 @@ class OrderServiceTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 동일한_지정가_매수_주문을_동시에_체결해도_한번만_체결된다() throws Exception {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        String marketCode = "KRW-LT8";
+        LimitBuyResponse order = orderService.limitBuy(
+                signupResponse.user().id(),
+                new LimitBuyRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("60000000"))
+        );
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        try {
+            Future<Integer> first = executorService.submit(() -> submitConcurrentLimitBuyExecution(
+                    marketCode,
+                    new BigDecimal("50000000"),
+                    readyLatch,
+                    startLatch
+            ));
+            Future<Integer> second = executorService.submit(() -> submitConcurrentLimitBuyExecution(
+                    marketCode,
+                    new BigDecimal("50000000"),
+                    readyLatch,
+                    startLatch
+            ));
+
+            assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+            startLatch.countDown();
+
+            int executedCount = first.get(5, TimeUnit.SECONDS) + second.get(5, TimeUnit.SECONDS);
+
+            assertThat(executedCount).isEqualTo(1);
+
+            flushAndClear();
+
+            assertThat(limitOrderJpaRepository.findById(order.orderId()))
+                    .hasValueSatisfying(limitOrder -> assertThat(limitOrder.getStatus()).isEqualTo(OrderStatus.FILLED));
+            assertThat(assetJpaRepository.findByUserAndAssetCode(user, "LT8"))
+                    .hasValueSatisfying(asset ->
+                            assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("0.00100000"))
+                    );
+            assertThat(tradeHistoryJpaRepository.findByUserOrderByIdDesc(user, PageRequest.of(0, 10)))
+                    .hasSize(1);
+        } finally {
+            executorService.shutdownNow();
+        }
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void 지정가_매수_주문이_체결되면_자산_사용_환불_매수_이력이_생성된다() {
         AuthTokenResponse signupResponse = signup();
         User user = findUser(signupResponse.user().id());
@@ -940,6 +1205,63 @@ class OrderServiceTest {
                     assertThat(tradeHistory.getPrice()).isEqualByComparingTo(new BigDecimal("61000000"));
                     assertThat(tradeHistory.getTotalAmount()).isEqualByComparingTo(new BigDecimal("61000.00000000"));
                 });
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void 동일한_지정가_매도_주문을_동시에_체결해도_한번만_체결된다() throws Exception {
+        AuthTokenResponse signupResponse = signup();
+        User user = findUser(signupResponse.user().id());
+        String marketCode = "KRW-LS4";
+        when(upbitOrderbookClient.fetchOrderbook(marketCode))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
+        orderService.marketBuy(
+                signupResponse.user().id(),
+                new MarketBuyRequest(marketCode, new BigDecimal("100000"))
+        );
+        LimitSellResponse order = orderService.limitSell(
+                signupResponse.user().id(),
+                new LimitSellRequest(marketCode, new BigDecimal("0.00100000"), new BigDecimal("60000000"))
+        );
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        try {
+            Future<Integer> first = executorService.submit(() -> submitConcurrentLimitSellExecution(
+                    marketCode,
+                    new BigDecimal("61000000"),
+                    readyLatch,
+                    startLatch
+            ));
+            Future<Integer> second = executorService.submit(() -> submitConcurrentLimitSellExecution(
+                    marketCode,
+                    new BigDecimal("61000000"),
+                    readyLatch,
+                    startLatch
+            ));
+
+            assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+            startLatch.countDown();
+
+            int executedCount = first.get(5, TimeUnit.SECONDS) + second.get(5, TimeUnit.SECONDS);
+
+            assertThat(executedCount).isEqualTo(1);
+
+            flushAndClear();
+
+            assertThat(limitOrderJpaRepository.findById(order.orderId()))
+                    .hasValueSatisfying(limitOrder -> assertThat(limitOrder.getStatus()).isEqualTo(OrderStatus.FILLED));
+            assertThat(assetJpaRepository.findByUserAndAssetCode(user, "KRW"))
+                    .hasValueSatisfying(asset ->
+                            assertThat(asset.getBalance()).isEqualByComparingTo(new BigDecimal("961000.00000000"))
+                    );
+            assertThat(tradeHistoryJpaRepository.findByUserOrderByIdDesc(user, PageRequest.of(0, 10)))
+                    .hasSize(2);
+        } finally {
+            executorService.shutdownNow();
+        }
     }
 
     @Test
@@ -1124,5 +1446,109 @@ class OrderServiceTest {
             entityManager.flush();
         }
         entityManager.clear();
+    }
+
+    private boolean submitConcurrentMarketBuy(
+            Long userId,
+            CountDownLatch readyLatch,
+            CountDownLatch startLatch
+    ) throws InterruptedException {
+        readyLatch.countDown();
+        assertThat(startLatch.await(5, TimeUnit.SECONDS)).isTrue();
+
+        try {
+            orderService.marketBuy(
+                    userId,
+                    new MarketBuyRequest("KRW-BTC", new BigDecimal("600000"))
+            );
+            return true;
+        } catch (BusinessException e) {
+            assertThat(e.getErrorCode()).isEqualTo(OrderErrorCode.INSUFFICIENT_BALANCE);
+            return false;
+        }
+    }
+
+    private boolean submitConcurrentMarketSell(
+            Long userId,
+            CountDownLatch readyLatch,
+            CountDownLatch startLatch
+    ) throws InterruptedException {
+        readyLatch.countDown();
+        assertThat(startLatch.await(5, TimeUnit.SECONDS)).isTrue();
+
+        try {
+            orderService.marketSell(
+                    userId,
+                    new MarketSellRequest("KRW-BTC", new BigDecimal("0.00150000"))
+            );
+            return true;
+        } catch (BusinessException e) {
+            assertThat(e.getErrorCode()).isEqualTo(OrderErrorCode.INSUFFICIENT_BALANCE);
+            return false;
+        }
+    }
+
+    private boolean submitConcurrentLimitBuy(
+            Long userId,
+            String marketCode,
+            CountDownLatch readyLatch,
+            CountDownLatch startLatch
+    ) throws InterruptedException {
+        readyLatch.countDown();
+        assertThat(startLatch.await(5, TimeUnit.SECONDS)).isTrue();
+
+        try {
+            orderService.limitBuy(
+                    userId,
+                    new LimitBuyRequest(marketCode, new BigDecimal("0.01200000"), new BigDecimal("50000000"))
+            );
+            return true;
+        } catch (BusinessException e) {
+            assertThat(e.getErrorCode()).isEqualTo(OrderErrorCode.INSUFFICIENT_BALANCE);
+            return false;
+        }
+    }
+
+    private boolean submitConcurrentLimitSell(
+            Long userId,
+            String marketCode,
+            CountDownLatch readyLatch,
+            CountDownLatch startLatch
+    ) throws InterruptedException {
+        readyLatch.countDown();
+        assertThat(startLatch.await(5, TimeUnit.SECONDS)).isTrue();
+
+        try {
+            orderService.limitSell(
+                    userId,
+                    new LimitSellRequest(marketCode, new BigDecimal("0.00150000"), new BigDecimal("60000000"))
+            );
+            return true;
+        } catch (BusinessException e) {
+            assertThat(e.getErrorCode()).isEqualTo(OrderErrorCode.INSUFFICIENT_BALANCE);
+            return false;
+        }
+    }
+
+    private int submitConcurrentLimitBuyExecution(
+            String marketCode,
+            BigDecimal currentPrice,
+            CountDownLatch readyLatch,
+            CountDownLatch startLatch
+    ) throws InterruptedException {
+        readyLatch.countDown();
+        assertThat(startLatch.await(5, TimeUnit.SECONDS)).isTrue();
+        return limitOrderExecutionService.executePendingBuyOrders(marketCode, currentPrice);
+    }
+
+    private int submitConcurrentLimitSellExecution(
+            String marketCode,
+            BigDecimal currentPrice,
+            CountDownLatch readyLatch,
+            CountDownLatch startLatch
+    ) throws InterruptedException {
+        readyLatch.countDown();
+        assertThat(startLatch.await(5, TimeUnit.SECONDS)).isTrue();
+        return limitOrderExecutionService.executePendingSellOrders(marketCode, currentPrice);
     }
 }
