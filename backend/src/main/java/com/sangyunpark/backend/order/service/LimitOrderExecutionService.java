@@ -61,7 +61,7 @@ public class LimitOrderExecutionService {
         }
 
         List<LimitOrder> executableOrders = limitOrderJpaRepository
-                .findByMarketCodeAndTradeSideAndOrderTypeAndStatusAndLimitPriceGreaterThanEqualOrderByIdAsc(
+                .findExecutableBuyOrders(
                         marketCode,
                         TradeSide.BUY,
                         OrderType.LIMIT,
@@ -116,7 +116,7 @@ public class LimitOrderExecutionService {
         }
 
         List<LimitOrder> executableOrders = limitOrderJpaRepository
-                .findByMarketCodeAndTradeSideAndOrderTypeAndStatusAndLimitPriceLessThanEqualOrderByIdAsc(
+                .findExecutableSellOrders(
                         marketCode,
                         TradeSide.SELL,
                         OrderType.LIMIT,
@@ -313,7 +313,7 @@ public class LimitOrderExecutionService {
     @Scheduled(fixedDelay = EXECUTION_RETRY_SCHEDULE_DELAY_MILLIS)
     public void retryExecutionRetryPendingOrders() {
         LocalDateTime retryBefore = LocalDateTime.now().minus(EXECUTION_RETRY_BACKOFF);
-        List<LimitOrder> orders = limitOrderJpaRepository.findByStatusAndUpdatedAtLessThanEqualOrderByIdAsc(
+        List<LimitOrder> orders = limitOrderJpaRepository.findRetryPendingOrders(
                 OrderStatus.EXECUTION_RETRY_PENDING,
                 retryBefore,
                 PageRequest.of(0, EXECUTION_RETRY_BATCH_SIZE)

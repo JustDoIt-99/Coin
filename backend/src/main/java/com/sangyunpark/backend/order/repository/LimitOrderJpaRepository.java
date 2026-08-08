@@ -5,6 +5,7 @@ import com.sangyunpark.backend.order.entity.OrderStatus;
 import com.sangyunpark.backend.order.entity.OrderType;
 import com.sangyunpark.backend.order.entity.TradeSide;
 import com.sangyunpark.backend.user.entity.User;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -26,7 +27,17 @@ public interface LimitOrderJpaRepository extends JpaRepository<LimitOrder, Long>
             List<OrderStatus> statuses
     );
 
-    List<LimitOrder> findByMarketCodeAndTradeSideAndOrderTypeAndStatusAndLimitPriceGreaterThanEqualOrderByIdAsc(
+    @Query("""
+            select o
+            from LimitOrder o
+            where o.marketCode = :marketCode
+              and o.tradeSide = :tradeSide
+              and o.orderType = :orderType
+              and o.status = :status
+              and o.limitPrice >= :currentPrice
+            order by o.id asc
+            """)
+    List<LimitOrder> findExecutableBuyOrders(
             String marketCode,
             TradeSide tradeSide,
             OrderType orderType,
@@ -35,7 +46,17 @@ public interface LimitOrderJpaRepository extends JpaRepository<LimitOrder, Long>
             Pageable pageable
     );
 
-    List<LimitOrder> findByMarketCodeAndTradeSideAndOrderTypeAndStatusAndLimitPriceLessThanEqualOrderByIdAsc(
+    @Query("""
+            select o
+            from LimitOrder o
+            where o.marketCode = :marketCode
+              and o.tradeSide = :tradeSide
+              and o.orderType = :orderType
+              and o.status = :status
+              and o.limitPrice <= :currentPrice
+            order by o.id asc
+            """)
+    List<LimitOrder> findExecutableSellOrders(
             String marketCode,
             TradeSide tradeSide,
             OrderType orderType,
@@ -44,23 +65,56 @@ public interface LimitOrderJpaRepository extends JpaRepository<LimitOrder, Long>
             Pageable pageable
     );
 
-    Optional<LimitOrder> findFirstByMarketCodeAndTradeSideAndOrderTypeAndStatusOrderByLimitPriceDesc(
-            String marketCode,
-            TradeSide tradeSide,
-            OrderType orderType,
-            OrderStatus status
+    @Query("""
+            select o
+            from LimitOrder o
+            where o.marketCode = :marketCode
+              and o.tradeSide = com.sangyunpark.backend.order.entity.TradeSide.BUY
+              and o.orderType = com.sangyunpark.backend.order.entity.OrderType.LIMIT
+              and o.status = com.sangyunpark.backend.order.entity.OrderStatus.PENDING
+            order by o.limitPrice desc
+            """)
+    List<LimitOrder> findPendingBuyOrdersByHighestLimitPrice(
+            @Param("marketCode") String marketCode,
+            Pageable pageable
     );
 
-    Optional<LimitOrder> findFirstByMarketCodeAndTradeSideAndOrderTypeAndStatusOrderByLimitPriceAsc(
-            String marketCode,
-            TradeSide tradeSide,
-            OrderType orderType,
-            OrderStatus status
+    default Optional<LimitOrder> findHighestPendingBuyLimitOrder(String marketCode) {
+        return findPendingBuyOrdersByHighestLimitPrice(marketCode, PageRequest.of(0, 1))
+                .stream()
+                .findFirst();
+    }
+
+    @Query("""
+            select o
+            from LimitOrder o
+            where o.marketCode = :marketCode
+              and o.tradeSide = com.sangyunpark.backend.order.entity.TradeSide.SELL
+              and o.orderType = com.sangyunpark.backend.order.entity.OrderType.LIMIT
+              and o.status = com.sangyunpark.backend.order.entity.OrderStatus.PENDING
+            order by o.limitPrice asc
+            """)
+    List<LimitOrder> findPendingSellOrdersByLowestLimitPrice(
+            @Param("marketCode") String marketCode,
+            Pageable pageable
     );
 
-    List<LimitOrder> findByStatusAndUpdatedAtLessThanEqualOrderByIdAsc(
-            OrderStatus status,
-            LocalDateTime updatedAt,
+    default Optional<LimitOrder> findLowestPendingSellLimitOrder(String marketCode) {
+        return findPendingSellOrdersByLowestLimitPrice(marketCode, PageRequest.of(0, 1))
+                .stream()
+                .findFirst();
+    }
+
+    @Query("""
+            select o
+            from LimitOrder o
+            where o.status = :status
+              and o.updatedAt <= :updatedAt
+            order by o.id asc
+            """)
+    List<LimitOrder> findRetryPendingOrders(
+            @Param("status") OrderStatus status,
+            @Param("updatedAt") LocalDateTime updatedAt,
             Pageable pageable
     );
 
@@ -74,22 +128,6 @@ public interface LimitOrderJpaRepository extends JpaRepository<LimitOrder, Long>
             """)
     int updateStatus(
             @Param("orderId") Long orderId,
-            @Param("currentStatus") OrderStatus currentStatus,
-            @Param("nextStatus") OrderStatus nextStatus
-    );
-
-    @Modifying(flushAutomatically = true)
-    @Query("""
-            update LimitOrder o
-            set o.status = :nextStatus,
-                o.updatedAt = CURRENT_TIMESTAMP
-            where o.id = :orderId
-              and o.user.id = :userId
-              and o.status = :currentStatus
-            """)
-    int updateStatusByUserId(
-            @Param("orderId") Long orderId,
-            @Param("userId") Long userId,
             @Param("currentStatus") OrderStatus currentStatus,
             @Param("nextStatus") OrderStatus nextStatus
     );

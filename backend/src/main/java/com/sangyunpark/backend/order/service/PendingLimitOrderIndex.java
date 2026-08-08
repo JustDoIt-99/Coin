@@ -109,12 +109,7 @@ public class PendingLimitOrderIndex {
         }
 
         Optional<BigDecimal> maxLimitPrice = limitOrderJpaRepository
-                .findFirstByMarketCodeAndTradeSideAndOrderTypeAndStatusOrderByLimitPriceDesc(
-                        marketCode,
-                        TradeSide.BUY,
-                        OrderType.LIMIT,
-                        OrderStatus.PENDING
-                )
+                .findHighestPendingBuyLimitOrder(marketCode)
                 .map(LimitOrder::getLimitPrice);
 
         maxBuyLimitPriceCache.put(marketCode, maxLimitPrice);
@@ -126,12 +121,7 @@ public class PendingLimitOrderIndex {
         }
 
         Optional<BigDecimal> minLimitPrice = limitOrderJpaRepository
-                .findFirstByMarketCodeAndTradeSideAndOrderTypeAndStatusOrderByLimitPriceAsc(
-                        marketCode,
-                        TradeSide.SELL,
-                        OrderType.LIMIT,
-                        OrderStatus.PENDING
-                )
+                .findLowestPendingSellLimitOrder(marketCode)
                 .map(LimitOrder::getLimitPrice);
 
         minSellLimitPriceCache.put(marketCode, minLimitPrice);
