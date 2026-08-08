@@ -21,3 +21,11 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+
+order:
+  limit-index:
+    enabled: false
+
+logging:
+  level:
+    com.sangyunpark.backend.order.service: DEBUG

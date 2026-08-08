@@ -17,6 +17,7 @@ import com.sangyunpark.backend.order.repository.TradeHistoryJpaRepository;
 import com.sangyunpark.backend.order.service.dto.MarketPair;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -38,6 +39,9 @@ public class LimitOrderExecutionService {
     private static final int EXECUTION_RETRY_SCHEDULE_DELAY_MILLIS = 500;
     private static final Duration EXECUTION_RETRY_BACKOFF = Duration.ofMillis(500);
 
+    @Value("${order.limit-index.enabled:true}")
+    private boolean limitIndexEnabled;
+
     private final LimitOrderJpaRepository limitOrderJpaRepository;
     private final AssetJpaRepository assetJpaRepository;
     private final TradeHistoryJpaRepository tradeHistoryJpaRepository;
@@ -55,7 +59,7 @@ public class LimitOrderExecutionService {
             return 0;
         }
 
-        if (!pendingLimitOrderIndex.mayHaveExecutableBuyOrder(marketCode, currentPrice)) {
+        if (limitIndexEnabled && !pendingLimitOrderIndex.mayHaveExecutableBuyOrder(marketCode, currentPrice)) {
             log.debug("지정가 매수 체결 후보 조회 스킵. marketCode={}, currentPrice={}", marketCode, currentPrice);
             return 0;
         }
@@ -110,7 +114,7 @@ public class LimitOrderExecutionService {
             return 0;
         }
 
-        if (!pendingLimitOrderIndex.mayHaveExecutableSellOrder(marketCode, currentPrice)) {
+        if (limitIndexEnabled && !pendingLimitOrderIndex.mayHaveExecutableSellOrder(marketCode, currentPrice)) {
             log.debug("지정가 매도 체결 후보 조회 스킵. marketCode={}, currentPrice={}", marketCode, currentPrice);
             return 0;
         }

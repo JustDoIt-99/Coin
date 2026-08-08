@@ -102,6 +102,7 @@ jobs:
             JWT_ACCESS_TOKEN_EXPIRATION=${{ secrets.PROD_JWT_ACCESS_TOKEN_EXPIRATION }}
             JWT_REFRESH_TOKEN_EXPIRATION=${{ secrets.PROD_JWT_REFRESH_TOKEN_EXPIRATION }}
             CORS_ALLOWED_ORIGIN=${{ secrets.PROD_CORS_ALLOWED_ORIGIN }}
+            ORDER_LIMIT_INDEX_ENABLED=false
             EOF
 
             echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ github.repository_owner }}" --password-stdin

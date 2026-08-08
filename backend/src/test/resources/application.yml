@@ -20,3 +20,7 @@ jwt:
 cors:
   allowed-origins:
     - http://localhost:5173
+
+order:
+  limit-index:
+    enabled: true
