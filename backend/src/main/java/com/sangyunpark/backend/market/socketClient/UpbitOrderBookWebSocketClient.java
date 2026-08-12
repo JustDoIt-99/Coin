@@ -2,6 +2,7 @@ package com.sangyunpark.backend.market.socketClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sangyunpark.backend.market.dto.response.OrderbookResponse;
+import com.sangyunpark.backend.market.price.OrderbookCache;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -43,18 +44,22 @@ public class UpbitOrderBookWebSocketClient {
     private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private final AtomicBoolean connecting = new AtomicBoolean(false);
 
+    private final OrderbookCache orderbookCache;
+
     private volatile WebSocketSession session;
     private volatile ScheduledFuture<?> reconnectFuture;
 
     public UpbitOrderBookWebSocketClient(
             ObjectMapper objectMapper,
             SimpMessagingTemplate messagingTemplate,
-            @Qualifier("upbitTaskScheduler") TaskScheduler taskScheduler
+            @Qualifier("upbitTaskScheduler") TaskScheduler taskScheduler,
+            OrderbookCache orderbookCache
     ) {
         this.objectMapper = objectMapper;
         this.messagingTemplate = messagingTemplate;
         this.taskScheduler = taskScheduler;
         this.webSocketClient = new StandardWebSocketClient();
+        this.orderbookCache = orderbookCache;
     }
 
     public synchronized void subscribe(String marketCode) {
@@ -135,6 +140,8 @@ public class UpbitOrderBookWebSocketClient {
                             log.debug("code가 비어있는 orderbook 메시지는 무시합니다. payload={}", payload);
                             return;
                         }
+
+                        orderbookCache.put(orderbook);
 
                         messagingTemplate.convertAndSend(
                                 ORDERBOOK_TOPIC_PREFIX + orderbook.code(),

@@ -26,6 +26,11 @@ order:
   limit-index:
     enabled: false
 
+market:
+  orderbook:
+    max-age-seconds: 2
+    rest-fallback-enabled: true
+
 logging:
   level:
     com.sangyunpark.backend.order.service: DEBUG

@@ -43,3 +43,8 @@ management:
 order:
   limit-index:
     enabled: ${ORDER_LIMIT_INDEX_ENABLED:true}
+
+market:
+  orderbook:
+    max-age-seconds: ${MARKET_ORDERBOOK_MAX_AGE_SECONDS:2}
+    rest-fallback-enabled: ${MARKET_ORDERBOOK_REST_FALLBACK_ENABLED:true}

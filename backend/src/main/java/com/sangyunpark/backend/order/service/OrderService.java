@@ -9,7 +9,7 @@ import com.sangyunpark.backend.asset.service.AssetTransactionRecorder;
 import com.sangyunpark.backend.auth.exception.AuthErrorCode;
 import com.sangyunpark.backend.common.exception.BusinessException;
 import com.sangyunpark.backend.market.dto.response.OrderbookResponse;
-import com.sangyunpark.backend.market.restClient.UpbitOrderbookClient;
+import com.sangyunpark.backend.market.price.MarketOrderbookProvider;
 import com.sangyunpark.backend.order.controller.dto.request.LimitBuyRequest;
 import com.sangyunpark.backend.order.controller.dto.request.LimitSellRequest;
 import com.sangyunpark.backend.order.controller.dto.request.MarketBuyRequest;
@@ -59,7 +59,7 @@ public class OrderService {
 
     private final UserJpaRepository userJpaRepository;
     private final AssetJpaRepository assetJpaRepository;
-    private final UpbitOrderbookClient upbitOrderbookClient;
+    private final MarketOrderbookProvider marketOrderbookProvider;
     private final TradeHistoryJpaRepository tradeHistoryJpaRepository;
     private final LimitOrderJpaRepository limitOrderJpaRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -452,7 +452,7 @@ public class OrderService {
     }
 
     private MarketOrderExecution calculateMarketBuyExecution(String marketCode, BigDecimal orderAmount) {
-        OrderbookResponse orderbook = upbitOrderbookClient.fetchOrderbook(marketCode);
+        OrderbookResponse orderbook = marketOrderbookProvider.getRequiredOrderbook(marketCode);
         if (orderbook.orderbookUnits() == null || orderbook.orderbookUnits().isEmpty()) {
             throw new BusinessException(OrderErrorCode.INSUFFICIENT_MARKET_LIQUIDITY);
         }
@@ -505,7 +505,7 @@ public class OrderService {
     }
 
     private MarketOrderExecution calculateMarketSellExecution(String marketCode, BigDecimal orderQuantity) {
-        OrderbookResponse orderbook = upbitOrderbookClient.fetchOrderbook(marketCode);
+        OrderbookResponse orderbook = marketOrderbookProvider.getRequiredOrderbook(marketCode);
         if (orderbook.orderbookUnits() == null || orderbook.orderbookUnits().isEmpty()) {
             throw new BusinessException(OrderErrorCode.INSUFFICIENT_MARKET_LIQUIDITY);
         }
