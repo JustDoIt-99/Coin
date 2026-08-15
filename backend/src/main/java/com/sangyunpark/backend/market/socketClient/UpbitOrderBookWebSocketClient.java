@@ -70,12 +70,9 @@ public class UpbitOrderBookWebSocketClient {
         boolean added = subscribedMarketCodes.add(marketCode);
         if (!added) {
             log.info("이미 구독 중인 orderbook 마켓입니다. marketCode={}", marketCode);
-            if (isSessionOpen()) {
-                sendSubscribeMessage();
-                return;
+            if (!isSessionOpen()) {
+                connect();
             }
-
-            connect();
             return;
         }
 
@@ -123,7 +120,6 @@ public class UpbitOrderBookWebSocketClient {
                     connecting.set(false);
                     reconnectScheduled.set(false);
                     cancelReconnect();
-
                     sendSubscribeMessage();
                     log.info("Upbit orderbook 웹소켓 연결 성공");
                 }
