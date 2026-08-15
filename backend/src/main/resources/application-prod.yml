@@ -48,3 +48,7 @@ market:
   orderbook:
     max-age-seconds: ${MARKET_ORDERBOOK_MAX_AGE_SECONDS:2}
     rest-fallback-enabled: ${MARKET_ORDERBOOK_REST_FALLBACK_ENABLED:true}
+
+logging:
+  file:
+    path: ${LOG_PATH:./logs}
