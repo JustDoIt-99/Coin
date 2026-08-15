@@ -17,6 +17,7 @@ RUN addgroup --system coinco && adduser --system --ingroup coinco coinco
 
 COPY --from=builder /app/build/libs/*.jar app.jar
 RUN chown coinco:coinco /app/app.jar
+RUN mkdir -p /app/logs && chown -R coinco:coinco /app/logs
 
 USER coinco
 
