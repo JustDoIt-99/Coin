@@ -435,6 +435,8 @@ class OrderServiceTest {
     @Test
     void 시장가_매수_금액이_잔액보다_크면_예외가_발생한다() {
         AuthTokenResponse signupResponse = signup();
+        when(marketOrderbookProvider.getRequiredOrderbook("KRW-BTC"))
+                .thenReturn(orderbook(new BigDecimal("50000000")));
 
         assertThatThrownBy(() -> orderService.marketBuy(
                 signupResponse.user().id(),

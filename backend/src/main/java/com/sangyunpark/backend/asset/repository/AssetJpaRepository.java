@@ -86,6 +86,57 @@ public interface AssetJpaRepository extends JpaRepository<Asset, Long> {
             @Param("refundAmount") BigDecimal refundAmount
     );
 
+    @Modifying
+    @Query(
+            """
+                        update Asset a
+                        set a.balance = a.balance - :executedAmount
+                            where a.user.id = :userId
+                            and a.assetCode = :assetCode
+                            and a.balance >= :orderAmount
+                    """)
+    int withdrawMarketBuyIfSufficient(
+            @Param("userId") Long userId,
+            @Param("assetCode") String assetCode,
+            @Param("orderAmount") BigDecimal orderAmount,
+            @Param("executedAmount") BigDecimal executedAmount
+    );
+
+    @Modifying
+    @Query(
+            value = """
+        INSERT INTO asset (
+            user_id,
+            asset_code,
+            balance,
+            locked_balance,
+            average_buy_price
+        )
+        VALUES (
+            :userId,
+            :assetCode,
+            :quantity,
+            0,
+            :price
+        )
+        ON DUPLICATE KEY UPDATE
+            average_buy_price =
+                (
+                    asset.balance * asset.average_buy_price
+                    + :quantity * :price
+                )
+                / (asset.balance + :quantity),
+            balance = asset.balance + :quantity
+        """,
+            nativeQuery = true
+    )
+    int upsertForBuy(
+            @Param("userId") Long userId,
+            @Param("assetCode") String assetCode,
+            @Param("quantity") BigDecimal quantity,
+            @Param("price") BigDecimal price
+    );
+
     interface AssetBalanceSnapshot {
         BigDecimal getBalance();
 

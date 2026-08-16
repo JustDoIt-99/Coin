@@ -4,6 +4,7 @@ import com.sangyunpark.backend.asset.entity.Asset;
 import com.sangyunpark.backend.asset.entity.AssetTransactionReferenceType;
 import com.sangyunpark.backend.asset.entity.AssetTransactionType;
 import com.sangyunpark.backend.asset.event.AssetUpdatedEvent;
+import com.sangyunpark.backend.asset.exception.AssetErrorCode;
 import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
 import com.sangyunpark.backend.asset.service.AssetTransactionRecorder;
 import com.sangyunpark.backend.auth.exception.AuthErrorCode;
@@ -74,8 +75,6 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.ORDER_AMOUNT_TOO_SMALL);
         }
 
-        validateMarketBuyBalance(userId, marketPair.baseAssetCode(), orderAmount);
-
         MarketOrderExecution execution = calculateMarketBuyExecution(request.marketCode(), orderAmount);
         BigDecimal executedQuantity = execution.executedQuantity();
 
@@ -92,18 +91,6 @@ public class OrderService {
         ));
     }
 
-    private void validateMarketBuyBalance(Long userId, String baseAssetCode, BigDecimal orderAmount) {
-        User user = userJpaRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
-
-        Asset baseAsset = assetJpaRepository.findByUserAndAssetCode(user, baseAssetCode)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
-
-        if (baseAsset.getBalance().compareTo(orderAmount) < 0) {
-            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
-        }
-    }
-
     private MarketBuyResponse executeMarketBuy(
             Long userId,
             MarketBuyRequest request,
@@ -111,26 +98,36 @@ public class OrderService {
             MarketPair marketPair,
             MarketOrderExecution execution
     ) {
-        User user = userJpaRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
-
-        Asset baseAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.baseAssetCode())
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
-
-        if (baseAsset.getBalance().compareTo(orderAmount) < 0) {
-            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
-        }
-
         BigDecimal executedQuantity = execution.executedQuantity();
         BigDecimal executedAmount = execution.executedAmount();
         BigDecimal executedPrice = execution.averageExecutedPrice();
 
-        Asset targetAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.targetAssetCode())
-                .orElseGet(() -> Asset.create(user, marketPair.targetAssetCode()));
+        int updated = assetJpaRepository.withdrawMarketBuyIfSufficient(
+                userId,
+                marketPair.baseAssetCode(),
+                orderAmount,
+                executedAmount
+        );
 
-        baseAsset.withdraw(executedAmount);
-        targetAsset.buy(executedQuantity, executedPrice);
-        assetJpaRepository.save(targetAsset);
+        if (updated == 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
+        }
+
+        assetJpaRepository.upsertForBuy(
+                userId,
+                marketPair.targetAssetCode(),
+                executedQuantity,
+                executedPrice
+        );
+
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
+
+        Asset baseAsset = assetJpaRepository.findByUserAndAssetCode(user, marketPair.baseAssetCode())
+                .orElseThrow(() -> new BusinessException(AssetErrorCode.ASSET_NOT_FOUND));
+
+        Asset targetAsset = assetJpaRepository.findByUserAndAssetCode(user, marketPair.targetAssetCode())
+                .orElseThrow(() -> new BusinessException(AssetErrorCode.ASSET_NOT_FOUND));
 
         TradeHistory tradeHistory = tradeHistoryJpaRepository.save(
                 TradeHistory.marketBuy(
