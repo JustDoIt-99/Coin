@@ -86,7 +86,7 @@ public interface AssetJpaRepository extends JpaRepository<Asset, Long> {
             @Param("refundAmount") BigDecimal refundAmount
     );
 
-    @Modifying
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
             """
                         update Asset a
@@ -102,7 +102,7 @@ public interface AssetJpaRepository extends JpaRepository<Asset, Long> {
             @Param("executedAmount") BigDecimal executedAmount
     );
 
-    @Modifying
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(
             value = """
         INSERT INTO asset (
