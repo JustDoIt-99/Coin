@@ -4,7 +4,6 @@ import com.sangyunpark.backend.asset.entity.Asset;
 import com.sangyunpark.backend.asset.entity.AssetTransactionReferenceType;
 import com.sangyunpark.backend.asset.entity.AssetTransactionType;
 import com.sangyunpark.backend.asset.event.AssetUpdatedEvent;
-import com.sangyunpark.backend.asset.exception.AssetErrorCode;
 import com.sangyunpark.backend.asset.repository.AssetJpaRepository;
 import com.sangyunpark.backend.asset.service.AssetTransactionRecorder;
 import com.sangyunpark.backend.auth.exception.AuthErrorCode;
@@ -98,36 +97,26 @@ public class OrderService {
             MarketPair marketPair,
             MarketOrderExecution execution
     ) {
+        User user = userJpaRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
+
+        Asset baseAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.baseAssetCode())
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE));
+
+        if (baseAsset.getBalance().compareTo(orderAmount) < 0) {
+            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
+        }
+
         BigDecimal executedQuantity = execution.executedQuantity();
         BigDecimal executedAmount = execution.executedAmount();
         BigDecimal executedPrice = execution.averageExecutedPrice();
 
-        int updated = assetJpaRepository.withdrawMarketBuyIfSufficient(
-                userId,
-                marketPair.baseAssetCode(),
-                orderAmount,
-                executedAmount
-        );
+        Asset targetAsset = assetJpaRepository.findForUpdateByUserAndAssetCode(user, marketPair.targetAssetCode())
+                .orElseGet(() -> Asset.create(user, marketPair.targetAssetCode()));
 
-        if (updated == 0) {
-            throw new BusinessException(OrderErrorCode.INSUFFICIENT_BALANCE);
-        }
-
-        assetJpaRepository.upsertForBuy(
-                userId,
-                marketPair.targetAssetCode(),
-                executedQuantity,
-                executedPrice
-        );
-
-        User user = userJpaRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
-
-        Asset baseAsset = assetJpaRepository.findByUserAndAssetCode(user, marketPair.baseAssetCode())
-                .orElseThrow(() -> new BusinessException(AssetErrorCode.ASSET_NOT_FOUND));
-
-        Asset targetAsset = assetJpaRepository.findByUserAndAssetCode(user, marketPair.targetAssetCode())
-                .orElseThrow(() -> new BusinessException(AssetErrorCode.ASSET_NOT_FOUND));
+        baseAsset.withdraw(executedAmount);
+        targetAsset.buy(executedQuantity, executedPrice);
+        assetJpaRepository.save(targetAsset);
 
         TradeHistory tradeHistory = tradeHistoryJpaRepository.save(
                 TradeHistory.marketBuy(
