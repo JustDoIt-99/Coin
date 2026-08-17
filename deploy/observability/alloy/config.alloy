@@ -61,6 +61,6 @@ loki.process "backend" {
 
 loki.write "default" {
   endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
+    url = env("LOKI_PUSH_URL")
   }
 }
