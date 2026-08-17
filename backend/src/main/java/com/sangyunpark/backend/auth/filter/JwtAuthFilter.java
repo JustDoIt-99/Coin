@@ -1,11 +1,13 @@
 package com.sangyunpark.backend.auth.filter;
 
 import com.sangyunpark.backend.auth.jwt.JwtTokenProvider;
+import com.sangyunpark.backend.common.logging.RequestLoggingFilter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -66,6 +68,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         Long userId = jwtTokenProvider.getUserId(token);
         request.setAttribute(USER_ID, userId);
+        MDC.put(RequestLoggingFilter.USER_ID, String.valueOf(userId));
 
         filterChain.doFilter(request, response);
     }
