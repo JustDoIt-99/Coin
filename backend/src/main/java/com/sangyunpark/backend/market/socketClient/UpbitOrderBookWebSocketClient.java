@@ -132,6 +132,12 @@ public class UpbitOrderBookWebSocketClient {
                     try {
                         OrderbookResponse orderbook = objectMapper.readValue(payload, OrderbookResponse.class);
 
+                        log.info(
+                                "[ORDERBOOK_RECEIVED] marketCode={}, orderbook={}",
+                                orderbook.code(),
+                                orderbook
+                        );
+
                         if (orderbook.code() == null || orderbook.code().isBlank()) {
                             log.debug("code가 비어있는 orderbook 메시지는 무시합니다. payload={}", payload);
                             return;
